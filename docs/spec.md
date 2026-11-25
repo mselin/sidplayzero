@@ -2,11 +2,11 @@
 
 | | |
 |---|---|
-| Status | **Draft 3, revised after two passes of independent review; a third pass is checking the last changes.** This is the Phase 2 artifact |
+| Status | **Draft 3, reviewed independently; every review item is closed; awaiting the owner's approval.** This is the Phase 2 artifact |
 | Date | 25 November 2026 |
 | Derives from | [`requirements.md`](requirements.md), approved 25 November 2026, with the changes made for FIND-006 and FIND-010 to FIND-013 |
 | Part of it | [`keymap.tsv`](keymap.tsv), the key map (SPEC-094) |
-| Review | [`spec-review.md`](spec-review.md) |
+| Review | [`spec-review.md`](spec-review.md): 67 items over four passes, all closed |
 | Next artifact | `docs/test-framework-tasks.md` (Phase 3) |
 
 ## 1. How to read this document
@@ -2255,8 +2255,8 @@ which is the form a device that fetches on demand can be measured in.
 - Level: host-unit, device
 
 **SPEC-241 Measurements the app takes of itself.** Started with `--metrics FILE`, the app writes a text file
-of `key = value` lines when it exits; while a device test asks for it (SPEC-260), it appends the same lines
-to `selftest.results`. The keys are those of SPEC-240's table and these:
+of `key = value` lines when it exits; while a device test asks for it, it appends them to `selftest.results`
+as they are taken (SPEC-260). The keys are those of SPEC-240's table and these:
 
 | Key | Holds |
 |---|---|
@@ -2575,17 +2575,18 @@ and says so.
 
 *How they talk.* The script writes the **request file**, `selftest.request`, in the app's state folder: one
 line, `step = NAME`. (A build with the test hooks of SPEC-253 also reads a line `benchmark_seconds = N`.) While that file exists, the app appends `key = value` lines to `selftest.results`
-beside it: `start_ms` at every start, `exit_ms` at every exit, and the measurements of a step when the step
-ends, followed by `step_done = NAME`. A key written again is a newer value, except `start_ms` and `exit_ms`,
+beside it: each measurement of SPEC-240 and SPEC-241 when it is taken, whatever the step (so `start_ms` at
+every start, and `hvsc_setup_s` when a set-up ends); at every exit, `exit_ms` and the keys of SPEC-241 that
+belong to no step; and `step_done = NAME` when a step ends. A key written again is a newer value, except `start_ms` and `exit_ms`,
 of which every line is kept. The script changes the request before each of the tester's steps and waits for
 `step_done`, or for the tester's answer. The steps:
 
 | `step` | What the app does at its next start |
 |---|---|
-| `none` | Runs as usual; only the start and exit times are recorded |
+| `none` | Runs as usual, with no step of its own; measurements are recorded as they are taken |
 | `keys` | Opens the self-test screen with the **key step**: it names one key at a time, from SPEC-111's table and the characters `/ . _ : ~ -`, and records the code that arrives. In this step every key is only recorded; a held ESC still leaves. It writes `key_codes_wrong` |
 | `engines` | Opens the self-test screen; measures the two engines (SPEC-072) and renders the built-in tune twice with each; writes the speed factors and the three `render_` keys |
-| `benchmark` | Opens the self-test screen while it fetches the benchmark set, if that is absent. Then it closes that screen and plays the set for 30 minutes on the app's ordinary screens, while the **key script** presses keys just as a user would, through the same code as real keys; then it builds the index again while a tune plays. It writes the keys of SPEC-240, and opens the self-test screen again |
+| `benchmark` | Opens the self-test screen while it fetches the benchmark set, if that is absent. Then it closes that screen and plays the set for 30 minutes on the app's ordinary screens, while the **key script** presses keys just as a user would, through the same code as real keys; then it builds the index again while a tune plays. It writes the keys of SPEC-240 that it produces, which are all but `start_ms`, `exit_ms` and `hvsc_setup_s`, and the `bench_` keys, and opens the self-test screen again |
 
 The self-test screen is opened over the browser, by the test and not by a key, and closed by it or by ESC.
 It shows the step and its progress as lines of text and, when a step is done, "Done. Hold ESC to leave." It
@@ -2621,8 +2622,9 @@ puts the answers in the results file. In the results file `start_ms` and `exit_m
 - Oracle: a simulator script with `step = keys` in its home folder sees `screen = selftest` and
   `place = key-step`, feeds the keys asked for with one wrong, and finds that key's name in
   `key_codes_wrong`; with `step = benchmark`, the fake backend and `benchmark_seconds = 30`, it shows the
-  browser and Search in turn while the key script runs, and ends on the self-test screen with every key of SPEC-240 in `selftest.results` and `step_done = benchmark`; with
-  `step = none`, two starts leave two `start_ms` lines. A host-integration test runs `tools/device-run.sh`
+  browser and Search in turn while the key script runs, and ends on the self-test screen with every key the
+  benchmark step writes in `selftest.results`, and `step_done = benchmark`; with `step = none`, two starts
+  and exits leave two `start_ms` and two `exit_ms` lines and one set of the keys that belong to no step. A host-integration test runs `tools/device-run.sh`
   against a stand-in that plays the app's and the tester's parts through files, and gets a results file with
   an answer for each checklist line; run as root, the script refuses. The results file from the reference
   device has all of SPEC-240's and SPEC-241's keys and every answer.

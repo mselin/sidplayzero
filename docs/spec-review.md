@@ -6,13 +6,14 @@
 | Who reviewed it | A reviewer with fresh context: a separate session that was given the documents and nothing of how they came about, and was asked whether tests could be written from the specification before any code exists. It also checked some of the cited evidence itself (the engine archives' checksums and API names, HVSC's document formats and server headers) |
 | Date | 25 November 2026 |
 | Verdict on draft 1 | Not fit to write tests from: 4 blockers, 29 major items, 11 minor items |
-| What followed | Draft 2 of `spec.md`, the new [`keymap.tsv`](keymap.tsv), four findings against the requirements (FIND-010 to FIND-013), and changes to `tools/check_repo.py`; then a second pass by the same reviewer, and draft 3 |
-| State | REVIEW-STATE |
+| Verdict on the present text | Fit to write tests from |
+| What followed | Draft 2 of `spec.md`, the new [`keymap.tsv`](keymap.tsv), four findings against the requirements (FIND-010 to FIND-013), and changes to `tools/check_repo.py`; then a second pass by the same reviewer and draft 3, a third pass, and a last check of the changes made after it |
+| State | **All 67 items closed.** The reviewer's verdict after its last check: fit to write tests from |
 
 This is the Phase 2 gate's record. Each item says what the reviewer found, what was done about it, and where
 to look. An item is closed when the reviewer has checked the change and agreed. Items RV-001 to RV-044 are
 from the first pass, on draft 1; RV-045 to RV-060 from the second, on draft 2; RV-061 to RV-066 from the
-third, on draft 3.
+third, on draft 3; RV-067 from the last check.
 
 ## What the reviewer found sound
 
@@ -228,7 +229,7 @@ third, on draft 3.
 - Found: items had no priority, and Must screens' oracles required Could parts.
 - Done: every item has a Priority line; key map rows and Settings rows carry priorities; SPEC-115 says what
   a part that is left out looks like, and that the tests pass with every Should and Could part off.
-- Status: the second pass found a remainder: several Must oracles still reached into Should and Could features, and a feature with no item of its own had nothing to carry its tests. SPEC-115 is now a table of named parts, each with a build switch; the key map and the Settings table name the part of every row; oracles that reach into a part say so; SPEC-250 runs the unit and simulator levels with all parts and with none. SPEC-025 is Must. At the third pass six Must oracles still reached into a part without saying so, and the job mark sat inside the mini player's part. Each of those oracles now names its part (SPEC-060, SPEC-062, SPEC-065, SPEC-069, SPEC-143, SPEC-154), and the job mark is always built (SPEC-147). FOURTH-RV-027
+- Status: the second pass found a remainder: several Must oracles still reached into Should and Could features, and a feature with no item of its own had nothing to carry its tests. SPEC-115 is now a table of named parts, each with a build switch; the key map and the Settings table name the part of every row; oracles that reach into a part say so; SPEC-250 runs the unit and simulator levels with all parts and with none. SPEC-025 is Must. At the third pass six Must oracles still reached into a part without saying so, and the job mark sat inside the mini player's part. Each of those oracles now names its part (SPEC-060, SPEC-062, SPEC-065, SPEC-069, SPEC-143, SPEC-154), and the job mark is always built (SPEC-147). Closed; confirmed by the reviewer at the last check
 
 ### RV-028 Muted voices and the filter were shown nowhere
 - Found: the only display was the Could voice bars, whose "envelope level" the library does not report.
@@ -479,12 +480,12 @@ of the device benchmark until RV-061 is settled.
 - Done: SPEC-260: the benchmark closes the self-test screen and plays on the app's ordinary screens, with
   the key script pressing keys as a user would; the job mark shows its progress; the self-test screen
   returns for "Done". SPEC-090 says the test opens and closes that screen.
-- Status: FOURTH-RV-061
+- Status: closed; confirmed by the reviewer at the last check
 
 ### RV-062 (minor) Which fetch is cancelled, and "both workers"
 - Done: SPEC-141: a played tune's request cancels a fetch-ahead or an earlier such request; a file of "Fetch
   missing" in flight finishes first. SPEC-253's settled rule names three workers.
-- Status: FOURTH-RV-062
+- Status: closed; confirmed by the reviewer at the last check
 
 ### RV-063 (minor) Tests that wait, and a store check that reported by design
 - Found: a test waiting for Phase 5's screenshots would have kept the required check red; and the tests'
@@ -492,26 +493,51 @@ of the device benchmark until RV-061 is settled.
 - Done: SPEC-256 has a waiting list: a listed test is in order while it fails as expected, and a fault when
   it fails otherwise or passes. The tests build with a maintainer in the reserved `.test` name, which the
   store's script accepts (SPEC-221, SPEC-224).
-- Status: FOURTH-RV-063
+- Status: closed; confirmed by the reviewer at the last check
 
 ### RV-064 (minor) "Finish the download" needed room it does not use
 - Done: SPEC-102 and SPEC-144: it is offered whenever a complete download was cut short while moving files,
   whatever SPEC-145's conditions say.
-- Status: FOURTH-RV-064
+- Status: closed; confirmed by the reviewer at the last check
 
 ### RV-065 (minor) Screen description leftovers
 - Done: the fake backend's `position()` follows the fake clock (SPEC-025); `lines` and `text` are checked
   by what they contain, and the browser's title at the root is `/` (SPEC-254); `save-samples` and
   `expect-same` let SPEC-070 compare two recordings; `boxes` has `text_x` for SPEC-098.
-- Status: FOURTH-RV-065
+- Status: closed; confirmed by the reviewer at the last check
 
 ### RV-066 (minor) Six loose sentences
 - Done: SPEC-069 says which failures wait 2 s‡ and which are passed over at once, and that
   `MSG_NOTICE_NEEDED` is a notice there; SPEC-060 says which keys take over from the unattended wait; the
   `selftest` place has no key of its own; the 10 s hold is in the first round (SPEC-260); an imported
   playlist's name is at most 40 characters with its number (SPEC-175).
-- Status: FOURTH-RV-066
+- Status: closed; confirmed by the reviewer at the last check
 
 ## The last check
 
-FOURTH-PASS
+The reviewer read the change made after the third pass, and ran the store's maintainer rule against the
+two addresses SPEC-221 and SPEC-224 name. It confirmed RV-027 and RV-061 to RV-066 closed, and found one more
+gap, present since draft 3, which it had missed before.
+
+### RV-067 (minor) Some measurements had no writer in the device test
+- Found: SPEC-260 had the app record only start and exit times outside a test step, so `hvsc_setup_s`, and
+  the keys of SPEC-241 that belong to no step, were never written to the results; and a simulator oracle
+  asked a benchmark-only run for keys it cannot have.
+- Done: SPEC-260: while the request file exists, every measurement is appended when it is taken, whatever
+  the step, and the keys that belong to no step at every exit; the oracle asks for the keys the benchmark
+  step writes. SPEC-241 says the same.
+- Status: closed. The reviewer gave the fix in one sentence and said it needed no further pass; it was made
+  as given, and has not been read again by the reviewer.
+
+The reviewer's verdict after the last check: **fit to write tests from: yes.**
+
+## Summary
+
+| Pass | On | Items raised | Outcome |
+|---|---|---|---|
+| First | Draft 1 | RV-001 to RV-044: 4 blockers, 29 major, 11 minor | Not fit to write tests from |
+| Second | Draft 2 | RV-045 to RV-060: 8 major, 8 minor; 7 earlier items with a remainder | Not yet; no blocker left |
+| Third | Draft 3 | RV-061 to RV-066: 1 major, 5 minor; 1 earlier item with a remainder | Fit, except the device benchmark |
+| Last check | The change after the third pass | RV-067: 1 minor | Fit to write tests from |
+
+All 67 items are closed: 66 confirmed by the reviewer, and RV-067 fixed as the reviewer prescribed.
