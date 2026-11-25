@@ -1,0 +1,134 @@
+# SPEC-151 SPEC-200 a session that starts, browses, searches, plays present tunes and changes settings makes no request: any request would fail this run
+# fixture: collections/85/C64Music C64Music
+# args: --backend fake
+# There is no http.tsv for this test, so the fake HttpClient fails the run if it is called at all.
+expect screen = browser
+expect title = /
+expect-requests 0
+# Browse: into a folder, down its list, back, and in again.
+key Down
+key Down
+key Enter
+expect title = /MUSICIANS
+key Down
+key Enter
+key Enter
+expect title = /MUSICIANS/T/Tester_Tom
+key Down
+key Down
+key PageDown
+key Home
+key Left
+key Left
+key Up
+key Enter
+key Enter
+expect title = /MUSICIANS/H/Hubbard_Rob
+expect rows[0].text = Commando.sid
+expect rows[0].marks = []
+advance 1000
+expect-requests 0
+# Play a present tune that the listing agrees with; let it end; use the keys that step and pause.
+key Enter
+expect screen = playing
+expect player.state = playing
+expect player.path = /MUSICIANS/H/Hubbard_Rob/Commando.sid
+advance 1000
+key PlayPause
+expect player.state = paused
+key PlayPause
+expect player.state = playing
+fake backend song_ended
+key PlayPause
+key Next
+key Previous
+key Right
+key Left
+key 5
+expect player.state = idle
+expect-requests 0
+# Search, and play a result.
+key 4
+expect screen = browser
+key 5
+expect screen = search
+type tester
+key Enter
+expect place = search-results
+expect rows[0].kind = tune
+key Enter
+expect screen = playing
+expect player.state = playing
+advance 3000
+fake backend song_ended
+advance 3000
+key 5
+expect player.state = idle
+expect-requests 0
+# Settings: step every row that has a set of values, whichever rows this build has.
+key Tab
+expect screen = settings
+expect rows[0].text = "Collection folder"
+key Enter
+key Right
+key Down
+key Right
+key Down
+key Right
+key Down
+key Right
+key Down
+key Right
+key Down
+key Right
+key Down
+key Right
+key Down
+key Right
+key Down
+key Right
+key Down
+key Right
+key Down
+key Right
+key Down
+key Right
+key Down
+key Right
+key Down
+key Right
+key Down
+key Right
+key Down
+key Right
+key Down
+key Left
+# The last row is an address: its prompt opens with the address in it, and Enter keeps it.
+key End
+key Enter
+expect panel.id = prompt
+key Enter
+expect panel = null
+expect-requests 0
+# The HVSC screen and the About screen, opened and closed.
+key 5
+expect screen = hvsc
+key Down
+key Up
+key 4
+key 8
+expect screen = about
+key 5
+expect panel.id = text
+key Enter
+key 4
+expect screen = settings
+# Ten minutes with the app left alone, and a second start.
+advance 600000
+expect-requests 0
+restart
+expect screen = browser
+key Down
+key Enter
+advance 60000
+expect-requests 0

@@ -1,0 +1,13 @@
+# SPEC-145 with no 7z on the device the row is absent and the text says to install the 7zip package
+# parts: download-all
+# fakes: fakes/hvsc_archive
+# fixture: collections/85/C64Music/DOCUMENTS C64Music/DOCUMENTS
+fake unpacker.available no
+key Tab
+key 5
+expect screen = hvsc
+expect rows matches ^(?![\s\S]*Download everything)
+expect text contains "Install the 7zip package to download everything."
+expect text contains "Tunes are fetched as you play them. To have everything, copy a C64Music folder into"
+expect text contains /tmp/sidplayzero-test/home/C64Music
+expect text matches ^(?![\s\S]*enough free memory)

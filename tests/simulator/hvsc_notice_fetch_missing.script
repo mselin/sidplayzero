@@ -1,0 +1,32 @@
+# SPEC-152 SPEC-174 with the notice not accepted, Fetch missing opens the notice panel and makes no request; ESC makes none; Enter fetches the playlist's absent entries
+# parts: playlists
+# fakes: fakes/hvsc_playlist
+# fixture: collections/85/C64Music/DOCUMENTS C64Music/DOCUMENTS
+expect screen = browser
+key 6
+expect screen = playlists
+expect rows[1].text contains "Not here yet"
+key Down
+key Enter
+expect screen = playlist
+expect rows[0].marks contains absent
+key 8
+expect panel.id = more-playlist
+expect panel.rows[0].text = "Fetch missing"
+key Enter
+expect panel.id = notice-panel
+expect-requests 0
+key Esc
+expect panel = null
+expect-requests 0
+expect job = null
+key 8
+key Enter
+expect panel.id = notice-panel
+key Enter
+expect-request 1 https://hvsc.c64.org/download/C64Music/MUSICIANS/H/Hubbard_Rob/Commando.sid
+advance 1000
+expect-requests 2
+expect-request 2 https://hvsc.c64.org/download/C64Music/MUSICIANS/T/Tester_Tom/Three_Songs.sid
+expect-file C64Music/MUSICIANS/H/Hubbard_Rob/Commando.sid exists
+expect-file C64Music/MUSICIANS/T/Tester_Tom/Three_Songs.sid exists

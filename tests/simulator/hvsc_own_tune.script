@@ -1,0 +1,35 @@
+# SPEC-154 a tune of the user's own at /My Rips/Cool Söng.sid is listed, plays, and is restored as the current entry after a restart; it is never asked of any server
+# args: --backend fake
+# There is no http.tsv for this test, so the fake HttpClient fails the run if it is called at all.
+expect screen = empty
+put fixtures/own C64Music
+expect-file C64Music exists
+advance 5000
+expect screen = browser
+expect title = /
+expect rows[0].text = "My Rips"
+expect rows[0].kind = folder
+key Enter
+expect title = "/My Rips"
+expect rows[0].text = "Cool Söng.sid"
+expect rows[0].kind = tune
+expect rows[0].marks = []
+key Enter
+expect screen = playing
+expect player.state = playing
+expect player.path = "/My Rips/Cool Söng.sid"
+expect-requests 0
+# The state is saved two seconds after it changed; then the app is started again.
+advance 2100
+expect-file .local/state/sidplayzero/state.ini contains "/My Rips/Cool Söng.sid"
+restart
+expect player.path = "/My Rips/Cool Söng.sid"
+expect player.state = idle
+expect screen = browser
+expect title = "/My Rips"
+# It plays again from where the app left it.
+key PlayPause
+expect player.state = playing
+expect player.path = "/My Rips/Cool Söng.sid"
+advance 60000
+expect-requests 0

@@ -1,0 +1,23 @@
+# SPEC-102 SPEC-147 key 4, Back, closes the HVSC screen and leaves the job running; coming back shows its progress again
+# fakes: fakes/hvsc_held
+key Tab
+key 5
+key Enter
+expect job.kind = setup
+key 4
+expect screen = settings
+expect job.kind = setup
+expect-requests 1
+key 5
+expect screen = hvsc
+expect job.step = 3
+expect actions[1] = Stop
+expect rows matches ^(?![\s\S]*Get HVSC)
+fake http release https://hvsc.c64.org/download/C64Music/DOCUMENTS/Songlengths.md5
+fake http release https://hvsc.c64.org/download/C64Music/DOCUMENTS/STIL.txt
+fake http release https://hvsc.c64.org/download/C64Music/DOCUMENTS/HVSC.txt
+fake http release https://hvsc.c64.org/download/C64Music/DOCUMENTS/BUGlist.txt
+fake http release https://hvsc.c64.org/download/C64Music/DOCUMENTS/hv_sids.txt
+expect job = null
+expect notice.id = MSG_HVSC_READY
+expect screen = browser

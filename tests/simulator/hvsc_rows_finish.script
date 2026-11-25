@@ -1,0 +1,48 @@
+# SPEC-102 SPEC-144 a complete download cut short while moving files leaves Finish the download in place of Download everything, whatever the memory; finishing ends with the whole collection
+# parts: download-all
+# fakes: fakes/hvsc_archive
+# fixture: collections/85/C64Music/DOCUMENTS C64Music/DOCUMENTS
+# fixture: collections/85/C64Music/MUSICIANS/T/Tester_Tom/Changed.sid C64Music/MUSICIANS/T/Tester_Tom/Changed.sid
+# A folder of the collection cannot be written: the move into it, in step 7, will fail.
+readonly C64Music/MUSICIANS/T/Tester_Tom
+key Tab
+key 5
+expect screen = hvsc
+expect rows matches "Download everything"
+expect rows matches ^(?![\s\S]*Finish the download)
+# The row before the last one, "Rebuild the index".
+key End
+key Up
+key Enter
+expect panel.id = notice-panel
+key Enter
+expect-requests 1
+expect-request 1 https://hvsc.brona.dk/HVSC/HVSC_85-all-of-them.7z
+expect-log unpacker contains "list "
+expect-log unpacker contains "unpack "
+expect notice.id = MSG_DOWNLOAD_FAILED
+expect job = null
+expect-file .cache/sidplayzero/install.state exists
+expect-file .sidplayzero-staging exists
+expect rows matches "Finish the download"
+expect rows matches ^(?![\s\S]*Download everything)
+# It is offered whatever SPEC-145 says: finishing only renames files.
+writable C64Music/MUSICIANS/T/Tester_Tom
+fake memory.available_mib 0
+fake memory.swap_free_mib 0
+fake unpacker.available no
+advance 4000
+key 4
+key 5
+expect rows matches "Finish the download"
+expect rows matches ^(?![\s\S]*Download everything)
+key End
+key Up
+key Enter
+expect notice.id = MSG_DOWNLOAD_DONE
+expect-requests 1
+expect-file .cache/sidplayzero/install.state absent
+expect-file .sidplayzero-staging absent
+expect-file C64Music/MUSICIANS/T/Tester_Tom/Three_Songs.sid exists
+expect-file C64Music/MUSICIANS/H/Hubbard_Rob/Commando.sid exists
+expect-file C64Music/DEMOS/A-F/Clock_Demo.sid exists

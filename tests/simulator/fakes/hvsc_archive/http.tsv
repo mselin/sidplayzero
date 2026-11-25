@@ -1,0 +1,22 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# The fake server of the HVSC tests with the complete archive of release 85 as well. What the archive's
+# bytes are does not matter: the fake Unpacker unpacks the tree that fakes.ini names. The notice has
+# not been accepted.
+# Columns, separated by tabs: the address, the status, the file with the body, options (SPEC-253).
+https://hvsc.c64.org/download/C64Music/DOCUMENTS/Songlengths.md5	200	fixtures/collections/85/C64Music/DOCUMENTS/Songlengths.md5
+https://hvsc.c64.org/download/C64Music/DOCUMENTS/STIL.txt	200	fixtures/collections/85/C64Music/DOCUMENTS/STIL.txt
+https://hvsc.c64.org/download/C64Music/DOCUMENTS/HVSC.txt	200	fixtures/collections/85/C64Music/DOCUMENTS/HVSC.txt
+https://hvsc.c64.org/download/C64Music/DOCUMENTS/BUGlist.txt	200	fixtures/collections/85/C64Music/DOCUMENTS/BUGlist.txt
+https://hvsc.c64.org/download/C64Music/DOCUMENTS/hv_sids.txt	200	fixtures/collections/85/C64Music/DOCUMENTS/hv_sids.txt
+https://hvsc.c64.org/download/C64Music/DEMOS/A-F/Clock_Demo.sid	200	fixtures/collections/85/C64Music/DEMOS/A-F/Clock_Demo.sid
+https://hvsc.c64.org/download/C64Music/GAMES/A-F/Either_Chip.sid	200	fixtures/collections/85/C64Music/GAMES/A-F/Either_Chip.sid
+https://hvsc.c64.org/download/C64Music/MUSICIANS/H/Hubbard_Rob/Commando.sid	200	fixtures/collections/85/C64Music/MUSICIANS/H/Hubbard_Rob/Commando.sid
+https://hvsc.c64.org/download/C64Music/MUSICIANS/H/Huelsbeck_Chris/Huelsbeck_Test.sid	200	fixtures/collections/85/C64Music/MUSICIANS/H/Huelsbeck_Chris/Huelsbeck_Test.sid
+https://hvsc.c64.org/download/C64Music/MUSICIANS/T/Tester_Tom/Changed.sid	200	fixtures/collections/85/C64Music/MUSICIANS/T/Tester_Tom/Changed.sid
+https://hvsc.c64.org/download/C64Music/MUSICIANS/T/Tester_Tom/Needs_BASIC.sid	200	fixtures/collections/85/C64Music/MUSICIANS/T/Tester_Tom/Needs_BASIC.sid
+https://hvsc.c64.org/download/C64Music/MUSICIANS/T/Tester_Tom/New_Chip.sid	200	fixtures/collections/85/C64Music/MUSICIANS/T/Tester_Tom/New_Chip.sid
+https://hvsc.c64.org/download/C64Music/MUSICIANS/T/Tester_Tom/Renamed.sid	200	fixtures/collections/85/C64Music/MUSICIANS/T/Tester_Tom/Renamed.sid
+https://hvsc.c64.org/download/C64Music/MUSICIANS/T/Tester_Tom/Three_Chips_3SID.sid	200	fixtures/collections/85/C64Music/MUSICIANS/T/Tester_Tom/Three_Chips_3SID.sid
+https://hvsc.c64.org/download/C64Music/MUSICIANS/T/Tester_Tom/Three_Songs.sid	200	fixtures/collections/85/C64Music/MUSICIANS/T/Tester_Tom/Three_Songs.sid
+https://hvsc.c64.org/download/C64Music/MUSICIANS/T/Tester_Tom/Two_Chips_2SID.sid	200	fixtures/collections/85/C64Music/MUSICIANS/T/Tester_Tom/Two_Chips_2SID.sid
+https://hvsc.brona.dk/HVSC/HVSC_85-all-of-them.7z	200	archive.7z

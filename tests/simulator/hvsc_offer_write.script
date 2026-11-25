@@ -1,0 +1,13 @@
+# SPEC-145 when the folder that holds the collection cannot be written the row is absent and the text says so
+# parts: download-all
+# fakes: fakes/hvsc_archive
+# fixture: collections/85/C64Music/DOCUMENTS C64Music/DOCUMENTS
+fake files.root_writable no
+key Tab
+key 5
+expect screen = hvsc
+expect rows matches ^(?![\s\S]*Download everything)
+expect text contains "The folder that holds the collection cannot be written."
+expect text contains "Tunes are fetched as you play them. To have everything, copy a C64Music folder into"
+expect text contains /tmp/sidplayzero-test/home/C64Music
+expect text matches ^(?![\s\S]*Not enough room)

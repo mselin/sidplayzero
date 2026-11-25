@@ -1,0 +1,48 @@
+# SPEC-152 the notice panel's text is the specification's; ESC cancels and leaves the notice not accepted, also after a restart; Enter accepts it for good
+# fakes: fakes/hvsc_server
+# args: --backend fake
+key Enter
+expect panel.id = notice-panel
+expect place = notice-panel
+expect panel.text = SidPlayZero can fetch music from the High Voltage SID Collection (HVSC), a free collection kept by the HVSC crew at hvsc.c64.org. HVSC says of its tunes: "All of the tunes available in the High Voltage SID Collection (HVSC) are copyrighted." and "Use of the SIDs in this collection for any purpose other than private enjoyment is subject to relevant copyright law." SidPlayZero downloads files to this device only when you ask, from the addresses in Settings: HVSC's own site, and the mirror its site links to, unless you change them. It does not contain HVSC's files and does not pass them on.
+key Down
+key Up
+expect panel.id = notice-panel
+key Esc
+expect panel = null
+expect-requests 0
+expect job = null
+# It was not accepted: the same key asks again, and so it does in the next run.
+key Enter
+expect panel.id = notice-panel
+key Esc
+advance 2100
+restart
+expect screen = empty
+expect-requests 0
+key Enter
+expect panel.id = notice-panel
+expect-requests 0
+# Enter accepts: what was asked for goes on, and notice_accepted is kept.
+key Enter
+expect panel = null
+expect-requests 5
+expect notice.id = MSG_HVSC_READY
+advance 2100
+expect-file .local/state/sidplayzero/state.ini contains "notice_accepted = on"
+restart
+expect screen = browser
+# To /MUSICIANS/H/Hubbard_Rob: the root lists DEMOS, GAMES and MUSICIANS.
+key Down
+key Down
+key Enter
+expect title = /MUSICIANS
+key Enter
+key Enter
+expect title = /MUSICIANS/H/Hubbard_Rob
+expect rows[0].text = Commando.sid
+key Enter
+# Nothing asks any more: the tune is fetched at once.
+expect panel = null
+expect-requests 6
+expect player.state = playing

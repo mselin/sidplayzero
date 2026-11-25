@@ -1,0 +1,13 @@
+# SPEC-145 with 699 MiB free on the card the row is absent and the text gives both figures
+# parts: download-all
+# fakes: fakes/hvsc_archive
+# fixture: collections/85/C64Music/DOCUMENTS C64Music/DOCUMENTS
+fake files.free_mib 699
+key Tab
+key 5
+expect screen = hvsc
+expect rows matches ^(?![\s\S]*Download everything)
+expect text contains "Not enough room: 700 MiB needed, 699 MiB free"
+expect text contains "Tunes are fetched as you play them. To have everything, copy a C64Music folder into"
+expect text contains /tmp/sidplayzero-test/home/C64Music
+expect text matches ^(?![\s\S]*7zip)

@@ -1,0 +1,28 @@
+# SPEC-102 SPEC-140 from Settings, with HVSC not set up, the three keys 5, Enter, Enter end with the notice MSG_HVSC_READY
+# fakes: fakes/hvsc_server
+key Tab
+expect screen = settings
+key 5
+expect screen = hvsc
+expect place = hvsc
+expect lines contains "HVSC is not set up"
+expect rows[0].text = "Get HVSC"
+expect rows[0].highlighted = true
+expect-requests 0
+key Enter
+expect panel.id = notice-panel
+key Enter
+expect panel = null
+expect notice.id = MSG_HVSC_READY
+expect-requests 5
+expect-file C64Music/DOCUMENTS/Songlengths.md5 exists
+# The set-up ended while the HVSC screen was showing: the browser opens at the root.
+expect screen = browser
+expect title = /
+# The HVSC screen now tells the release, and no longer offers to get HVSC.
+key Tab
+key 5
+expect screen = hvsc
+expect lines contains "HVSC #85"
+expect rows matches ^(?![\s\S]*Get HVSC)
+expect rows matches "Rebuild the index"
