@@ -1,0 +1,92 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPEC-095 the browser's keys: Up and Down move, Enter or Right opens a folder or plays a tune, Left goes to the parent, "Playing" has a label only when the player has a current entry, and "Search" opens Search
+# fixture: collections/85/C64Music C64Music
+# args: --backend fake
+
+expect screen = browser
+expect place = browser
+expect title = /
+
+# Nothing is loaded and a folder is highlighted: "Playing" has no label, and its key does nothing.
+expect rows[0].kind = folder
+expect rows[0].highlighted = true
+expect actions[0] = ""
+expect actions[1] = Search
+key 4
+expect screen = browser
+expect title = /
+expect rows[0].highlighted = true
+
+# Up and Down move.
+key Down
+expect rows[1].highlighted = true
+expect position = 2/3
+key Up
+expect rows[0].highlighted = true
+expect position = 1/3
+
+# Right opens a folder, and so does Enter.
+key Right
+expect title = /DEMOS
+expect rows[0].text = A-F
+key Enter
+expect title = /DEMOS/A-F
+expect rows[0].text = Clock_Demo.sid
+expect rows[0].kind = tune
+expect rows[0].highlighted = true
+
+# A tune is highlighted, and still nothing is loaded.
+expect actions[0] = ""
+expect actions[1] = Search
+
+# Left goes to the parent.
+key Left
+expect title = /DEMOS
+key Right
+expect title = /DEMOS/A-F
+
+# Right on a tune plays it, and playing a tune opens the now-playing screen.
+key Right
+expect screen = playing
+expect player.state = playing
+expect player.path = /DEMOS/A-F/Clock_Demo.sid
+
+# Back in the browser the player has a current entry: "Playing" has its label, and its key works.
+key Esc
+expect screen = browser
+expect title = /DEMOS/A-F
+expect rows[0].highlighted = true
+expect actions[0] = Playing
+expect actions[1] = Search
+key 4
+expect screen = playing
+expect player.path = /DEMOS/A-F/Clock_Demo.sid
+key 5
+expect player.state = idle
+key 4
+expect screen = browser
+
+# Stopped, the entry is still the current one: the label stays, over a folder too.
+expect actions[0] = Playing
+key Left
+expect title = /DEMOS
+expect rows[0].kind = folder
+expect actions[0] = Playing
+expect actions[1] = Search
+
+# Enter on a tune plays it too.
+key Enter
+expect title = /DEMOS/A-F
+key Enter
+expect screen = playing
+expect player.state = playing
+expect player.path = /DEMOS/A-F/Clock_Demo.sid
+key Esc
+expect screen = browser
+
+# "Search".
+key 5
+expect screen = search
+key Esc
+expect screen = browser
+expect title = /DEMOS/A-F

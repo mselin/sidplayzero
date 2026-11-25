@@ -1,0 +1,29 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPEC-048 started with an empty home folder, the empty screen says no collection was found, names the root and has the one row "Get HVSC"; Enter opens the notice panel
+
+expect screen = empty
+expect place = empty
+expect stack = ["empty"]
+expect text matches [Nn]o collection
+expect text contains /tmp/sidplayzero-test/home/C64Music
+expect rows matches ^\[\{[^{}]*\}\]$
+expect rows[0].text = "Get HVSC"
+expect rows[0].kind = action
+expect rows[0].highlighted = true
+expect actions = ["","","","",""]
+
+# Nothing has been asked of the network, and Enter does not ask either: it shows HVSC's notice first.
+key Enter
+expect panel.id = notice-panel
+expect place = notice-panel
+expect screen = empty
+expect-requests 0
+
+# ESC cancels: the empty screen is as it was, and still nothing has been asked.
+key Esc
+expect panel = null
+expect screen = empty
+expect place = empty
+expect rows[0].text = "Get HVSC"
+expect rows[0].highlighted = true
+expect-requests 0

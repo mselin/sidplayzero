@@ -1,0 +1,81 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPEC-044 a folder opens with its first entry highlighted, or the one highlighted the last time it was open; Left or a short ESC goes to the parent with the folder just left highlighted; at the root they do nothing
+# fixture: collections/85/C64Music C64Music
+
+expect screen = browser
+expect title = /
+expect rows[0].text = DEMOS
+expect rows[0].kind = folder
+expect rows[0].highlighted = true
+
+# At the collection root, Left and a short ESC do nothing.
+key Left
+expect screen = browser
+expect title = /
+expect rows[0].highlighted = true
+key Esc
+expect screen = browser
+expect title = /
+expect rows[0].highlighted = true
+
+# Enter opens a folder, and so does Right: the first entry is highlighted.
+key Down
+key Down
+expect rows[2].text = MUSICIANS
+expect rows[2].highlighted = true
+key Enter
+expect title = /MUSICIANS
+expect rows[0].text = H
+expect rows[0].highlighted = true
+expect rows[1].text = T
+key Down
+key Right
+expect title = /MUSICIANS/T
+expect rows[0].text = Tester_Tom
+expect rows[0].highlighted = true
+key Enter
+expect title = /MUSICIANS/T/Tester_Tom
+expect rows[0].text = Changed.sid
+expect rows[0].highlighted = true
+expect position = 1/7
+
+# Down two rows, back, and in again: the third row is highlighted.
+key Down
+key Down
+expect rows[2].text = New_Chip.sid
+expect rows[2].highlighted = true
+expect position = 3/7
+key Left
+expect title = /MUSICIANS/T
+expect rows[0].text = Tester_Tom
+expect rows[0].highlighted = true
+key Enter
+expect title = /MUSICIANS/T/Tester_Tom
+expect rows[2].text = New_Chip.sid
+expect rows[2].highlighted = true
+expect rows[0].highlighted = false
+expect position = 3/7
+
+# A short ESC is the parent folder too, and each time the folder just left is the one highlighted.
+key Esc
+expect screen = browser
+expect title = /MUSICIANS/T
+expect rows[0].highlighted = true
+key Esc
+expect title = /MUSICIANS
+expect rows[1].text = T
+expect rows[1].highlighted = true
+expect rows[0].highlighted = false
+expect position = 2/2
+key Left
+expect title = /
+expect rows[2].text = MUSICIANS
+expect rows[2].highlighted = true
+expect position = 3/3
+
+# The other folders have not been open in this run: each opens at its first entry.
+key Home
+key Enter
+expect title = /DEMOS
+expect rows[0].text = A-F
+expect rows[0].highlighted = true

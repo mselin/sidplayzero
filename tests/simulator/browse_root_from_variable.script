@@ -1,0 +1,35 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPEC-040 with HVSC_BASE set, the Settings row for the collection shows its value with "(from HVSC_BASE)", and Enter on the row changes nothing
+# fixture: collections/85/C64Music C64Music
+
+# The runner sets HVSC_BASE to C64Music in the home folder for every script.
+expect screen = browser
+expect title = /
+expect rows[0].text = DEMOS
+
+key Tab
+expect screen = settings
+key Home
+expect rows[0].text = "Collection folder"
+expect rows[0].kind = setting
+expect rows[0].highlighted = true
+expect rows[0].value contains /tmp/sidplayzero-test/home/C64Music
+expect rows[0].value contains "(from HVSC_BASE)"
+
+# Enter would open a prompt holding the path. Here it opens nothing, and the row stays as it is.
+key Enter
+expect panel = null
+expect typing = false
+expect place = settings
+expect rows[0].value contains /tmp/sidplayzero-test/home/C64Music
+expect rows[0].value contains "(from HVSC_BASE)"
+key Left
+key Right
+expect rows[0].value contains "(from HVSC_BASE)"
+
+# And the browser still shows that root.
+key Esc
+expect screen = browser
+expect title = /
+expect rows[0].text = DEMOS
+expect rows[2].text = MUSICIANS

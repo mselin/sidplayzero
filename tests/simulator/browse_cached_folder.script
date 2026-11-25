@@ -1,0 +1,47 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPEC-043 a file added to a folder that was listed before appears when the folder is opened again
+# fixture: collections/85/C64Music C64Music
+# args: --clock real
+
+# The folders kept in memory are known to have changed by their modification time, which the file
+# system gives in whole seconds (spz/files.h). So this one script runs on the real clock, and lets more
+# than a second pass between the first look at the folder and the change to it. On the real clock only
+# `settle` waits for the app.
+settle
+expect screen = browser
+expect title = /
+key Enter
+settle
+expect title = /DEMOS
+key Enter
+settle
+expect title = /DEMOS/A-F
+expect position = 1/1
+expect rows[0].text = Clock_Demo.sid
+
+key Left
+settle
+expect title = /DEMOS
+advance 1100
+put fixtures/tunes/two_sid.sid C64Music/DEMOS/A-F/Zeta.sid
+key Enter
+settle
+expect title = /DEMOS/A-F
+expect position = 1/2
+expect list.total = 2
+expect rows[0].text = Clock_Demo.sid
+expect rows[0].highlighted = true
+expect rows[1].text = Zeta.sid
+expect rows[1].kind = tune
+expect rows[1].marks = []
+
+# A file taken away is gone in the same way.
+key Left
+settle
+advance 1100
+remove C64Music/DEMOS/A-F/Zeta.sid
+key Enter
+settle
+expect title = /DEMOS/A-F
+expect position = 1/1
+expect list.total = 1

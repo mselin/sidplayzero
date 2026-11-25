@@ -1,0 +1,41 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPEC-100 in the search results the keys 7 and 8 are "Fav" and "Add", and act on the highlighted result
+# parts: playlists
+# fixture: collections/85/C64Music C64Music
+
+expect screen = browser
+key 5
+expect screen = search
+type commando
+key Enter
+expect place = search-results
+expect list.total = 1
+expect rows[0].text = Commando.sid
+expect rows[0].highlighted = true
+expect rows[0].marks = []
+expect actions[0] = Edit
+expect actions[1] = Folder
+expect actions[3] = Fav
+expect actions[4] = Add
+
+# "Fav": the tune is a favourite, and has its star in the results.
+key 7
+expect notice.id = MSG_FAV_ADDED
+expect rows[0].marks contains favourite
+expect place = search-results
+advance 3000
+expect notice = null
+
+# "Add" asks which playlist.
+key 8
+expect panel.id = pick-playlist
+key Esc
+expect panel = null
+expect place = search-results
+
+# The star is the tune's, wherever it is listed.
+key 5
+expect screen = browser
+expect title = /MUSICIANS/H/Hubbard_Rob
+expect rows[0].text = Commando.sid
+expect rows[0].marks contains favourite

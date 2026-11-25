@@ -1,0 +1,43 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPEC-045 no action but moving, deleting and stepping a value repeats: holding Enter for one second acts once, and so does holding Down on the now-playing screen
+# fixture: collections/85/C64Music C64Music
+# args: --backend fake
+
+expect screen = browser
+expect title = /
+expect rows[0].text = DEMOS
+expect rows[0].highlighted = true
+
+# Enter held for a second opens DEMOS, and that is all: were it to repeat, it would go on into A-F and
+# play the tune there.
+hold Enter 1000
+expect screen = browser
+expect title = /DEMOS
+expect rows[0].text = A-F
+expect rows[0].highlighted = true
+
+# To a folder of seven tunes, and play the third.
+key Left
+key End
+key Enter
+expect title = /MUSICIANS
+key End
+key Enter
+expect title = /MUSICIANS/T
+key Enter
+expect title = /MUSICIANS/T/Tester_Tom
+key Down
+key Down
+expect rows[2].text = New_Chip.sid
+expect rows[2].highlighted = true
+key Enter
+expect screen = playing
+expect player.state = playing
+expect player.path = /MUSICIANS/T/Tester_Tom/New_Chip.sid
+
+# On the now-playing screen Down is "next tune", which does not repeat: one second of it is one tune on.
+hold Down 1000
+expect screen = playing
+expect player.path = /MUSICIANS/T/Tester_Tom/Renamed.sid
+hold Up 1000
+expect player.path = /MUSICIANS/T/Tester_Tom/New_Chip.sid

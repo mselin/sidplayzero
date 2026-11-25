@@ -1,0 +1,60 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPEC-046 the detail line holds a present tune's title, author and length within 200 ms of the highlight resting on it; an absent tune's holds "not on device", the number of subtunes and the first length; a folder's holds nothing
+# parts: detail
+# fixture: collections/85/C64Music/DOCUMENTS C64Music/DOCUMENTS
+# fixture: collections/85/C64Music/MUSICIANS/H C64Music/MUSICIANS/H
+
+# HVSC is set up, and of its tunes only those under /MUSICIANS/H are on the device.
+expect screen = browser
+expect title = /
+expect rows[0].kind = folder
+advance 200
+expect detail matches ^(null)?$
+
+key End
+key Enter
+expect title = /MUSICIANS
+key Enter
+expect title = /MUSICIANS/H
+key Enter
+expect title = /MUSICIANS/H/Hubbard_Rob
+expect rows[0].text = Commando.sid
+expect rows[0].highlighted = true
+expect rows[0].marks = []
+
+# A present tune: nothing until the highlight has rested for 150 ms, and all of it within 200 ms. The
+# database gives this tune 0:03.500.
+advance 100
+expect detail matches ^(?![\s\S]*Commando Test)
+advance 100
+expect detail contains "Commando Test"
+expect detail contains "Test Author"
+expect detail contains 0:03
+expect detail matches ^(?![\s\S]*not on device)
+
+# An absent tune, with three subtunes of 0:02, 0:02.500 and 0:03.
+key Left
+key Left
+expect title = /MUSICIANS
+key Down
+key Enter
+expect title = /MUSICIANS/T
+key Enter
+expect title = /MUSICIANS/T/Tester_Tom
+key End
+key Up
+expect position = 6/7
+expect rows matches "text":"Three_Songs\.sid"[^{}]*"highlighted":true
+advance 200
+expect detail contains "not on device"
+expect detail contains 0:02
+expect detail matches (^|[^0-9:.])3([^0-9:.]|$)
+expect detail matches ^(?![\s\S]*0:03)
+
+# On a folder the line says nothing, however long the highlight rests.
+key Left
+expect title = /MUSICIANS/T
+expect rows[0].kind = folder
+advance 200
+expect detail matches ^(null)?$
+expect-requests 0
