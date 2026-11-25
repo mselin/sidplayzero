@@ -15,17 +15,6 @@ brief the project started from, so the findings below are raised against that br
 
 ## Open
 
-### FIND-006 The complete HVSC archive may not unpack on the device
-- Phase: 1, requirements
-- Observed: the complete collection is one 7-Zip archive of 80.8 MB, on a mirror that HVSC's site links to and
-  does not run. HVSC's archives are "solid", and some have used compression methods that need a lot of memory
-  or that some unpackers do not have. The device has 512 MB of RAM. The mirror could not be reached from the
-  environment this was researched in, so the archive itself has not been inspected.
-- Concerns: the brief's candidate "downloading HVSC locally should be easy"; REQ-080
-- Resolution: none yet. Phase 2 inspects the archive and tries unpacking it within a memory limit (R1 in
-  `requirements.md`). If it cannot be done on the device, REQ-080 comes back to Phase 1 to be changed.
-- Status: open, with Phase 2
-
 ### FIND-007 USBSID-Pico needs a newer engine library than the device's system has
 - Phase: 1, requirements
 - Observed: USBSID-Pico support came in libsidplayfp 2.16.0. Debian trixie, which the device runs, has 2.12.0.
@@ -33,20 +22,36 @@ brief the project started from, so the findings below are raised against that br
   contradicts the rest.
 - Concerns: the brief's fact "Debian trixie carries libsidplayfp 2.12.0" and the wish to "possibly support
   USBSID"; REQ-111, REQ-144
-- Resolution so far: the licence is GPL-3 (REQ-144, CON-21). How the engine library reaches the device is R3,
-  and the header is R9, both for Phase 2.
-- Status: open, with Phase 2
-
-### FIND-009 Whether Debian's engine library has a known vulnerability is not known
-- Phase: 1, requirements
-- Observed: upstream 3.1.2 fixes an out-of-bounds read, CVE-2026-111148. Whether the 2.12.0 in Debian trixie
-  has the fault, or a fix for it, has not been checked.
-- Concerns: the brief's fact "Debian trixie carries libsidplayfp 2.12.0"; REQ-126
-- Resolution: none yet. Phase 2 checks the affected code against 2.12.0 and Debian's security record before
-  choosing the library (R3).
-- Status: open, with Phase 2
+- Resolution so far: the licence is GPL-3 (REQ-144, CON-21), and the specification builds a library version
+  that has USBSID support into the package, with that support switched off until the header's licence is
+  cleared with its author (R9).
+- Status: open; it matters only when REQ-111 is taken up
 
 ## Closed
+
+### FIND-006 The complete HVSC archive cannot be relied on to unpack on the device
+- Phase: 1, requirements; confirmed with measurements in phase 2, specification
+- Observed: the complete collection is one 7-Zip archive of 81 MB whose tunes are in a single solid block
+  compressed with a 340 MB dictionary. Unpacking it took 364 MB of memory at its peak with 7-Zip and 540 MB
+  with libarchive. The RAR archive needed 391 MB with the one free program that can read it. The device has
+  512 MB in all.
+- Concerns: REQ-080 as approved, which had the app download and unpack the complete archive
+- Resolution: the owner decided on 25 November 2026 that HVSC is set up for use on demand. In
+  `requirements.md`, REQ-080 no longer depends on the complete archive, REQ-088 has tunes fetched when they
+  are played, and REQ-089 keeps the complete download for devices that pass a memory check. CON-15 and CON-22
+  hold the measurements. Carried forward into the specification in the same change.
+- Status: closed, once the owner has approved the wording of the changed requirements
+
+### FIND-009 Debian's engine library has a known vulnerability and no fix
+- Phase: 1, requirements; settled in phase 2, specification
+- Observed: upstream 3.1.2 fixes an out-of-bounds read, CVE-2026-111148, by checking that a tune's data
+  offset lies inside the file. The 2.12.0 in Debian trixie takes the offset from the file header and uses it
+  without that check, as does 2.16.1. On 25 November 2026 Debian's security, updates and backports archives
+  for trixie held no newer version.
+- Concerns: the brief's fact "Debian trixie carries libsidplayfp 2.12.0"; REQ-126
+- Resolution: the specification builds upstream 3.1.2 into the package and does not depend on Debian's
+  library. The app also checks a tune's header itself before handing it to the engine.
+- Status: closed
 
 ### FIND-001 The emulator is not part of `czdev` any more
 - Phase: 1, requirements

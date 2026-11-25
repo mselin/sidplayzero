@@ -16,6 +16,13 @@
 #   ./device-probe.sh --bench --fetch
 #                                  downloads three test tunes from hvsc.c64.org to /dev/shm
 #                                  when there is no collection on the device, and deletes them
+#   ./device-probe.sh --unpack-test
+#                                  finds out whether this device can unpack the complete HVSC
+#                                  archive. It downloads the archive (81 MB) next to the results
+#                                  file, has 7z test it without writing any files, records the
+#                                  memory and time that took, and deletes the archive. Needs the
+#                                  7zip package. Expect several minutes during which the device is
+#                                  short of memory and slow; stop other apps first.
 #
 # The collection is looked for in $HVSC_BASE, then in ~/C64Music.
 
@@ -23,10 +30,12 @@ set -u
 
 BENCH=0
 FETCH=0
+UNPACK=0
 for arg in "$@"; do
   case "$arg" in
     --bench) BENCH=1 ;;
     --fetch) FETCH=1 ;;
+    --unpack-test) UNPACK=1 ;;
     -h|--help) sed -n '2,/^$/p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "unknown option: $arg" >&2; exit 2 ;;
   esac
@@ -35,6 +44,7 @@ done
 OUT="sidplayzero-probe-$(date +%Y%m%d-%H%M%S).txt"
 KEYBOARD=/dev/input/by-path/platform-3f804000.i2c-event
 HVSC_URL=https://hvsc.c64.org/download/C64Music
+ARCHIVE_URL=https://hvsc.brona.dk/HVSC/HVSC_85-all-of-them.7z
 # One ordinary tune, one that plays samples, one for two SID chips.
 TUNES="MUSICIANS/H/Hubbard_Rob/Commando.sid MUSICIANS/G/Galway_Martin/Arkanoid.sid MUSICIANS/J/Jammer/Antipop_2SID.sid"
 
@@ -63,7 +73,8 @@ probe() {
   echo "kernel: $(uname -srm)"
   echo "model: $( (cat /proc/device-tree/model 2>/dev/null || echo unknown) | tr -d '\0')"
   echo "cpus: $(nproc 2>/dev/null)"
-  grep -E '^(MemTotal|MemAvailable|SwapTotal)' /proc/meminfo
+  grep -E '^(MemTotal|MemAvailable|SwapTotal|SwapFree)' /proc/meminfo
+  echo "swap devices: $(tail -n +2 /proc/swaps 2>/dev/null | awk '{print $1 " " $2 " " $3 "kB"}' | tr '\n' ';')"
   echo "cpu_max_khz: $(cat /sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq 2>/dev/null || echo unknown)"
   echo "cpu_governor: $(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2>/dev/null || echo unknown)"
   echo "home_filesystem: $(df -h --output=fstype,size,avail "$HOME" 2>/dev/null | tail -1)"
@@ -127,6 +138,7 @@ probe() {
   fi
 
   [ "$BENCH" = 1 ] && bench "$base"
+  [ "$UNPACK" = 1 ] && unpack_test
   echo
   echo "# end of probe"
 }
@@ -176,6 +188,39 @@ bench() {
   fi
   echo "test tunes downloaded for this run: $([ "$fetched" = 1 ] && echo yes || echo no)"
   rm -rf "$work"
+}
+
+# Has 7z test the complete HVSC archive, which takes the same memory as unpacking it, and records
+# what that needed. Nothing is unpacked to the card; the archive itself is deleted afterwards.
+unpack_test() {
+  section "Unpack test (7z t on the complete HVSC archive)"
+  local z="" f="./sidplayzero-probe-archive.$$.7z" log="/dev/shm/sidplayzero-probe-7z.$$"
+  for c in 7z 7zz 7za; do have "$c" && { z="$c"; break; }; done
+  [ -n "$z" ] || { echo "skipped: no 7z program (sudo apt install 7zip)"; return 0; }
+  have curl || { echo "skipped: curl is not installed"; return 0; }
+  echo "7z program: $z"
+  echo "before: $(grep -E '^(MemAvailable|SwapFree)' /proc/meminfo | tr -s ' ' | tr '\n' ' ')"
+  local t0 t1
+  t0=$(date +%s.%N)
+  if ! curl -fsSL --max-time 1800 -o "$f" "$ARCHIVE_URL"; then echo "download failed"; rm -f "$f"; return 0; fi
+  t1=$(date +%s.%N)
+  echo "download: $(stat -c %s "$f") bytes in $(awk -v a="$t0" -v b="$t1" 'BEGIN{printf "%.0f", b-a}') s"
+  if [ -x /usr/bin/time ]; then
+    /usr/bin/time -v "$z" t -mmt1 -bso0 -bsp0 "$f" > "$log" 2>&1
+    echo "7z exit status: $?"
+    grep -E 'Maximum resident set size|Elapsed \(wall clock\)|Major \(requiring I/O\) page faults|Swaps' "$log" | sed 's/^[[:space:]]*/  /'
+  else
+    t0=$(date +%s.%N); "$z" t -mmt1 -bso0 -bsp0 "$f" > "$log" 2>&1; echo "7z exit status: $?"; t1=$(date +%s.%N)
+    echo "  elapsed seconds: $(awk -v a="$t0" -v b="$t1" 'BEGIN{printf "%.0f", b-a}') (install the 'time' package for memory figures)"
+  fi
+  grep -i -E 'error|cannot|killed' "$log" | head -5 | sed 's/^/  /'
+  echo "after: $(grep -E '^(MemAvailable|SwapFree)' /proc/meminfo | tr -s ' ' | tr '\n' ' ')"
+  if dmesg >/dev/null 2>&1; then
+    echo "out-of-memory kills in the kernel log: $(dmesg | grep -c -i 'out of memory')"
+  else
+    echo "out-of-memory kills in the kernel log: unknown (reading the kernel log is not permitted)"
+  fi
+  rm -f "$f" "$log"
 }
 
 probe > "$OUT" 2>&1
