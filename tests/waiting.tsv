@@ -415,3 +415,197 @@ SPEC-116 each message whose words the table gives whole has exactly those words	
 SPEC-110 with only a mouse and a touch screen in the list, the input set-up still creates no pointer	code	not built yet
 SPEC-110 against a made-up list with a mouse, a touch screen and two keyboards, the input set-up creates one keypad and nothing else	code	not built yet
 SPEC-110 SPEC-111 the CardputerZero's own keyboard is chosen before another device with letters, and the path in SIDPLAYZERO_KEYBOARD before both	code	not built yet
+SPEC-007 SPEC-144 with the fake Unpacker the complete download runs its steps in order and ends with the archive's tree under the root [parts: download-all]	code	not built yet
+SPEC-144 the staging folder is removed first if it exists, and nothing of it reaches the root [parts: download-all]	code	not built yet
+SPEC-144 in step 7 the listing in use is copied to listing.old first, and the DOCUMENTS folder is moved last [parts: download-all]	code	not built yet
+SPEC-144 a file the user put in the root, or changed, is never removed by step 7 [parts: download-all]	code	not built yet
+SPEC-144 stopping at each of steps 3 to 6 leaves the root's contents unchanged and no staging folder [parts: download-all]	code	not built yet
+SPEC-144 SPEC-147 an archive download that was cut is carried on from the cut when the row is chosen again [parts: download-all]	code	not built yet
+SPEC-144 a failure in any of steps 3 to 6 leaves the root as it was, removes the staging folder and the marker, and the notice names the step [parts: download-all]	code	not built yet
+SPEC-144 a rename made to fail in step 7 gives the notice and keeps the marker, the staging folder and listing.old; Finish the download then ends with the same tree [parts: download-all]	code	not built yet
+SPEC-144 Finish the download is offered until it has succeeded [parts: download-all]	code	not built yet
+SPEC-144 a file that cannot be removed at the end of step 7 fails the step, and finishing removes it [parts: download-all]	code	not built yet
+SPEC-144 after being cut short while moving files, the next start takes steps 7 and 8 up again and ends with the same tree as an uninterrupted run [parts: download-all]	code	not built yet
+SPEC-144 at the next start a marker naming a step from 1 to 6 means the clean-up: the staging folder and the marker go, the root stays [parts: download-all]	code	not built yet
+SPEC-144 the marker names the step the download is in, and writing step 0 removes it [parts: download-all]	code	not built yet
+SPEC-146 SPEC-144 with one MiB less than 700 MiB free no download request is made and the notice shows the two numbers; with exactly enough the download starts [parts: download-all]	code	not built yet
+SPEC-146 SPEC-144 once the archive is listed, the room it needs is its size, its entries, a tenth and 64 MiB: one MiB less and nothing is unpacked [parts: download-all]	code	not built yet
+SPEC-146 the room for unpacking is the archive's size plus its entries, each rounded up to the block size, plus a tenth, plus 64 MiB [parts: download-all]	code	not built yet
+SPEC-145 with 450 MiB of memory and swap, a 7z, 700 MiB free and a folder that can be written, the complete download is offered [parts: download-all]	code	not built yet
+SPEC-145 with 449 MiB the row is absent and the text names the number [parts: download-all]	code	not built yet
+SPEC-145 each other condition, failed alone, gives its own text [parts: download-all]	code	not built yet
+SPEC-145 with HVSC not set up, or its release not known, the row is simply absent: no text [parts: download-all]	code	not built yet
+SPEC-145 SPEC-144 the conditions are checked again when the row is chosen: with too little memory by then, nothing is downloaded [parts: download-all]	code	not built yet
+SPEC-149 an archive whose every entry is a file or folder under C64Music passes [parts: download-all]	code	not built yet
+SPEC-149 an archive is refused for any one entry that could land outside the collection, or that is a link or a special file [parts: download-all]	code	not built yet
+SPEC-149 an archive is refused with more than 200,000 entries, or with sizes that add up to more than 2 GiB [parts: download-all]	code	not built yet
+SPEC-149 the reader of 7z's listing gives each entry's path, size and kind [parts: download-all]	code	not built yet
+SPEC-149 text that is not a listing of 7z is not read as one [parts: download-all]	code	not built yet
+SPEC-141 playing an absent tune with Enter makes one request at once, for exactly that path, and the file appears at its HVSC path	code	not built yet
+SPEC-141 SPEC-132 SPEC-154 the fetched file is written under a temporary name in its folder, which is made first, then flushed and renamed; nothing is written anywhere else	code	not built yet
+SPEC-141 playing a tune again makes no request	code	not built yet
+SPEC-141 the request is url_files followed by the tune's HVSC path, as the setting is when it is made	code	not built yet
+SPEC-141 an answer with other bytes fails with MSG_FETCH_MISMATCH and leaves no file	code	not built yet
+SPEC-141 SPEC-203 a fetched file that does not pass the tune check is not stored, even with the MD5 the listing gives	code	not built yet
+SPEC-141 an answer that is no tune at all and has another MD5 fails and leaves no file	code	not built yet
+SPEC-141 SPEC-069 each way a request can fail gives its message, and leaves no file	code	not built yet
+SPEC-141 SPEC-069 a tune whose folder cannot be made fails with MSG_CANNOT_WRITE	code	not built yet
+SPEC-141 with 7 MiB free no request is made and the fetch fails with MSG_CARD_FULL; with 8 MiB it is made	code	not built yet
+SPEC-141 next pressed 50 times within five seconds makes one request, 700 ms after the last press, for the entry landed on	code	not built yet
+SPEC-141 SPEC-060 a wait that is ended by Stop, or replaced by Enter on a tune, never makes its own request	code	not built yet
+SPEC-141 the fetch-ahead is asked for when 10 s or less remain of a song that has a length, and not before	code	not built yet
+SPEC-141 a fetch-ahead that is answered in time leaves the entry present when its turn comes, and tells the player only that	code	not built yet
+SPEC-141 a fetch-ahead that failed fails the entry at the song's end with that failure, without a second request	code	not built yet
+SPEC-141 a fetch-ahead held back past the song's end is taken over: the player waits for that same request, and there is still one	code	not built yet
+SPEC-141 a request for the tune to be played cancels a fetch-ahead, or an earlier such request, that is in flight for another tune	code	not built yet
+SPEC-141 SPEC-060 Stop cancels the request that is in flight for the tune to be played	code	not built yet
+SPEC-141 SPEC-022 a tune that is to be played goes ahead of everything waiting on the fetch worker	code	not built yet
+SPEC-141 SPEC-174 a file of Fetch missing that is in flight is left to finish before the tune to be played	code	not built yet
+SPEC-141 unattended requests are limited to six in any minute; the seventh waits for the next one allowed	code	not built yet
+SPEC-141 with two-second songs and absent tunes, no more than six requests are made in any minute, and they go on being made	code	not built yet
+SPEC-141 a fetch-ahead counts as an unattended request, and one beyond the limit is not started	code	not built yet
+SPEC-141 requests that a key asks for are not limited	code	not built yet
+SPEC-143 for 60 s after an unattended fetch failed for lack of network, unattended playback makes no request	code	not built yet
+SPEC-143 with the network down and 30-second songs, the queue present, absent, absent, present costs one failed request, made when 10 s remained	code	not built yet
+SPEC-143 within the 60 s a tune chosen by a key is still requested, and its failure is told	code	not built yet
+SPEC-143 SPEC-069 the failures for lack of network, room or a place to write start the 60 s; a file that is wrong or not there does not	code	not built yet
+SPEC-143 a fetch that a key asked for and that failed does not hold unattended requests back	code	not built yet
+SPEC-154 a path the listing does not name, or that is not an HVSC path, is never requested and nothing is written for it	code	not built yet
+SPEC-148 SPEC-141 a present tune that an update found changed is requested once when it is played, and replaced [parts: releases]	code	not built yet
+SPEC-148 SPEC-141 when the fetcher cannot fetch a tune that an update found changed, it says the file on the device can be played [parts: releases]	code	not built yet
+SPEC-152 the notice's text is the specification's, word for word	code	not built yet
+SPEC-152 with the notice not accepted, asking opens the panel with that text and nothing goes on	code	not built yet
+SPEC-152 Enter accepts the notice, sets notice_accepted, and what was asked for goes on, once	code	not built yet
+SPEC-152 ESC cancels what was asked for and leaves notice_accepted off, so the next key asks again	code	not built yet
+SPEC-152 a notice accepted in an earlier run is accepted: nothing is asked	code	not built yet
+SPEC-152 SPEC-140 with the notice not accepted, Get HVSC opens the panel and makes no request; ESC makes none; Enter makes the requests	code	not built yet
+SPEC-152 SPEC-141 with the notice not accepted, Enter on an absent tune opens the panel and makes no request; ESC makes none; Enter makes the request	code	not built yet
+SPEC-152 SPEC-143 with the notice not accepted, nothing that happens by itself opens the panel or makes a request	code	not built yet
+SPEC-152 SPEC-148 with the notice not accepted, Check for a newer release opens the panel and makes no request; Enter makes it [parts: releases]	code	not built yet
+SPEC-152 SPEC-144 with the notice not accepted, Download everything opens the panel and makes no request; Enter makes it [parts: download-all]	code	not built yet
+SPEC-140 one job runs at a time: a second one does not begin until the first has ended	code	not built yet
+SPEC-147 a running job's step, bytes done and total are there for the screens to read	code	not built yet
+SPEC-147 the job mark's percentage is done as a share of the total, from 0 to 100	code	not built yet
+SPEC-147 SPEC-254 a job's kind has the screen description's word for it	code	not built yet
+SPEC-147 Stop asks the running job to stop, and the job is running until it has ended itself	code	not built yet
+SPEC-144 SPEC-147 from step 7 on the complete download cannot be stopped [parts: download-all]	code	not built yet
+SPEC-142 the listing built from the fixture database has one record for each tune, in order, with every length to the millisecond	code	not built yet
+SPEC-142 a database with LF line endings gives the same listing as one with CRLF	code	not built yet
+SPEC-142 SPEC-042 the listing is in the browser's order whatever the order of the file: folders before tunes, names without regard to case	code	not built yet
+SPEC-142 lengths are read as m:ss and as m:ss.SSS, one for each subtune, and held in milliseconds	code	not built yet
+SPEC-142 a folder of the listing gives the folders and the tunes HVSC has there, each in order	code	not built yet
+SPEC-142 a tune is found by its path and by its MD5, and of two paths with one MD5 the first in order	code	not built yet
+SPEC-142 a database with one bad line in 200 is used, and one with two in 100 is refused	code	not built yet
+SPEC-142 a database in which no tune is found is refused	code	not built yet
+SPEC-142 SPEC-154 a line whose path is not an HVSC path is skipped and counted, and never gets into the listing	code	not built yet
+SPEC-142 an MD5 line with no path before it is skipped and counted	code	not built yet
+SPEC-142 the listing is built again when the database's size or modification time differs from what it records	code	not built yet
+SPEC-142 SPEC-202 a listing file that is cut short, or is not a listing, does not open	code	not built yet
+SPEC-142 SPEC-132 SPEC-154 the listing is written through a temporary file beside it, and nothing is written anywhere else	code	not built yet
+SPEC-151 starting with HVSC set up, reading what is known of it, and playing present tunes that the listing agrees with make no request	code	not built yet
+SPEC-151 with no collection at all, nothing is requested until Get HVSC is chosen	code	not built yet
+SPEC-151 SPEC-165 what a set-up and a fetch request is under url_files, and nothing else is asked of any server	code	not built yet
+SPEC-151 SPEC-148 nothing checks for releases unless the user asks [parts: releases]	code	not built yet
+SPEC-151 SPEC-144 the complete download asks for nothing until its row is chosen, not even at start [parts: download-all]	code	not built yet
+SPEC-148 with release 84 set up and a server offering 85, the check reports 85 and changes nothing [parts: releases]	code	not built yet
+SPEC-148 a check that finds the same release, or a lower one, says that this is the newest [parts: releases]	code	not built yet
+SPEC-148 a check whose file cannot be fetched, or names no release, says that it could not check [parts: releases]	code	not built yet
+SPEC-148 after updating, the listing is release 85's, and a tune 85 moved is present at its new path with no request [parts: releases]	code	not built yet
+SPEC-148 after updating, a tune whose bytes changed is requested once when it is played [parts: releases]	code	not built yet
+SPEC-148 a changed tune that the user had replaced with other bytes is not requested [parts: releases]	code	not built yet
+SPEC-148 if the fetch of a changed tune fails, the file on the device is played [parts: releases]	code	not built yet
+SPEC-148 a tune whose path and MD5 the new listing does not have stays where it is, as a tune of the user's own [parts: releases]	code	not built yet
+SPEC-148 what an update found changed is still known after the app has started again [parts: releases]	code	not built yet
+SPEC-148 SPEC-140 an update that fails leaves the root, the tunes and the listing as they were, and the notice names the step [parts: releases]	code	not built yet
+SPEC-146 SPEC-148 an update needs 16 MiB as a set-up does: with 15 MiB free no request is made [parts: releases]	code	not built yet
+SPEC-148 SPEC-140 one job at a time: an update does not begin while another job runs [parts: releases]	code	not built yet
+SPEC-147 a download that is not cut is one request from the first byte, and the whole file is there	code	not built yet
+SPEC-147 an archive download cut at 50 % and tried again requests bytes from the cut, and ends with a file equal to the whole	code	not built yet
+SPEC-147 with a changed ETag the download starts again from the beginning: the file is the new one, whole	code	not built yet
+SPEC-147 when the server gave neither an ETag nor a Last-Modified, the next attempt requests from 0	code	not built yet
+SPEC-147 a partial file whose .meta is gone is not carried on with: the next attempt requests from 0	code	not built yet
+SPEC-147 stopping leaves nothing in the cache but the partial file and its .meta, and the next attempt carries on from there	code	not built yet
+SPEC-147 SPEC-150 an archive past its limit fails as too large	code	not built yet
+SPEC-140 with the fixture documents served, Get HVSC ends with HVSC set up, and the request log is exactly the five documents	code	not built yet
+SPEC-140 SPEC-141 after the set-up, an absent tune that is chosen is fetched and is there to be played	code	not built yet
+SPEC-140 SPEC-132 each document is moved into DOCUMENTS through a temporary file beside it, the song length file last	code	not built yet
+SPEC-140 with a download failing, the root is unchanged and the notice names step 3; the row can then be chosen again	code	not built yet
+SPEC-140 a root that does not exist is still not there after a failed set-up	code	not built yet
+SPEC-140 documents that do not pass the check fail step 4, and nothing is moved into the root	code	not built yet
+SPEC-140 a root that cannot be written fails step 5, and HVSC is not set up	code	not built yet
+SPEC-140 a move that fails half-way leaves no song length file in the root, so HVSC is not half set up	code	not built yet
+SPEC-146 with one MiB less than the 16 MiB a set-up needs, no request is made and the notice gives both figures; with exactly enough, the download starts	code	not built yet
+SPEC-146 what is about to be written is compared with the free space, and both are told in MiB	code	not built yet
+SPEC-147 SPEC-140 while a document's download is held open the job is in step 3, and no other job can begin	code	not built yet
+SPEC-147 SPEC-140 stopping a set-up leaves the root as it was, nothing in the cache, and makes no further request	code	not built yet
+SPEC-148 SPEC-140 the release is the first number after the word Release in hv_sids.txt	code	not built yet
+SPEC-140 HVSC is set up when the root's song length file gave a listing, and its release is known when hv_sids.txt names one	code	not built yet
+SPEC-140 SPEC-113 when the set-up ends on the HVSC screen with help open, the notice shows and the browser opens once help is closed	code	expect job.kind = setup
+SPEC-148 SPEC-102 a check that cannot fetch the file says so, and adds no row	code	expect rows[0].text = "Check for a newer release"
+SPEC-102 SPEC-147 key 4, Back, closes the HVSC screen and leaves the job running; coming back shows its progress again	code	expect job.kind = setup
+SPEC-147 SPEC-102 with a download held open, the HVSC screen shows the job in step 3; ESC returns to Settings, the job mark goes on reporting, and a notice tells the end	code	expect screen = hvsc
+SPEC-147 SPEC-114 Stop asks "Stop the download?" in a confirm panel: ESC lets the job go on, Enter stops it, and nothing of it is left	code	expect job.kind = setup
+SPEC-151 SPEC-200 a session that starts, browses, searches, plays present tunes and changes settings makes no request: any request would fail this run	code	expect screen = browser
+SPEC-151 a session that makes a tune a favourite, makes, plays, renames and deletes a playlist, and steps what happens when a song ends, makes no request	code	expect screen = browser
+SPEC-152 SPEC-148 with the notice not accepted, Check for a newer release opens the notice panel and makes no request; ESC makes none; Enter makes the request	code	expect rows[0].text = "Check for a newer release"
+SPEC-152 SPEC-144 with the notice not accepted, Download everything opens the notice panel and makes no request; ESC makes none; Enter starts the download	code	expect rows matches "Download everything"
+SPEC-152 SPEC-174 with the notice not accepted, Fetch missing opens the notice panel and makes no request; ESC makes none; Enter fetches the playlist's absent entries	code	expect screen = browser
+SPEC-152 SPEC-140 Get HVSC on the HVSC screen opens the notice panel and makes no request; ESC makes none; Enter makes the five	code	expect panel.id = notice-panel
+SPEC-152 SPEC-141 with the notice not accepted, Enter on an absent tune opens the notice panel and makes no request; ESC makes none; Enter makes the request and the tune plays	code	expect screen = browser
+SPEC-152 the notice panel's text is the specification's; ESC cancels and leaves the notice not accepted, also after a restart; Enter accepts it for good	code	expect panel.id = notice-panel
+SPEC-152 SPEC-143 with the notice not accepted, unattended playback that reaches an absent tune makes no request and opens no panel	code	expect screen = browser
+SPEC-145 with no 7z on the device the row is absent and the text says to install the 7zip package	code	expect screen = hvsc
+SPEC-145 SPEC-144 the conditions are checked again when the row is chosen: with the memory gone by then, nothing is downloaded and the text explains	code	expect rows matches "Download everything"
+SPEC-145 with 449 MiB of memory and swap the row is absent and the text gives the number; with 450 MiB it is offered	code	expect screen = hvsc
+SPEC-145 with 699 MiB free on the card the row is absent and the text gives both figures	code	expect screen = hvsc
+SPEC-145 when the folder that holds the collection cannot be written the row is absent and the text says so	code	expect screen = hvsc
+SPEC-154 a tune of the user's own at /My Rips/Cool Söng.sid is listed, plays, and is restored as the current entry after a restart; it is never asked of any server	code	expect screen = browser
+SPEC-154 a tune of the user's own at /My Rips/Cool Söng.sid becomes a favourite and is still in Favourites after a restart	code	expect screen = browser
+SPEC-102 SPEC-144 a complete download cut short while moving files leaves Finish the download in place of Download everything, whatever the memory; finishing ends with the whole collection	code	expect screen = hvsc
+SPEC-102 with HVSC not set up the HVSC screen's rows are Get HVSC and Rebuild the index, the first highlighted, and opening it asks nothing of the network	code	expect screen = settings
+SPEC-102 SPEC-140 with a song length file and no hv_sids.txt, HVSC is set up and its release is not known	code	expect screen = browser
+SPEC-102 SPEC-145 with HVSC set up and its release not known, Download everything is simply absent: the rows are Check for a newer release and Rebuild the index, with no explanation	code	expect screen = hvsc
+SPEC-102 with HVSC set up the HVSC screen tells its release and how many tunes HVSC lists and the device has, and Get HVSC is not offered	code	expect screen = browser
+SPEC-102 SPEC-148 a check that finds a newer release adds the row Update to #85 after it; updating makes it the release and takes the row away	code	expect screen = hvsc
+SPEC-102 with a newer release found and room to unpack, the rows are Check for a newer release, Update to #85, Download everything and Rebuild the index, in that order	code	expect panel.id = notice-panel
+SPEC-102 with HVSC set up, its release known and room to unpack, the rows are Check for a newer release, Download everything and Rebuild the index	code	expect screen = hvsc
+SPEC-140 with a download failing, the root is unchanged and the notice says that HVSC could not be set up; the row can be chosen again	code	expect screen = hvsc
+SPEC-140 SPEC-152 SPEC-048 from the empty screen, Enter and Enter on the notice set HVSC up; the browser opens on it and a chosen absent tune plays	code	expect panel.id = notice-panel
+SPEC-102 SPEC-140 from Settings, with HVSC not set up, the three keys 5, Enter, Enter end with the notice MSG_HVSC_READY	code	expect screen = settings
+SPEC-154 the state reader drops a path with a backslash	code	the app, started with current_path = '/MUSICIANS\\H\\Hubbard_Rob\\Commando.sid', ended with status 1 at: expect screen = browser (found: empty)
+SPEC-154 the state reader drops a path with a control character	code	the app, started with current_path = '/MUSICIANS/H/Hubbard_Rob/Comm\x01ando.sid', ended with status 1 at: expect screen = browser (found: empty)
+SPEC-154 the state reader drops a path with a .. part, though it leads to a tune that is there	code	the app, started with current_path = '/MUSICIANS/T/../H/Hubbard_Rob/Commando.sid', ended with status 1 at: expect screen = browser (found: empty)
+SPEC-154 the state reader drops a path with a doubled slash	code	the app, started with current_path = '/MUSICIANS//H/Hubbard_Rob/Commando.sid', ended with status 1 at: expect screen = browser (found: empty)
+SPEC-154 the state reader keeps a path that the listing names: the current entry is restored	code	the app, started with current_path = '/MUSICIANS/H/Hubbard_Rob/Commando.sid', ended with status 1 at: expect screen = browser (found: empty)
+SPEC-154 the state reader drops a path that does not end in .sid, though the file is there	code	the app, started with current_path = '/DOCUMENTS/STIL.txt', ended with status 1 at: expect screen = browser (found: empty)
+SPEC-154 the state reader drops a path that does not start with a slash	code	the app, started with current_path = 'MUSICIANS/H/Hubbard_Rob/Commando.sid', ended with status 1 at: expect screen = browser (found: empty)
+SPEC-154 the state reader drops a path that would lead out of the collection	code	the app, started with current_path = '/../C64Music/MUSICIANS/H/Hubbard_Rob/Commando.sid', ended with status 1 at: expect screen = browser (found: empty)
+SPEC-154 the state reader accepts a path with a space and an accent: the user's own tune is the current entry again	code	the app, started with current_path = '/My Rips/Cool Söng.sid', ended with status 1 at: expect screen = browser (found: empty)
+SPEC-150 SPEC-144 with url_archive pointed at the local server, the server's log is the complete list of requests the download makes: the archive of the release set up [parts: download-all]	code	not built yet
+SPEC-144 SPEC-007 with a real 7z and an archive of the fixture collection, the complete download ends with the fixture tree under the root and every tune present [parts: download-all]	code	not built yet
+SPEC-144 after a kill in step 6, with everything unpacked and nothing moved, the next start cleans up: the root is as it was, and the staging folder and the marker are gone [parts: download-all]	code	not built yet
+SPEC-144 the program killed during step 7 and started again ends with the same tree as an uninterrupted run: the old release's own files gone, the planted file still there [parts: download-all]	code	not built yet
+SPEC-144 a file the test planted in the root survives step 7, and a file only the old release had is removed [parts: download-all]	code	not built yet
+SPEC-144 stopping at each of steps 3 to 6, with the real 7z, leaves the root's contents unchanged and no staging folder [parts: download-all]	code	not built yet
+SPEC-150 an endless answer is cut at the limit and the download fails as too large	code	not built yet
+SPEC-150 SPEC-006 the real HttpClient fetches a file over HTTPS from a server whose certificate the test's authority signed	code	not built yet
+SPEC-150 SPEC-151 SPEC-140 with url_files pointed at the local server, the server's log is the complete list of requests a set-up makes: the five documents	code	not built yet
+SPEC-150 SPEC-069 the real HttpClient tells a file that is not there from a server that fails	code	not built yet
+SPEC-150 a redirect to http:// is refused: it is not followed, and nothing is written	code	not built yet
+SPEC-150 with a release build's rules http://127.0.0.1 is refused, and no request reaches the server	code	not built yet
+SPEC-150 with a release build's rules an authority named by a test is not trusted	code	not built yet
+SPEC-150 a self-signed certificate is refused, even with the test's authority trusted	code	not built yet
+SPEC-150 a test build also accepts http://127.0.0.1	code	not built yet
+SPEC-150 a server whose certificate no trusted authority signed is refused, and nothing is written	code	not built yet
+SPEC-150 the request as the server received it names the app and its version as its user agent, and carries no cookie	code	not built yet
+SPEC-142 the app's reader builds the listing of the fixture database with the real file system: 11 tunes and 13 lengths	code	not built yet
+SPEC-142 a database with two bad lines in a hundred is refused by the real program too	code	not built yet
+SPEC-007 the real Unpacker starts 7z with an argument list and no shell: a name full of a shell's characters arrives as one argument [parts: download-all]	code	not built yet
+SPEC-149 SPEC-007 the app's reader of the real 7z's listing gives every entry of a good archive, and the check passes it [parts: download-all]	code	not built yet
+SPEC-007 the real Unpacker unpacks a good archive into the folder it is given [parts: download-all]	code	not built yet
+SPEC-149 an archive with an absolute path is refused by the real 7z path, and nothing appears at that path [parts: download-all]	code	not built yet
+SPEC-149 an archive with a .. part is refused by the real 7z path, and nothing appears beside the staging folder [parts: download-all]	code	not built yet
+SPEC-149 an archive with a link that points outside is refused by the real 7z path [parts: download-all]	code	not built yet
+SPEC-149 an archive whose entries add up to more than 2 GiB is refused by the real 7z path [parts: download-all]	code	not built yet
+SPEC-149 an archive with more than 200,000 entries is refused by the real 7z path [parts: download-all]	code	not built yet
+SPEC-149 an archive with a second top-level folder is refused by the real 7z path [parts: download-all]	code	not built yet
