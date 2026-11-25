@@ -255,7 +255,7 @@ class Benchmark(unittest.TestCase):
         described = subprocess.run(["file", str(program)], text=True, stdout=subprocess.PIPE).stdout
         self.assertIn("ARM aarch64", described)
         self.assertIn("statically linked", described)
-        ran = subprocess.run(["qemu-aarch64-static", str(program)], text=True, stdout=subprocess.PIPE, timeout=1800)
+        ran = subprocess.run([deb.qemu(), str(program)], text=True, stdout=subprocess.PIPE, timeout=1800)
         factors = re.findall(r"(?m)^engine_bench_(accurate|light)_[123]sid_(44100|48000) = (\d+\.\d+)$", ran.stdout)
         self.assertEqual(len(factors), 12, ran.stdout)
         self.assertTrue(all(float(value) > 0 for _, _, value in factors))

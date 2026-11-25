@@ -95,7 +95,11 @@ class LocalServer:
                     self.end_headers()
                     self.wfile.write(body)
 
-        self.httpd = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        class Quiet(http.server.ThreadingHTTPServer):
+            def handle_error(self, request, client_address):
+                pass    # a client that hangs up, or refuses the certificate, is what some tests are about
+
+        self.httpd = Quiet(("127.0.0.1", 0), Handler)
         self.port = self.httpd.server_address[1]
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
         if self.self_signed:

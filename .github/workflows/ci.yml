@@ -109,9 +109,11 @@ jobs:
         with:
           persist-credentials: false
       - name: Install what the level needs
-        run: >
-          sudo apt-get update -q && sudo apt-get install -y -q
-          ninja-build g++-aarch64-linux-gnu qemu-user-static pkg-config
+        # The arm64 emulator is qemu-user-binfmt on newer Ubuntu releases and qemu-user-static on older ones.
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q ninja-build g++-aarch64-linux-gnu pkg-config
+          sudo apt-get install -y -q qemu-user-binfmt || sudo apt-get install -y -q qemu-user-static
       - name: Pinned downloads
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:

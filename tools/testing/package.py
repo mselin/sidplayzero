@@ -2,13 +2,15 @@
 """The host-package level (TF-070 to TF-073): the .deb for the device, and every check on it."""
 
 from . import deb
-from .common import Timer, canaries_wanted, needs
+from .common import Missing, Timer, canaries_wanted, needs
 from .unit import python_results
 
 
 def level():
-    needs("cmake", "ninja", "aarch64-linux-gnu-gcc", "aarch64-linux-gnu-g++", "dpkg-deb", "qemu-aarch64-static",
+    needs("cmake", "ninja", "aarch64-linux-gnu-gcc", "aarch64-linux-gnu-g++", "dpkg-deb",
           "python3", "git", "curl", "make", "pkg-config", "file", "strings", "docker")
+    if deb.qemu() is None:
+        raise Missing(["qemu-aarch64 (Debian and Ubuntu: qemu-user-static, or qemu-user-binfmt on newer releases)"])
     with Timer("arm64 containers"):
         deb.container_ready()
     with Timer("the package: cmake --workflow --preset cp0-cross-package"):

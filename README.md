@@ -79,7 +79,7 @@ package and says what to copy to a CardputerZero and what to run there.
 | simulator | The program drawing its screens with no display, driven by scripts | `libsdl2-dev`, `xvfb` |
 | integration | The pinned engine and reference player, the real program, a local server, a real `7z`, ThreadSanitizer | `libsdl2-dev`, `xvfb`, `7zip`, `pkg-config`, `make`, `curl`, `openssl` |
 | fuzz | The fuzz targets, 15 s each | `clang`, `libclang-rt-dev` |
-| package | The `.deb` for the device and every check on it, with an install in an emulated Debian arm64 container | `g++-aarch64-linux-gnu`, `qemu-user-static`, `docker`, `pkg-config`, `make`, `curl` |
+| package | The `.deb` for the device and every check on it, with an install in an emulated Debian arm64 container | `g++-aarch64-linux-gnu`, `qemu-user-static` (`qemu-user-binfmt` on newer releases), `docker`, `pkg-config`, `make`, `curl` |
 
 Each level has a test that is built to fail, left out of a normal run. `tools/test prove` runs each level
 with that test put in, and succeeds only if exactly that test is reported:

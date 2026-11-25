@@ -130,9 +130,10 @@ class Server(unittest.TestCase):
     def test_misbehaving_addresses(self):
         """TF-053 SPEC-150 the server can redirect to plain http, answer with a status, and never end"""
         with localserver.LocalServer(self.work / "files", self.work) as server:
-            redirect = self.curl("--cacert", str(server.authority), "-o", "/dev/null", "-w", "%{http_code} %{redirect_url}",
+            redirect = self.curl("--cacert", str(server.authority), "-o", "/dev/null", "-D", "-",
                                  server.url("/redirect-to-http/tune.sid"))
-            self.assertTrue(redirect.stdout.startswith("302 http://"), redirect.stdout)
+            self.assertRegex(redirect.stdout, r"(?im)^HTTP/\S+ 302")
+            self.assertRegex(redirect.stdout, r"(?im)^location: http://")
             status = self.curl("--cacert", str(server.authority), "-o", "/dev/null", "-w", "%{http_code}", server.url("/status/503"))
             self.assertEqual(status.stdout, "503")
             endless = self.curl("--cacert", str(server.authority), "-o", "/dev/null", "--max-filesize", "1000000",

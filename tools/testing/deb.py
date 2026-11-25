@@ -19,6 +19,11 @@ IMAGE = "public.ecr.aws/docker/library/debian:trixie-slim"
 INDEX_URL = "https://deb.debian.org/debian/dists/trixie/main/binary-arm64/Packages.xz"
 
 
+def qemu():
+    """The program that runs an arm64 program on this machine: its name differs between systems."""
+    return shutil.which("qemu-aarch64-static") or shutil.which("qemu-aarch64")
+
+
 def version():
     return json.loads((ROOT / "app-builder.json").read_text())["version"]
 
