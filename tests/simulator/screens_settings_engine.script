@@ -1,0 +1,38 @@
+# SPEC-101 SPEC-110 a setting with a fixed set of values is stepped with Left and Right, Enter steps forward, and each change is saved at once and is there after a restart
+# fixture: tunes/commando_test.sid C64Music/A_Commando.sid
+# fixture: tunes/three_subtunes.sid C64Music/B_Three.sid
+# fixture: tunes/two_sid.sid C64Music/C_Two.sid
+expect screen = browser
+key Tab
+expect screen = settings
+key Home
+expect rows[0].text = "Collection folder"
+expect rows[0].kind = setting
+expect rows[0].highlighted = true
+expect rows[1].text = Engine
+expect rows[1].kind = setting
+key Down
+expect rows[1].highlighted = true
+key Right
+expect rows[1].value matches "[Aa]ccurate"
+expect-file .config/sidplayzero/settings.ini contains "engine = accurate"
+key Right
+expect rows[1].value matches "[Ll]ight"
+expect-file .config/sidplayzero/settings.ini contains "engine = light"
+key Left
+expect-file .config/sidplayzero/settings.ini contains "engine = accurate"
+key Left
+expect rows[1].value matches "[Aa]uto"
+expect-file .config/sidplayzero/settings.ini contains "engine = auto"
+# Enter steps forward
+key Enter
+expect rows[1].value matches "[Aa]ccurate"
+expect-file .config/sidplayzero/settings.ini contains "engine = accurate"
+expect panel = null
+restart
+expect screen = browser
+key Tab
+key Home
+expect rows[1].text = Engine
+expect rows[1].value matches "[Aa]ccurate"
+expect-file .config/sidplayzero/settings.ini contains "engine = accurate"

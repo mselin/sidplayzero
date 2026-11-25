@@ -1,0 +1,57 @@
+# SPEC-092 on the empty screen each key of `always`, of `lists` and of `screens` has its effect
+expect screen = empty
+expect place = empty
+# with nothing to play, the three player keys leave the player idle
+key PlayPause
+expect player.state = idle
+key Next
+key Previous
+expect player.state = idle
+expect screen = empty
+# volume and mute, from the fake's 50 %
+key VolumeUp
+expect notice.id = MSG_VOLUME
+expect notice.text = "Volume 55 %"
+expect-log volume contains "set 55"
+key VolumeDown
+expect notice.text = "Volume 50 %"
+key Mute
+expect notice.text = Muted
+expect-log volume contains toggle_mute
+key Mute
+# help
+key Help
+expect place = help
+expect help != null
+key Help
+expect help = null
+expect place = empty
+# the keys of `lists`: the one row keeps the highlight
+key Down
+key Up
+key PageDown
+key PageUp
+key End
+key Home
+expect rows[0].text = "Get HVSC"
+expect rows[0].highlighted = true
+expect screen = empty
+# the keys of `screens`
+key Space
+expect player.state = idle
+key P
+expect screen = playing
+expect stack = ["empty","playing"]
+key Esc
+expect screen = empty
+key Tab
+expect screen = settings
+expect stack = ["empty","settings"]
+key Esc
+expect screen = empty
+# ESC closes nothing on the bottom screen; held, it leaves
+key Esc
+expect screen = empty
+expect stack = ["empty"]
+expect-requests 0
+hold Esc 1000

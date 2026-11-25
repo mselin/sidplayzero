@@ -1,0 +1,14 @@
+# SPEC-103 once HVSC is set up, the notice in About is followed by the copyright section of the root's HVSC.txt, and by no more of that file
+# fixture: collections/85/C64Music C64Music
+expect screen = browser
+key Tab
+key 8
+expect screen = about
+key 5
+expect panel.id = text
+expect panel.text matches "^SidPlayZero can fetch music from the High Voltage SID Collection \(HVSC\), a free collection kept by the HVSC crew at hvsc\.c64\.org\."
+expect panel.text contains "It does not contain HVSC's files and does not pass them on."
+expect panel.text contains "This is the copyright section of a test fixture for release 85."
+expect panel.text contains "The tunes beside it are a few bytes of code written for the tests."
+expect panel.text matches "^(?![\s\S]*Nothing more)"
+expect panel.text matches "^(?![\s\S]*A fixture, not HVSC)"

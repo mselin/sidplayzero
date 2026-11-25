@@ -1,0 +1,24 @@
+# SPEC-099 SPEC-100 in the Search field Down moves to the results, and TAB and Up do nothing
+# fixture: tunes/commando_test.sid C64Music/A_Commando.sid
+# fixture: tunes/three_subtunes.sid C64Music/B_Three.sid
+# fixture: tunes/two_sid.sid C64Music/C_Two.sid
+expect screen = browser
+key 5
+type test
+key Enter
+expect place = search-results
+expect typing = false
+key 4
+expect place = search-field
+expect typing = true
+key Tab
+expect screen = search
+expect stack = ["browser","search"]
+expect place = search-field
+key Up
+expect place = search-field
+expect fields contains ""text":"test""
+key Down
+expect place = search-results
+expect typing = false
+expect fields contains ""text":"test""

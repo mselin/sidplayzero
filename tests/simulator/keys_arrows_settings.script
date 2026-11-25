@@ -1,0 +1,49 @@
+# SPEC-093 SPEC-101 SPEC-103 in Settings, HVSC and About the keys with a label do what it says, and 6, 7, 9 and Q do nothing
+# fixture: tunes/commando_test.sid C64Music/A_Commando.sid
+# fixture: tunes/three_subtunes.sid C64Music/B_Three.sid
+# fixture: tunes/two_sid.sid C64Music/C_Two.sid
+expect screen = browser
+key Tab
+expect screen = settings
+expect actions[0] = Back
+expect actions[1] = HVSC
+expect actions[2] = ""
+expect actions[3] = ""
+expect actions[4] = About
+key 6
+expect stack = ["browser","settings"]
+expect panel = null
+key 7
+expect stack = ["browser","settings"]
+expect panel = null
+key 9
+expect stack = ["browser","settings"]
+key Q
+expect stack = ["browser","settings"]
+expect panel = null
+expect notice = null
+# 5 is "HVSC", and 4 there is "Back"
+key 5
+expect screen = hvsc
+expect actions[0] = Back
+key 4
+expect screen = settings
+expect stack = ["browser","settings"]
+# 8 is "About", whose keys are "Back" and "Notice"
+key 8
+expect screen = about
+expect actions[0] = Back
+expect actions[1] = Notice
+expect actions[2] = ""
+expect actions[3] = ""
+expect actions[4] = ""
+key 6
+key 7
+key 8
+expect stack = ["browser","settings","about"]
+expect panel = null
+key 4
+expect screen = settings
+key 4
+expect screen = browser
+expect stack = ["browser"]

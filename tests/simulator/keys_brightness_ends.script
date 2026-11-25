@@ -1,0 +1,21 @@
+# SPEC-104 the level never goes below 10 % or above 100 %, and the notice shows the level as it is
+# parts: brightness
+# fixture: tunes/commando_test.sid C64Music/A_Commando.sid
+# fixture: tunes/three_subtunes.sid C64Music/B_Three.sid
+# fixture: tunes/two_sid.sid C64Music/C_Two.sid
+expect screen = browser
+fake backlight.level 10
+key BrightnessDown
+expect notice.id = MSG_BRIGHTNESS
+expect notice.text = "Brightness 10 %"
+fake backlight.level 20
+key BrightnessDown
+expect notice.text = "Brightness 10 %"
+expect-log backlight contains "set 10"
+fake backlight.level 90
+key BrightnessUp
+expect notice.text = "Brightness 100 %"
+expect-log backlight contains "set 100"
+key BrightnessUp
+expect notice.id = MSG_BRIGHTNESS
+expect notice.text = "Brightness 100 %"

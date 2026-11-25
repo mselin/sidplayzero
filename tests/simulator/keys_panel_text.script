@@ -1,0 +1,46 @@
+# SPEC-114 the text panel opens on "Notice", Enter or ESC closes it, and the keys 4 to 8 do nothing while it is open
+# fixture: tunes/commando_test.sid C64Music/A_Commando.sid
+# fixture: tunes/three_subtunes.sid C64Music/B_Three.sid
+# fixture: tunes/two_sid.sid C64Music/C_Two.sid
+expect screen = browser
+key Tab
+key 8
+expect screen = about
+key 5
+expect panel.id = text
+expect place = text
+expect typing = false
+# Enter closes it
+key Enter
+expect panel = null
+expect screen = about
+key 5
+expect panel.id = text
+# the keys 4 to 8 do nothing while the panel is open: 4 would be "Back"
+key 4
+expect panel.id = text
+expect screen = about
+key 5
+expect panel.id = text
+key 6
+key 7
+key 8
+expect panel.id = text
+expect stack = ["browser","settings","about"]
+# Up and Down scroll, and the panel stays
+key Down
+key Down
+key Up
+expect panel.id = text
+# help can be open over the panel
+key Help
+expect place = help
+expect panel.id = text
+key Esc
+expect help = null
+expect panel.id = text
+# ESC closes the panel, and not the screen under it
+key Esc
+expect panel = null
+expect screen = about
+expect stack = ["browser","settings","about"]

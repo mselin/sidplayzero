@@ -1,0 +1,30 @@
+# SPEC-093 on the browser 9 and Q change nothing, and the key 4 does nothing while it has no label
+# fixture: tunes/commando_test.sid C64Music/A_Commando.sid
+# fixture: tunes/three_subtunes.sid C64Music/B_Three.sid
+# fixture: tunes/two_sid.sid C64Music/C_Two.sid
+expect screen = browser
+key Down
+expect position = 2/3
+expect rows[1].highlighted = true
+key 9
+expect screen = browser
+expect stack = ["browser"]
+expect position = 2/3
+expect rows[1].highlighted = true
+expect panel = null
+expect notice = null
+expect help = null
+key Q
+expect screen = browser
+expect stack = ["browser"]
+expect position = 2/3
+expect rows[1].highlighted = true
+expect panel = null
+expect notice = null
+expect help = null
+# nothing is loaded, so "Playing" has no label, and its key does nothing
+expect actions[0] = ""
+key 4
+expect screen = browser
+expect stack = ["browser"]
+expect position = 2/3

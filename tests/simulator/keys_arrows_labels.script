@@ -1,0 +1,19 @@
+# SPEC-093 SPEC-095 on the browser the keys 4 and 5 trigger the actions whose labels are above them
+# fixture: tunes/commando_test.sid C64Music/A_Commando.sid
+# fixture: tunes/three_subtunes.sid C64Music/B_Three.sid
+# fixture: tunes/two_sid.sid C64Music/C_Two.sid
+# args: --backend fake
+expect screen = browser
+key Enter
+expect screen = playing
+key Esc
+expect screen = browser
+expect actions[0] = Playing
+expect actions[1] = Search
+key 4
+expect screen = playing
+expect stack = ["browser","playing"]
+key Esc
+key 5
+expect screen = search
+expect stack = ["browser","search"]

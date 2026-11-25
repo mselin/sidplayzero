@@ -1,0 +1,49 @@
+# SPEC-092 SPEC-108 Print Screen acts on every screen, in a panel and in the text prompt
+# parts: screenshot
+# fixture: tunes/commando_test.sid C64Music/A_Commando.sid
+# fixture: tunes/three_subtunes.sid C64Music/B_Three.sid
+# fixture: tunes/two_sid.sid C64Music/C_Two.sid
+expect screen = browser
+key PrintScreen
+expect notice.id = MSG_SCREENSHOT_SAVED
+advance 3000
+expect notice = null
+key P
+expect screen = playing
+key PrintScreen
+expect notice.id = MSG_SCREENSHOT_SAVED
+advance 3000
+key Tab
+expect screen = settings
+key PrintScreen
+expect notice.id = MSG_SCREENSHOT_SAVED
+advance 3000
+key 5
+expect screen = hvsc
+key PrintScreen
+expect notice.id = MSG_SCREENSHOT_SAVED
+advance 3000
+key Esc
+key 8
+expect screen = about
+key PrintScreen
+expect notice.id = MSG_SCREENSHOT_SAVED
+advance 3000
+# in a panel
+key 5
+expect panel.id = text
+key PrintScreen
+expect notice.id = MSG_SCREENSHOT_SAVED
+expect panel.id = text
+advance 3000
+key Esc
+key Esc
+# in the text prompt
+key End
+key Enter
+expect panel.id = prompt
+key PrintScreen
+expect notice.id = MSG_SCREENSHOT_SAVED
+expect panel.id = prompt
+advance 3000
+expect notice = null

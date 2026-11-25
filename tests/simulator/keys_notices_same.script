@@ -1,0 +1,24 @@
+# SPEC-113 five volume presses within a second leave one notice, with the last level
+# fixture: tunes/commando_test.sid C64Music/A_Commando.sid
+# fixture: tunes/three_subtunes.sid C64Music/B_Three.sid
+# fixture: tunes/two_sid.sid C64Music/C_Two.sid
+expect screen = browser
+key VolumeUp
+advance 200
+key VolumeUp
+advance 200
+key VolumeUp
+advance 200
+key VolumeUp
+advance 200
+key VolumeUp
+expect notice.id = MSG_VOLUME
+expect notice.text = "Volume 75 %"
+expect-log volume contains "set 75"
+# its three seconds began at the last press
+advance 2990
+expect notice.text = "Volume 75 %"
+advance 20
+expect notice = null
+advance 3000
+expect notice = null
