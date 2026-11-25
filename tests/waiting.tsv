@@ -707,3 +707,8 @@ SPEC-002 the program needs no libsidplayfp library when it starts, and --version
 SPEC-022 a test build makes the audio callback abort if it allocates or takes a lock	code	not built yet
 SPEC-022 the program plays a fixture tune with the real engine through that guarded audio callback, and it does not abort	code	the script stopped at: expect screen = browser
 SPEC-022 the scripts of the thread rules, run in the ThreadSanitizer build, pass and give no report	code	the script stopped at: expect screen = browser
+SPEC-103 the packaged program gives the version of the package's control file and of app-builder.json, with the two libraries, as the About screen's first lines	code	does not print libsidplayfp 3.1.2
+SPEC-002 the packaged program, run under emulation, prints libsidplayfp 3.1.2 by --version, and holds nothing of the exSID backend	code	does not print libsidplayfp 3.1.2
+SPEC-011 no file under a "GPL version 2 only" notice is among the sources compiled into the package's program	code	the engine is not built in
+SPEC-011 the installed notices file names each component that is built in, each with its licence's text, beside the installed LICENSE	code	the notices file lacks
+SPEC-005 readelf -d lists neither libpulse nor libasound, and the program holds their names, to load them when it runs	code	miniaudio is not built in
