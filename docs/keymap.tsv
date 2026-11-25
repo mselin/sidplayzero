@@ -1,0 +1,116 @@
+# The key map of SidPlayZero. This file is part of the specification (SPEC-094): the app's key handling,
+# its action bar and its help are built from it, and the tests check against it.
+# Columns, separated by tabs: where, key, action, label, priority, help.
+#   where     a screen or panel (SPEC-090), or "always" (every screen and panel, also while typing) or
+#             "moving" (every screen and panel while no text is being typed)
+#   key       a key name from SPEC-111; "Char" is any character that can be typed
+#   action    what the key does there; the same word means the same thing everywhere
+#   label     the word shown above keys 4 to 8 in the action bar; "-" for other keys
+#   priority  Must, Should or Could: a row that is not built is simply absent (SPEC-115)
+#   help      the words shown for the key in the help panel
+where	key	action	label	priority	help
+always	PlayPause	play_pause	-	Must	Play or pause
+always	Previous	previous_tune	-	Must	Previous tune
+always	Next	next_tune	-	Must	Next tune
+always	Mute	volume_mute	-	Must	Mute
+always	VolumeDown	volume_down	-	Must	Volume down
+always	VolumeUp	volume_up	-	Must	Volume up
+always	BrightnessDown	brightness_down	-	Should	Screen darker
+always	BrightnessUp	brightness_up	-	Should	Screen brighter
+always	Help	toggle_help	-	Must	Show or hide help
+always	PrintScreen	screenshot	-	Should	Save a picture of the screen
+always	Esc	back	-	Must	Back, or cancel
+always	EscHold	leave	-	Must	Hold to leave SidPlayZero
+moving	Tab	open_settings	-	Must	Settings
+moving	Space	play_pause	-	Must	Play or pause
+moving	P	open_playing	-	Must	Now playing
+moving	L	use_light_engine	-	Should	Use the light engine, when offered
+moving	Up	up	-	Must	Up
+moving	Down	down	-	Must	Down
+moving	PageUp	page_up	-	Must	A screenful up
+moving	PageDown	page_down	-	Must	A screenful down
+moving	Home	first	-	Must	First entry
+moving	End	last	-	Must	Last entry
+browser	Enter	open_or_play	-	Must	Open the folder, or play the tune
+browser	Right	open_or_play	-	Must	Open the folder, or play the tune
+browser	Left	parent	-	Must	Parent folder
+browser	4	open_playing	Playing	Must	Now playing
+browser	5	open_search	Search	Must	Search
+browser	6	open_playlists	Lists	Should	Playlists
+browser	7	toggle_favourite	Fav	Should	Favourite on or off
+browser	8	add_to_playlist	Add	Should	Add to a playlist
+empty	Enter	get_hvsc	-	Must	Get HVSC
+playing	Left	previous_subtune	-	Must	Previous subtune
+playing	Right	next_subtune	-	Must	Next subtune
+playing	RightHold	skip_ahead	-	Could	Hold to skip ahead
+playing	Up	previous_tune	-	Must	Previous tune
+playing	Down	next_tune	-	Must	Next tune
+playing	Enter	play_pause	-	Must	Play or pause
+playing	Backspace	restart	-	Should	Start the subtune again
+playing	1	toggle_voice_1	-	Should	Voice 1 on or off
+playing	2	toggle_voice_2	-	Should	Voice 2 on or off
+playing	3	toggle_voice_3	-	Should	Voice 3 on or off
+playing	9	toggle_filter	-	Should	Filter on or off
+playing	0	next_chip	-	Should	Next SID chip
+playing	4	browse_here	Browse	Must	Show this tune in the browser
+playing	5	stop	Stop	Must	Stop
+playing	6	next_song_end_mode	Mode	Should	What happens when a song ends
+playing	7	toggle_favourite	Fav	Should	Favourite on or off
+playing	8	open_more_playing	More	Should	More
+more-playing	Enter	choose	-	Should	Choose
+search-field	Char	type	-	Must	Type
+search-field	Backspace	delete_before	-	Must	Delete the character before
+search-field	Delete	delete_after	-	Must	Delete the character after
+search-field	Left	cursor_left	-	Must	Cursor left
+search-field	Right	cursor_right	-	Must	Cursor right
+search-field	Home	cursor_first	-	Must	Cursor to the start
+search-field	End	cursor_last	-	Must	Cursor to the end
+search-field	Enter	run_search	-	Must	Search
+search-field	Down	to_results	-	Must	To the results
+search-results	Enter	play_result	-	Must	Play
+search-results	4	edit_query	Edit	Must	Change the search
+search-results	5	browse_here	Folder	Must	Show in the browser
+search-results	6	open_filter	Filter	Could	Limit the results
+search-results	7	toggle_favourite	Fav	Should	Favourite on or off
+search-results	8	add_to_playlist	Add	Should	Add to a playlist
+filter	Left	previous_value	-	Could	Previous value
+filter	Right	next_value	-	Could	Next value
+filter	Enter	apply	-	Could	Apply
+playlists	Enter	open_playlist	-	Should	Open
+playlists	4	back	Back	Should	Back
+playlists	5	new_playlist	New	Should	New playlist
+playlists	6	rename_playlist	Rename	Should	Rename
+playlists	7	delete_playlist	Delete	Should	Delete
+playlists	8	open_import	Import	Should	Import a playlist
+import	Enter	import_file	-	Should	Import
+playlist	Enter	play_entry	-	Should	Play from here
+playlist	4	back	Back	Should	Back
+playlist	5	move_up	Up	Should	Move up
+playlist	6	move_down	Down	Should	Move down
+playlist	7	remove_entry	Remove	Should	Remove
+playlist	8	open_more_playlist	More	Should	More
+more-playlist	Enter	choose	-	Should	Choose
+pick-playlist	Enter	choose	-	Should	Choose
+settings	Enter	change	-	Must	Change
+settings	Left	previous_value	-	Must	Previous value
+settings	Right	next_value	-	Must	Next value
+settings	4	back	Back	Must	Back
+settings	5	open_hvsc	HVSC	Must	HVSC
+settings	8	open_about	About	Must	About
+hvsc	Enter	run	-	Must	Do the highlighted thing
+hvsc	4	back	Back	Must	Back
+hvsc	5	stop_job	Stop	Must	Stop the download
+about	4	back	Back	Must	Back
+about	5	show_notice	Notice	Must	HVSC's notice
+notice-panel	Enter	accept	-	Must	I understand
+confirm	Enter	yes	-	Must	Yes
+prompt	Char	type	-	Must	Type
+prompt	Backspace	delete_before	-	Must	Delete the character before
+prompt	Delete	delete_after	-	Must	Delete the character after
+prompt	Left	cursor_left	-	Must	Cursor left
+prompt	Right	cursor_right	-	Must	Cursor right
+prompt	Home	cursor_first	-	Must	Cursor to the start
+prompt	End	cursor_last	-	Must	Cursor to the end
+prompt	Enter	accept	-	Must	OK
+text	Enter	close	-	Must	Close
+help	Enter	close	-	Must	Close

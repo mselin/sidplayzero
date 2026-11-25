@@ -5,8 +5,8 @@ computer with a 320×170 screen and a keyboard. It will browse a collection of C
 device, normally the [High Voltage SID Collection](https://hvsc.c64.org), and play the tunes with the
 [sidplayfp](https://github.com/libsidplayfp/libsidplayfp) engine, all from the device's own keys.
 
-**There is nothing to install yet.** The requirements are approved, and the specification is written and
-waiting for review and approval.
+**There is nothing to install yet.** The requirements are approved, and the specification has been through
+an independent review and is waiting for the owner's approval.
 
 ## How it is being built
 
@@ -15,8 +15,8 @@ until that gate has passed.
 
 | # | Phase | What it produces | State |
 |---|---|---|---|
-| 1 | Requirements | [`docs/requirements.md`](docs/requirements.md) | Approved 25 November 2026; one change since awaits approval |
-| 2 | Specification | [`docs/spec.md`](docs/spec.md) and an independent review of it, [`docs/spec-review.md`](docs/spec-review.md) | Draft, awaiting approval |
+| 1 | Requirements | [`docs/requirements.md`](docs/requirements.md) | Approved 25 November 2026; changes made since (see its first page) await approval |
+| 2 | Specification | [`docs/spec.md`](docs/spec.md) and an independent review of it, [`docs/spec-review.md`](docs/spec-review.md) | Reviewed, every review item closed; awaiting approval |
 | 3 | Test framework | The harness for the three levels of tests | Not started |
 | 4 | Tests | `tests/`, each test tracing to the specification | Not started |
 | 5 | Implementation | `src/` | Not started |
@@ -31,6 +31,7 @@ settle it, and carried forward from there.
 |---|---|
 | [`docs/requirements.md`](docs/requirements.md) | What the app has to do, and the facts about the device that this rests on |
 | [`docs/spec.md`](docs/spec.md) | How the app does it: decisions, structure, screens and keys, states, limits, and how each item is tested |
+| [`docs/keymap.tsv`](docs/keymap.tsv) | The key map: every key on every screen. It is part of the specification, and the app and its tests will be built from it |
 | [`docs/spec-review.md`](docs/spec-review.md) | The independent review of the specification, and what was done about each point |
 | [`docs/findings.md`](docs/findings.md) | Things that turned out differently from what an earlier document said |
 | [`tools/device-probe.sh`](tools/device-probe.sh) | Collects facts about a CardputerZero that the requirements depend on. It changes nothing on the device |
@@ -45,9 +46,10 @@ python3 tools/check_repo.py
 
 This checks that the requirements, the specification and the findings are well formed (every id used once and
 in order, every requirement with a reason, a priority and an acceptance criterion, every specification item
-with what it covers, how it is tested and where, every reference pointing at something that exists), that
-every requirement is covered by the specification, that the shell scripts parse, and that no private network
-addresses or private terms are in the repository. `python3 tools/check_repo.py --matrix` prints which items
+with what it covers, its priority, how it is tested and at which level, every reference pointing at
+something that exists), that every requirement is covered by the specification, that the key map is
+consistent, that the shell scripts parse, that nothing names the store's login or publish command, and that
+no private network addresses, home folder paths or private terms are in the repository. `python3 tools/check_repo.py --matrix` prints which items
 cover each requirement. [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs it on every pull request.
 
 The check also reads an optional `PRIVATE_TERMS` repository secret: host names and the like, one per line,

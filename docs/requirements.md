@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | **Approved by the owner on 25 November 2026**, with the priorities as proposed. Changed since then by FIND-006, following the owner's decision of the same day: the wording of those changes awaits his approval (see "Changes since approval" below). |
+| Status | **Approved by the owner on 25 November 2026**, with the priorities as proposed. Changed since then by FIND-006, following the owner's decision of the same day, and by FIND-010 to FIND-013, which the review of the specification raised. The wording of those changes awaits his approval (see "Changes since approval" below). |
 | Date | 25 November 2026 |
 | Next artifact | `docs/spec.md` (Phase 2), which traces every SPEC item to the REQ ids here |
 
@@ -11,6 +11,10 @@ Changes since approval:
 | Finding | What changed | State |
 |---|---|---|
 | FIND-006: the complete HVSC archive cannot be relied on to unpack on the device | REQ-080 reworded: setting HVSC up no longer depends on the complete archive. REQ-088 added: tunes are fetched when played. REQ-089 added: the complete download, offered only when the device can do it (this was REQ-080). REQ-004, REQ-007, REQ-082, REQ-084, REQ-086, REQ-090, REQ-091 and REQ-123 adjusted to match. CON-15 corrected with measured figures and CON-22 added | Decided by the owner ("on demand first"); wording awaits approval |
+| FIND-010: after FIND-006, "missing" in the playlist requirements meant two different things | REQ-103 reworded: an entry is missing only when its tune is neither on the device nor in HVSC's list; one that HVSC lists is fetched when played. REQ-104 reworded to match: "Fetch what is missing" fetches a playlist's tunes ahead of playing them. REQ-093 now points at REQ-088 for fetching one tune | Awaits approval |
+| FIND-011: REQ-011 pointed at the wrong requirement for stepping past the last subtune | REQ-011 now says that next and previous subtune, past either end, go to the next or previous tune (REQ-012) | Awaits approval |
+| FIND-012: REQ-051's acceptance needed HVSC's tunes on the host, where REQ-087 forbids them | REQ-051's acceptance now uses the test tunes on the host | Awaits approval |
+| FIND-013: the brightness keys do nothing while an app runs unless the app handles them | REQ-129 added: brightness keys (Should). CON-09 names those keys too | Awaits approval |
 
 ## 1. What SidPlayZero is
 
@@ -75,7 +79,7 @@ How sure each one is:
 | CON-06 | Keys arrive from one Linux input device that apps share without grabbing it. The keyboard driver works out the `sym`, `shift` and `fn` layers and the press-once, press-twice and hold behaviour of those keys, so the app receives finished key codes: `fn`+F/X/Z/C are Up/Down/Left/Right, `fn`+Q/W/E are Play-Pause/Previous/Next, `fn`+A/S/D are Mute/Volume down/Volume up, `fn`+U/I are brightness, `fn`+H is Help, `fn`+J is Print Screen, `fn`+K/N are Home/End, `fn`+L/M are Page Up/Page Down | Keyboard driver and device tree keymaps, key specification | Source |
 | CON-07 | Key conventions that apps are asked to follow: the number keys 4 to 8 sit under the screen and trigger five actions drawn along its bottom edge (icon centres at x = 49, 105, 161, 217 and 273, y = 153, 22×22 pixels); Enter confirms; a short ESC goes back; F/X/Z/C work as arrows without `fn` wherever text is not being typed; `fn`+H shows help. The stock apps also use TAB for a menu or settings | cardputer.cc key specification, M5Stack usage guide | Documented |
 | CON-08 | Sound goes through PipeWire with its PulseAudio-compatible server, run for the logged-in user. The sound card is `ES8389-Audio`. Plugging in headphones switches the output in the system; the app does not route anything. The stock Music app plays through the PulseAudio client library and changes the system volume in 5 % steps | Image builder, device tree, Music app | Source; the sink's sample rate and format are Unknown |
-| CON-09 | While an app runs, the launcher pauses its own key handling. So the volume, mute and media keys do nothing unless the app handles them | Launcher source (`keyboard_pause`) | Source, by inference; to be confirmed on the device |
+| CON-09 | While an app runs, the launcher pauses its own key handling. So the volume, mute, media and brightness keys do nothing unless the app handles them | Launcher source (`keyboard_pause`, and the one key handler that serves all of those keys) | Source, by inference; to be confirmed on the device |
 | CON-10 | The launcher locks its home screen after a period without key presses (30 s by default, setting "DarkTime"). Whether the screen dims or locks while another app is running is not known | Usage guide, launcher source | Unknown |
 | CON-11 | The supported way to build an app is the CardputerZero Template: C++17, LVGL 9.5.0, CMake 3.31 or newer, a desktop simulator built with SDL2, a cross build for arm64 against M5Stack's sysroot, and a `.deb` made by CPack. I built the template and ran its simulator without a display: synthetic key presses reached it, and its own screenshot function wrote 320×170 PNGs | Template; built and run on 25 November 2026 | Run |
 | CON-12 | The `czdev` tool now only scaffolds and publishes. Its emulator was removed, and the manifest fields `runtime`, `entry` and `lvgl_version` are no longer read. The desktop simulator is part of the template instead | AppBuilder documentation | Source |
@@ -161,12 +165,12 @@ folder.
   samples are missing or repeated.
 
 **REQ-011 Subtunes.** A tune starts at the subtune its file names as the default. Next and previous subtune
-step through the others.
+step through the others, and past the last or the first they go to the next or previous tune (REQ-012).
 - Why: HVSC's 61,157 tunes hold 87,868 songs, so many tunes have several. The file's default is the one
   meant to be heard first.
 - Priority: Must
 - Acceptance: for a test tune with 3 subtunes and default 2, play starts at 2, next gives 3, previous gives 2
-  then 1, and stepping past either end follows REQ-014.
+  then 1; next from 3 starts the next tune and previous from 1 the previous tune.
 
 **REQ-012 Next and previous tune.** Next and previous move to the neighbouring tune in whatever is being played
 from: the folder, the search results or the playlist.
@@ -341,8 +345,9 @@ provides. The default is whichever meets REQ-050 with the best sound.
 - Why: which engines exist depends on the library version (CON-13); the choice of version is made in the
   specification.
 - Priority: Must
-- Acceptance: both settings play the benchmark tunes on the host; the on-device run records the speed of each,
-  and the default is the one the specification names from those figures.
+- Acceptance: both settings play the test tunes on the host, among them tunes for two and for three SID
+  chips; the on-device run records the speed of each engine, and the default is the one the specification
+  names from those figures.
 
 **REQ-052 Sample rate.** The sample rate can be set, with at least 44,100 and 48,000 Hz. The default matches
 what the device's sound system runs at.
@@ -603,7 +608,7 @@ first build of HVSC #85 takes 5 minutes‡ or less and causes no underruns in a 
 - Acceptance: each filter removes exactly the non-matching tunes of the test collection.
 
 **REQ-093 Search HVSC online.** With a network, the user can search HVSC's site for tunes that are not on the
-device and fetch one (REQ-104).
+device and fetch one (REQ-088).
 - Why: it would let the app be useful without the full collection. It depends on a search address on HVSC's
   site that is not documented or offered for other software to use.
 - Priority: Could, and only if HVSC's maintainers agree
@@ -636,22 +641,24 @@ MD5. A tune outside the collection is referred to by its full path.
 - Acceptance: after a folder in the test collection is renamed, every entry of a playlist that pointed into it
   still plays.
 
-**REQ-103 Missing tunes do not break a playlist.** An entry whose tune is not on the device is shown as
-missing and skipped when playing. It stays in the playlist.
+**REQ-103 Missing tunes do not break a playlist.** An entry whose tune is neither on the device nor in HVSC's
+list of tunes is shown as missing and skipped when playing. It stays in the playlist. An entry whose tune
+HVSC lists, but that has not been fetched yet, is not missing: it is fetched when it is played, like any such
+tune (REQ-088).
 - Why: playlists outlive the collection they were made with: releases change, and playlists get shared.
 - Priority: Must, if playlists are in
 - Acceptance: a playlist of a present, a missing and a present tune plays the two present ones and shows the
-  middle one as missing.
+  middle one as missing, and still holds three entries afterwards.
 
-**REQ-104 Fetch single tunes.** A missing entry that has an HVSC path can be downloaded by itself and put in
-its place in the collection folder. "Fetch what is missing" does this for a whole playlist, one file at a
+**REQ-104 Fetch a playlist's tunes ahead.** "Fetch what is missing" downloads the tunes of a playlist that
+HVSC lists and that are not on the device yet, each to its place in the collection folder, one file at a
 time, up to a limit of 200‡ files per request. The app never downloads tunes the user has not asked for.
 - Why: asked for directly: playlists that download single files, or just link to files in the collection.
   HVSC's site serves single files (CON-15); fetching them in bulk would be misuse of it.
 - Priority: Should
-- Acceptance: against a local test server, fetching a missing entry makes it playable and stores it at its
-  HVSC path; a playlist with 250 missing entries fetches 200 and says so; the server's log shows only the
-  files asked for.
+- Acceptance: against a local test server, a playlist with three such entries fetches three files and stores
+  each at its HVSC path; one with 250 fetches 200 and says so; the server's log shows only the files asked
+  for.
 
 **REQ-105 Import playlists from other SID players.** The app can read playlists that other players write and
 turn them into its own:
@@ -780,6 +787,14 @@ presses, and any key brings it back.
 - Priority: Could
 - Acceptance: on-device checklist: leave a tune playing for two minutes; it plays to its end whatever the
   screen does.
+
+**REQ-129 Brightness keys.** `fn`+U and `fn`+I lower and raise the screen's brightness on every screen, when
+the system lets the app change it, and the app shows the new level briefly.
+- Why: the system leaves these keys to the app while it runs, as it does the volume keys (CON-09). Without
+  this, two keys printed on the keyboard do nothing in SidPlayZero.
+- Priority: Should
+- Acceptance: against a fake backlight, each key requests the expected change; on the reference device the
+  brightness changes, or the results file records that the app is not allowed to change it.
 
 ### 4.13 The package and how it is offered
 

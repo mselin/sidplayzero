@@ -27,7 +27,9 @@ brief the project started from, so the findings below are raised against that br
   cleared with its author (R9).
 - Status: open; it matters only when REQ-111 is taken up
 
-## Closed
+## Resolved, awaiting the owner's approval
+
+These change the wording of approved requirements, so each stays open until the owner has approved it.
 
 ### FIND-006 The complete HVSC archive cannot be relied on to unpack on the device
 - Phase: 1, requirements; confirmed with measurements in phase 2, specification
@@ -40,7 +42,54 @@ brief the project started from, so the findings below are raised against that br
   `requirements.md`, REQ-080 no longer depends on the complete archive, REQ-088 has tunes fetched when they
   are played, and REQ-089 keeps the complete download for devices that pass a memory check. CON-15 and CON-22
   hold the measurements. Carried forward into the specification in the same change.
-- Status: closed, once the owner has approved the wording of the changed requirements
+- Status: resolved in the requirements and carried into the specification; open until the owner approves the
+  wording of the changed requirements
+
+### FIND-010 "Missing" in the playlist requirements came to mean two things
+- Phase: 2, specification (raised by the independent review, item RV-018)
+- Observed: REQ-103 says an entry "whose tune is not on the device" is shown as missing and skipped, and
+  REQ-104 offers to fetch such entries. Since FIND-006, most of HVSC is not on the device and any tune HVSC
+  lists is fetched when played (REQ-088). Read literally, REQ-103 would make a playlist skip nearly
+  everything on a device that fetches on demand.
+- Concerns: REQ-103, REQ-104, REQ-093
+- Resolution: in `requirements.md`, an entry is missing only when its tune is neither on the device nor in
+  HVSC's list; one that HVSC lists is fetched when played. REQ-104 is the fetching of a playlist's tunes
+  ahead of playing them, and REQ-093 points at REQ-088 for fetching a single tune. The specification's
+  terms "absent" and "missing" (section 1, SPEC-173, SPEC-174) follow this.
+- Status: resolved in both documents; open until the owner approves the wording
+
+### FIND-011 REQ-011 named the wrong requirement for stepping past the last subtune
+- Phase: 2, specification (review item RV-018)
+- Observed: REQ-011's acceptance said that stepping past either end of a tune's subtunes "follows REQ-014".
+  REQ-014 is the setting for what happens when a song reaches its length by itself; it has values, "repeat"
+  and "stop", that make no sense for a key press.
+- Concerns: REQ-011
+- Resolution: REQ-011 now says that next and previous subtune, past the last or the first, go to the next
+  or previous tune (REQ-012). SPEC-061 says the same.
+- Status: resolved in both documents; open until the owner approves the wording
+
+### FIND-012 An acceptance test needed HVSC's tunes where they may not be
+- Phase: 2, specification (review item RV-018)
+- Observed: REQ-051's acceptance had both engine settings "play the benchmark tunes on the host". The
+  benchmark tunes are HVSC's, and REQ-087 keeps HVSC's files out of the repository, so no host test can
+  have them.
+- Concerns: REQ-051
+- Resolution: REQ-051's acceptance uses the project's own test tunes on the host, with ones for two and
+  three SID chips among them; the benchmark tunes are played on the device only (SPEC-242).
+- Status: resolved in both documents; open until the owner approves the wording
+
+### FIND-013 The brightness keys do nothing while the app runs
+- Phase: 2, specification (review item RV-043)
+- Observed: the launcher handles `fn`+U and `fn`+I, the brightness keys, in the same key handler as the
+  volume keys, and pauses that handler while an app runs (CON-09). The requirements gave the volume keys to
+  the app (REQ-042) and said nothing of the brightness keys, so they would have done nothing in SidPlayZero.
+- Concerns: CON-09; the requirements, which had no item for these keys
+- Resolution: REQ-129 added (Should): the keys change the screen's brightness when the system lets the app.
+  CON-09 names them. SPEC-104 specifies it. Whether the stock user may change the brightness is still not
+  known (R7); the device run records it.
+- Status: resolved in both documents; open until the owner approves the new requirement
+
+## Closed
 
 ### FIND-009 Debian's engine library has a known vulnerability and no fix
 - Phase: 1, requirements; settled in phase 2, specification
