@@ -7,11 +7,12 @@
 | Date | 25 November 2026 |
 | Verdict on draft 1 | Not fit to write tests from: 4 blockers, 29 major items, 11 minor items |
 | What followed | Draft 2 of `spec.md`, the new [`keymap.tsv`](keymap.tsv), four findings against the requirements (FIND-010 to FIND-013), and changes to `tools/check_repo.py`; then a second pass by the same reviewer, and draft 3 |
-| State | Third pass under way: the reviewer is checking the changes made after the second |
+| State | REVIEW-STATE |
 
 This is the Phase 2 gate's record. Each item says what the reviewer found, what was done about it, and where
 to look. An item is closed when the reviewer has checked the change and agreed. Items RV-001 to RV-044 are
-from the first pass, on draft 1; RV-045 to RV-060 from the second, on draft 2.
+from the first pass, on draft 1; RV-045 to RV-060 from the second, on draft 2; RV-061 to RV-066 from the
+third, on draft 3.
 
 ## What the reviewer found sound
 
@@ -34,7 +35,7 @@ from the first pass, on draft 1; RV-045 to RV-060 from the second, on draft 2.
   the options, the fakes folder, the full script language with `expect` over the description, file, request
   and sample assertions, and the rule for "settled". SPEC-255 makes images approval artefacts of Phase 5;
   no oracle rests on an image alone. Key names are in SPEC-111.
-- Status: the second pass found a remainder: the script language had no way to restart the app on the same home folder or to change a file during a run; "the fake backend" had no switch and no way to set what it reports; `advance` under the real clock was undefined. SPEC-253 adds `restart`, `put`, `remove`, `readonly` and `writable`, the option `--backend fake` with `fake backend EVENT`, and says what `advance` and `hold` do on the real clock. Closed at the third pass: THIRD-RV-001
+- Status: the second pass found a remainder: the script language had no way to restart the app on the same home folder or to change a file during a run; "the fake backend" had no switch and no way to set what it reports; `advance` under the real clock was undefined. SPEC-253 adds `restart`, `put`, `remove`, `readonly` and `writable`, the option `--backend fake` with `fake backend EVENT`, and says what `advance` and `hold` do on the real clock. Closed; confirmed by the reviewer at the third pass
 
 ### RV-002 "Host" meant two incompatible things
 - Found: host tests were defined as `core` against fakes in under two minutes, yet host oracles needed the
@@ -59,7 +60,7 @@ from the first pass, on draft 1; RV-045 to RV-060 from the second, on draft 2.
   fetch needed transitions it forbade.
 - Done: SPEC-060 is a full table of every event in every state, with a Waiting state before Fetching, device
   loss, and "ignored" written out where nothing happens.
-- Status: the second pass found a remainder: other items still made transitions the table lacked: out of Failed after the unattended wait, the stop after five bad files, the pause when the sound device does not come back, the L key, and the guard during the complete download. SPEC-060 has rows for each, and for the fetch-ahead; SPEC-025 and SPEC-078 gain the event `device_gone`, whose message is a notice. Closed at the third pass: THIRD-RV-004
+- Status: the second pass found a remainder: other items still made transitions the table lacked: out of Failed after the unattended wait, the stop after five bad files, the pause when the sound device does not come back, the L key, and the guard during the complete download. SPEC-060 has rows for each, and for the fetch-ahead; SPEC-025 and SPEC-078 gain the event `device_gone`, whose message is a notice. Closed; confirmed by the reviewer at the third pass
 
 ## Major
 
@@ -199,7 +200,7 @@ from the first pass, on draft 1; RV-045 to RV-060 from the second, on draft 2.
 - Done: SPEC-260: the app is always started from the launcher and talks to the script through a request
   file; a table gives the order of the sitting, with a key step for the real key codes, a check that
   rendering is repeatable on the device, and lines for REQ-127.
-- Status: the second pass found a remainder: the five timed starts came before HVSC was set up, and the complete download came after the benchmark, so a full collection was never measured. SPEC-260 reorders the sitting: set-up, then the optional complete download, then the timed starts and the benchmark. Closed at the third pass: THIRD-RV-023
+- Status: the second pass found a remainder: the five timed starts came before HVSC was set up, and the complete download came after the benchmark, so a full collection was never measured. SPEC-260 reorders the sitting: set-up, then the optional complete download, then the timed starts and the benchmark. Closed; confirmed by the reviewer at the third pass
 
 ### RV-024 The index did not notice changes
 - Found: added and removed files, and a changed root, went unnoticed; the user's own tunes had no MD5 to be
@@ -214,7 +215,7 @@ from the first pass, on draft 1; RV-045 to RV-060 from the second, on draft 2.
 - Done: SPEC-144 has a named staging folder, a marker file with resume and roll-back at start, `7z` limited
   to one thread and ended with its process group, and playing switched off meanwhile. SPEC-145 gates the
   offer on the unpacker, memory, room and a writable folder, and HVSC must be set up first.
-- Status: the second pass found a remainder: a failure, as opposed to a kill, while files are being moved had no rule; and after a kill the old listing was rebuilt before the marker was acted on. SPEC-144 keeps the old listing as `listing.old`, says what a failure in steps 7 and 8 does and how "Finish the download" completes it; SPEC-200 acts on the marker before anything reads the database. Closed at the third pass: THIRD-RV-025
+- Status: the second pass found a remainder: a failure, as opposed to a kill, while files are being moved had no rule; and after a kill the old listing was rebuilt before the marker was acted on. SPEC-144 keeps the old listing as `listing.old`, says what a failure in steps 7 and 8 does and how "Finish the download" completes it; SPEC-200 acts on the marker before anything reads the database. Closed; confirmed by the reviewer at the third pass
 
 ### RV-026 The audio references were not pinned
 - Found: the `sidplayfp` program's version, build and command lines were not given, and stored hashes of
@@ -227,7 +228,7 @@ from the first pass, on draft 1; RV-045 to RV-060 from the second, on draft 2.
 - Found: items had no priority, and Must screens' oracles required Could parts.
 - Done: every item has a Priority line; key map rows and Settings rows carry priorities; SPEC-115 says what
   a part that is left out looks like, and that the tests pass with every Should and Could part off.
-- Status: the second pass found a remainder: several Must oracles still reached into Should and Could features, and a feature with no item of its own had nothing to carry its tests. SPEC-115 is now a table of named parts, each with a build switch; the key map and the Settings table name the part of every row; oracles that reach into a part say so; SPEC-250 runs the unit and simulator levels with all parts and with none. SPEC-025 is Must. Closed at the third pass: THIRD-RV-027
+- Status: the second pass found a remainder: several Must oracles still reached into Should and Could features, and a feature with no item of its own had nothing to carry its tests. SPEC-115 is now a table of named parts, each with a build switch; the key map and the Settings table name the part of every row; oracles that reach into a part say so; SPEC-250 runs the unit and simulator levels with all parts and with none. SPEC-025 is Must. At the third pass six Must oracles still reached into a part without saying so, and the job mark sat inside the mini player's part. Each of those oracles now names its part (SPEC-060, SPEC-062, SPEC-065, SPEC-069, SPEC-143, SPEC-154), and the job mark is always built (SPEC-147). FOURTH-RV-027
 
 ### RV-028 Muted voices and the filter were shown nowhere
 - Found: the only display was the Could voice bars, whose "envelope level" the library does not report.
@@ -306,13 +307,13 @@ from the first pass, on draft 1; RV-045 to RV-060 from the second, on draft 2.
   were open.
 - Done: SPEC-170 and SPEC-172 give the name rules; SPEC-175 to SPEC-177 show each dialect as its player
   writes it; SPEC-179 names the export file. The dialect beyond REQ-105 is dropped.
-- Status: the second pass found a remainder: whether an imported playlist takes its name from the file or from its `#PLAYLIST:` line was said both ways. SPEC-175: the `#PLAYLIST:` line when there is one, else the file's name, with one rule for length, control characters and a name already taken. Closed at the third pass: THIRD-RV-038
+- Status: the second pass found a remainder: whether an imported playlist takes its name from the file or from its `#PLAYLIST:` line was said both ways. SPEC-175: the `#PLAYLIST:` line when there is one, else the file's name, with one rule for length, control characters and a name already taken. Closed; confirmed by the reviewer at the third pass
 
 ### RV-039 Shuffle could not be tested
 - Found: "the order the test lists" needs a defined generator and method.
 - Done: SPEC-065 names Fisher–Yates and xorshift64*, where the chosen entry goes, what switching does, and
   the `--seed` option.
-- Status: the second pass found a remainder: the method was named but did not give one permutation. SPEC-065 gives the generator's steps and constants, the seed 0 case, the loop, where the chosen entry goes, and the expected order for seed 1. Closed at the third pass: THIRD-RV-039
+- Status: the second pass found a remainder: the method was named but did not give one permutation. SPEC-065 gives the generator's steps and constants, the seed 0 case, the loop, where the chosen entry goes, and the expected order for seed 1. Closed; confirmed by the reviewer at the third pass
 
 ### RV-040 Build and package details
 - Found: two preset names, a clean build that both passes and fails without a maintainer, build paths in
@@ -364,41 +365,41 @@ of them introduced by the rewrite itself. None was a blocker. Draft 3 answers th
   tune chosen straight after set-up waited for the index.
 - Done: SPEC-022 has a fetch worker of its own, on which a tune that is to be played goes first; SPEC-174
   gives way to it. An oracle holds the index build and checks the request is made at once.
-- Status: THIRD-RV-045
+- Status: closed; confirmed by the reviewer at the third pass
 
 ### RV-046 (major) The path rule shut out the user's own file names
 - Found: every path had to be in HVSC's alphabet, so a tune named with a space or an accent could not be a
   favourite, a playlist entry or the remembered tune.
 - Done: SPEC-154 has two rules: the strict one for the song length database and for anywhere a file is
   written, and a wider one for paths that are only read. SPEC-170 and SPEC-041 follow.
-- Status: THIRD-RV-046
+- Status: closed; confirmed by the reviewer at the third pass
 
 ### RV-047 (major) Fetching ahead was outside the state table
 - Found: the next tune is requested while another plays; what happens at the song's end, on failure and on
   a key press was not said, and SPEC-143's test queues could not be reached unattended.
 - Done: SPEC-141 defines the fetch-ahead and each of those cases; SPEC-060 has its rows; SPEC-143's queues
   start with a present tune.
-- Status: THIRD-RV-047
+- Status: closed; confirmed by the reviewer at the third pass
 
 ### RV-048 (major) Screen shortcuts acted inside panels
 - Found: TAB and P were "moving" keys that also applied in panels, against "a panel takes the keys".
 - Done: the key map has three groups: `always`, `lists` (which work in panels) and `screens` (which do
   not). SPEC-092, SPEC-094 and SPEC-107 follow, with an oracle.
-- Status: THIRD-RV-048
+- Status: closed; confirmed by the reviewer at the third pass
 
 ### RV-049 (major) The screen description's values had no stated form
 - Found: two test writers could write `6581` and `MOS6581`; `boxes` cannot be written by hand before the
   code; a mark and the empty screen's action did not fit the fields.
 - Done: SPEC-254 has a table of value forms, the mark `fetching`, `place`, `text_w` in `boxes`, the empty
   screen's row, and an oracle that leaves `boxes` and `list.objects` to property checks.
-- Status: THIRD-RV-049
+- Status: closed; confirmed by the reviewer at the third pass
 
 ### RV-050 (major) The self-test was only outlined
 - Found: the request file's form, the step names, how plain starts differ from test starts, the user the
   script runs as, and the self-test's screens and keys were missing.
 - Done: SPEC-260 gives the two files' forms, the four steps, who runs what, and the screens; the key map
   has the places `selftest` and `key-step`; SPEC-090 and SPEC-254 name the screen.
-- Status: THIRD-RV-050
+- Status: closed; confirmed by the reviewer at the third pass
 
 ### RV-051 (major) The wrong store check was named
 - Found: the script SPEC-223 named does not check the summary's length; the store's own check is another
@@ -407,34 +408,34 @@ of them introduced by the rewrite itself. None was a blocker. Draft 3 answers th
 - Done: SPEC-223 lists the fields the store's script asks for and runs that script at its pinned commit;
   SPEC-222 gives the icon sizes of the app template (100, 100 and 80); SPEC-224 says which package checks
   are made, and that test builds carry a maintainer the store refuses.
-- Status: THIRD-RV-051
+- Status: closed; confirmed by the reviewer at the third pass
 
 ### RV-052 (major) A subtune mark of REQ-105 had been dropped
 - Found: the leading `{N}` was removed with the dialect that was beyond the requirement, but REQ-105 lists
   that mark.
 - Done: SPEC-175 reads a leading `{N}` again, with a sample line.
-- Status: THIRD-RV-052
+- Status: closed; confirmed by the reviewer at the third pass
 
 ### RV-053 (minor) Notices queued stale values
 - Found: five volume presses showed five levels over 15 s; the offer of the light engine could expire
   before it showed; two things that happen by themselves did change the screen.
 - Done: SPEC-113: a notice replaces one with the same identifier; the offer shows for its 10 s; the two
   exceptions are named and wait for panels and help to close.
-- Status: THIRD-RV-053
+- Status: closed; confirmed by the reviewer at the third pass
 
 ### RV-054 (minor) Unattended playback and the notice
 - Found: with the notice not accepted, unattended playback reaching an absent tune had no rule.
 - Done: it is a fetch that cannot be made (SPEC-069, SPEC-143, SPEC-152), with `MSG_NOTICE_NEEDED`.
-- Status: THIRD-RV-054
+- Status: closed; confirmed by the reviewer at the third pass
 
 ### RV-055 (minor) Lengths by path, against REQ-013
 - Found: a file with other contents at an HVSC path got that path's lengths.
 - Done: SPEC-063: by the file's MD5 for a present tune; by path only for an absent one.
-- Status: THIRD-RV-055
+- Status: closed; confirmed by the reviewer at the third pass
 
 ### RV-056 (minor) A simulator oracle compared with a stored reference
 - Done: SPEC-070 compares with a second run that presses nothing.
-- Status: THIRD-RV-056
+- Status: closed; confirmed by the reviewer at the third pass
 
 ### RV-057 (minor) Key map odds and ends
 - Found: help listed TAB where it does nothing; the filter's years were typed in a panel with no typing;
@@ -443,25 +444,74 @@ of them introduced by the rewrite itself. None was a blocker. Draft 3 answers th
 - Done: a `screens` key can be switched off in one place (`nothing`); SPEC-164's years are stepped;
   SPEC-100 and SPEC-254 name the places; SPEC-045 ties repeating to the action; SPEC-111 says unnamed codes
   are ignored and names F1 to F10.
-- Status: THIRD-RV-057
+- Status: closed; confirmed by the reviewer at the third pass
 
 ### RV-058 (minor) The font test did not fit one tune or the script language
 - Done: SPEC-252 has seven tunes for the characters; SPEC-010's glyph check is a C++ test of the simulator
   level (SPEC-253).
-- Status: THIRD-RV-058
+- Status: closed; confirmed by the reviewer at the third pass
 
 ### RV-059 (minor) Undefined words and missing messages
 - Found: "HVSC is set up" and "job" were never defined; some texts had no identifier.
 - Done: SPEC-140 defines both; SPEC-116 gains `MSG_CHECK_FAILED`, `MSG_IMPORT_NOTHING`,
   `MSG_ENTRY_MISSING` and `MSG_USBSID_MISSING`, and puts `MSG_NEED_ROOM` right.
-- Status: THIRD-RV-059
+- Status: closed; confirmed by the reviewer at the third pass
 
 ### RV-060 (minor) Levels that did not fit their oracles, and two lists of key map rules
 - Done: SPEC-110's and SPEC-258's oracles are integration tests; SPEC-257's is a check of the workflow file
   and one observation at the Phase 3 gate; SPEC-256 refers to SPEC-094's rules; SPEC-205 runs thirteen
   targets for 15 s‡ each inside a budget of eight minutes.
-- Status: THIRD-RV-060
+- Status: closed; confirmed by the reviewer at the third pass
 
 ## The third pass
 
-THIRD-PASS
+The reviewer read only what draft 3 changed. It recomputed the shuffle order of SPEC-065, ran the store's
+metadata script against SPEC-223's fields and its four bad copies, checked the app template's icon sizes,
+and read `tools/check_repo.py`'s key map rules against SPEC-094.
+
+Result: 22 of the 23 items it was asked about closed; RV-027 with a small remainder (above); and six new
+items from draft 3's own changes, one of them major. Its verdict: fit to write tests from, except the tests
+of the device benchmark until RV-061 is settled.
+
+### RV-061 (major) The benchmark's key script could not reach the screens it measures
+- Found: the benchmark was said to show the self-test screen in the browser's place, but its key script
+  opens folders, the detail line and Search, which that screen cannot reach.
+- Done: SPEC-260: the benchmark closes the self-test screen and plays on the app's ordinary screens, with
+  the key script pressing keys as a user would; the job mark shows its progress; the self-test screen
+  returns for "Done". SPEC-090 says the test opens and closes that screen.
+- Status: FOURTH-RV-061
+
+### RV-062 (minor) Which fetch is cancelled, and "both workers"
+- Done: SPEC-141: a played tune's request cancels a fetch-ahead or an earlier such request; a file of "Fetch
+  missing" in flight finishes first. SPEC-253's settled rule names three workers.
+- Status: FOURTH-RV-062
+
+### RV-063 (minor) Tests that wait, and a store check that reported by design
+- Found: a test waiting for Phase 5's screenshots would have kept the required check red; and the tests'
+  maintainer was one the store's script reports, against REQ-142's "report nothing".
+- Done: SPEC-256 has a waiting list: a listed test is in order while it fails as expected, and a fault when
+  it fails otherwise or passes. The tests build with a maintainer in the reserved `.test` name, which the
+  store's script accepts (SPEC-221, SPEC-224).
+- Status: FOURTH-RV-063
+
+### RV-064 (minor) "Finish the download" needed room it does not use
+- Done: SPEC-102 and SPEC-144: it is offered whenever a complete download was cut short while moving files,
+  whatever SPEC-145's conditions say.
+- Status: FOURTH-RV-064
+
+### RV-065 (minor) Screen description leftovers
+- Done: the fake backend's `position()` follows the fake clock (SPEC-025); `lines` and `text` are checked
+  by what they contain, and the browser's title at the root is `/` (SPEC-254); `save-samples` and
+  `expect-same` let SPEC-070 compare two recordings; `boxes` has `text_x` for SPEC-098.
+- Status: FOURTH-RV-065
+
+### RV-066 (minor) Six loose sentences
+- Done: SPEC-069 says which failures wait 2 s‡ and which are passed over at once, and that
+  `MSG_NOTICE_NEEDED` is a notice there; SPEC-060 says which keys take over from the unattended wait; the
+  `selftest` place has no key of its own; the 10 s hold is in the first round (SPEC-260); an imported
+  playlist's name is at most 40 characters with its number (SPEC-175).
+- Status: FOURTH-RV-066
+
+## The last check
+
+FOURTH-PASS

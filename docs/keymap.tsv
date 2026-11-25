@@ -120,6 +120,5 @@ prompt	End	cursor_last	-	-	Cursor to the end
 prompt	Enter	accept	-	-	OK
 text	Enter	close	-	-	Close
 help	Enter	close	-	-	Close
-selftest	Enter	next_step	-	-	Go on, when the screen asks
 key-step	Any	record_key	-	-	Press the key the screen asks for
 key-step	EscHold	leave	-	-	Hold to leave SidPlayZero
