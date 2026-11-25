@@ -29,6 +29,19 @@ brief the project started from, so the findings below are raised against that br
 
 ## Closed
 
+### FIND-016 The key step did not say in which order it asks for keys, or how
+- Phase: 4, tests
+- Observed: SPEC-260's oracle has a script "feed the keys asked for with one wrong". A script is a list of
+  lines and cannot read the screen to choose its next key, so it can only be written if the order of the
+  keys is known. The item said "one key at a time, from SPEC-111's table and the characters", and nothing
+  about the order, about what the screen shows for the key asked for, or about what counts as a wrong
+  answer.
+- Concerns: SPEC-260
+- Resolution: SPEC-260 has a paragraph on the key step: 67 keys in the order of SPEC-111's table and then
+  the six characters, the line "Key n/67: NAME", one answer for each key, and what `key_codes_wrong` holds.
+  The key step is seen only in the device test; nothing a user of the app sees changes.
+- Status: closed. A gap in the specification filled in; to be confirmed by the owner at the Phase 4 gate
+
 ### FIND-015 The test commands were required to be in the README
 - Phase: 4, tests
 - Observed: REQ-161's acceptance had the test commands "in the README", and SPEC-250 put the list of what

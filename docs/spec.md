@@ -2585,9 +2585,18 @@ of which every line is kept. The script changes the request before each of the t
 | `step` | What the app does at its next start |
 |---|---|
 | `none` | Runs as usual, with no step of its own; measurements are recorded as they are taken |
-| `keys` | Opens the self-test screen with the **key step**: it names one key at a time, from SPEC-111's table and the characters `/ . _ : ~ -`, and records the code that arrives. In this step every key is only recorded; a held ESC still leaves. It writes `key_codes_wrong` |
+| `keys` | Opens the self-test screen with the **key step**: it names one key at a time, from SPEC-111's table and the characters `/ . _ : ~ -`, and records the code that arrives. In this step every key is only recorded; a held ESC still leaves. It writes `key_codes_wrong` (the order and the rest are below) |
 | `engines` | Opens the self-test screen; measures the two engines (SPEC-072) and renders the built-in tune twice with each; writes the speed factors and the three `render_` keys |
 | `benchmark` | Opens the self-test screen while it fetches the benchmark set, if that is absent. Then it closes that screen and plays the set for 30 minutes on the app's ordinary screens, while the **key script** presses keys just as a user would, through the same code as real keys; then it builds the index again while a tune plays. It writes the keys of SPEC-240 that it produces, which are all but `start_ms`, `exit_ms` and `hvsc_setup_s`, and the `bench_` keys, and opens the self-test screen again |
+
+*The key step.* It asks for 67 keys, one at a time: the 61 names of SPEC-111's table, row by row from the
+top and from left to right within a row (so Esc first, the letters A to Z before the digits 0 to 9, and
+PrintScreen last), and then the six characters `/ . _ : ~ -` in that order. The screen's last line reads
+"Key n/67: NAME"; a character is named by itself. The first press of a key that SPEC-111 or SPEC-099 names
+answers the key asked for, and the step goes on to the next: the answer is right if its code is the one
+SPEC-111 gives for the name, or the one SPEC-099 gives for the character, and wrong otherwise. A code that
+neither names is ignored, as it is everywhere. After the 67th the step is done. `key_codes_wrong` holds
+the names asked for whose answers were wrong, in the order asked and with a space between them, or `none`.
 
 The self-test screen is opened over the browser, by the test and not by a key, and closed by it or by ESC.
 It shows the step and its progress as lines of text and, when a step is done, "Done. Hold ESC to leave." It

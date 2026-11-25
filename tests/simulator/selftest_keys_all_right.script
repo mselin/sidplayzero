@@ -1,0 +1,89 @@
+# SPEC-260 SPEC-241 the key step with every key right writes key_codes_wrong = none and step_done
+# fakes: fakes/selftest_keys
+# args: --backend fake --seed 1
+expect screen = selftest
+expect place = key-step
+expect text contains "Key 1/67: Esc"
+key Esc
+expect text contains "Key 2/67: Tab"
+key Tab
+expect text contains "Key 3/67: Enter"
+key Enter
+key Backspace
+key Space
+expect text contains "Key 6/67: A"
+key A
+key B
+key C
+key D
+key E
+key F
+key G
+key H
+key I
+key J
+key K
+key L
+key M
+key N
+key O
+key P
+key Q
+key R
+key S
+key T
+key U
+key V
+key W
+key X
+key Y
+key Z
+expect text contains "Key 32/67: 0"
+key 0
+key 1
+key 2
+key 3
+key 4
+key 5
+key 6
+key 7
+key 8
+key 9
+key Shift
+key Up
+key Down
+key Left
+key Right
+key Home
+key End
+key PageUp
+key PageDown
+key Delete
+key PlayPause
+key Previous
+key Next
+key Mute
+key VolumeDown
+key VolumeUp
+key BrightnessDown
+key BrightnessUp
+key Help
+key PrintScreen
+expect text contains "Key 62/67: /"
+expect place = key-step
+type /
+expect text contains "Key 63/67: ."
+type .
+expect text contains "Key 64/67: _"
+type _
+expect text contains "Key 65/67: :"
+type :
+expect text contains "Key 66/67: ~"
+type ~
+expect text contains "Key 67/67: -"
+type -
+expect text contains "Done. Hold ESC to leave."
+expect screen = selftest
+expect-file .local/state/sidplayzero/selftest.results contains "key_codes_wrong = none"
+expect-file .local/state/sidplayzero/selftest.results contains "step_done = keys"
+quit

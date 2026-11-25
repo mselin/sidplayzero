@@ -1,0 +1,15 @@
+# SPEC-260 in the key step a key is only recorded: TAB opens no Settings, and a held ESC still leaves
+# fakes: fakes/selftest_keys
+# args: --backend fake --seed 1
+expect screen = selftest
+expect place = key-step
+key Esc
+expect screen = selftest
+expect text contains "Key 2/67: Tab"
+key Tab
+expect screen = selftest
+expect text contains "Key 3/67: Enter"
+key P
+expect screen = selftest
+expect text contains "Key 4/67: Backspace"
+quit

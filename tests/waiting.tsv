@@ -15,3 +15,12 @@ SPEC-098 SPEC-010 text from a tune's header is converted from Windows-1252, ever
 SPEC-008 the MD5 function gives the test vectors of RFC 1321	code	not built yet
 SPEC-154 an HVSC path has HVSC's shape and alphabet and nothing else	code	not built yet
 SPEC-154 a collection path may have spaces and accents, and still no way out of the collection	code	not built yet
+SPEC-260 SPEC-111 the key step asks for 67 keys in turn, and a wrong answer puts the name asked for in key_codes_wrong	code	expect screen = selftest
+SPEC-260 SPEC-241 the key step with every key right writes key_codes_wrong = none and step_done	code	expect screen = selftest
+SPEC-260 in the key step a key is only recorded: TAB opens no Settings, and a held ESC still leaves	code	expect screen = selftest
+SPEC-260 the benchmark step plays the set on the ordinary screens while the key script presses keys, then ends on the self-test screen with its keys written	code	the notice MSG_SELFTEST did not show
+SPEC-260 with the request none, two starts and exits leave two start_ms and two exit_ms lines and no step's keys	code	selftest.results was not written
+SPEC-203 every bad fixture is refused with MSG_INVALID_SID by the real backend's way in, under AddressSanitizer with no report	code	not built yet
+SPEC-203 every good fixture, cut at every length from 0 to its size, goes to the real backend under AddressSanitizer with no report	code	not built yet
+SPEC-223 SPEC-255 the manifest has three to six screenshots of exactly 320×170, each one of the approved images	images	needs three to six approved images
+SPEC-223 the store's own check, at its pinned commit, reports no error on what the manifest publishes	images	screenshots is required

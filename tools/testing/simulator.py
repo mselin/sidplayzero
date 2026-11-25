@@ -89,12 +89,16 @@ def new_home():
             shutil.rmtree(home, ignore_errors=True)
 
 
-def run_script(program, script, out, extra_args=(), prefix=(), timeout=180):
-    """Runs one script in a new, empty home folder. Returns (status, output, the script's header)."""
+def run_script(program, script, out, extra_args=(), prefix=(), timeout=180, collect=(), beside=None):
+    """Runs one script in a new, empty home folder. Returns (status, output, the script's header).
+
+    `collect` names files under the home folder to read before that folder is removed: the header
+    returned then has them in "collected", as {name: bytes, or None for a file that is not there}.
+    `beside` is the folder a `# fakes:` line is relative to, for a script a test wrote somewhere else."""
     script = Path(script)
     options = header(script)
     with new_home() as home:
-        fakes = script.parent / options["fakes"] if options["fakes"] else None
+        fakes = Path(beside or script.parent) / options["fakes"] if options["fakes"] else None
         if fakes and (fakes / "home").is_dir():
             shutil.copytree(fakes / "home", home, dirs_exist_ok=True)
         for source, target in options["fixtures"]:
@@ -111,6 +115,8 @@ def run_script(program, script, out, extra_args=(), prefix=(), timeout=180):
             command += ["--fakes", fakes]
         command += options["args"] + [a for a in extra_args if a != "--window"]
         process = run(command, env={**home_environment(home), "SPZ_FIXTURES": str(FIXTURES)}, timeout=timeout)
+        options["collected"] = {name: (Path(home) / name).read_bytes() if (Path(home) / name).is_file() else None
+                                for name in collect}
     return process.returncode, process.stdout, options
 
 
