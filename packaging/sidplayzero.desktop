@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=SidPlayZero
+Exec=/usr/bin/sidplayzero
+Icon=share/images/sidplayzero.png
+Terminal=false

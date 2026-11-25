@@ -68,3 +68,8 @@ option(SIDPLAYZERO_FUZZ_CANARY "Also build the fuzz target with a deliberate fau
 if(SIDPLAYZERO_BUILD_FUZZ)
     add_subdirectory(tests/fuzz)
 endif()
+
+option(SIDPLAYZERO_PACKAGE "Add the rules that make the .deb for the device (SPEC-220)" OFF)
+if(SIDPLAYZERO_PACKAGE)
+    include(cmake/package.cmake)
+endif()
