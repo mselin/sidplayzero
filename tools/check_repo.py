@@ -339,6 +339,13 @@ def tests_in(rel, text):
                 break
     elif rel.endswith(".cpp"):
         for n, line in enumerate(text.split("\n"), 1):
+            # The test runners read a name from its one line, as it is written: a name continued in a
+            # second string literal, or with an escape in it, would be reported as a test that did not run.
+            for whole in re.finditer(r'TEST_CASE\(\s*"((?:[^"\\]|\\.)*)"\s*(\S?)', line):
+                if whole.group(2) != ")" and whole.group(2) != ",":
+                    fail(rel, n, "a test's name is one string literal, on the line of its TEST_CASE")
+                elif "\\" in whole.group(1):
+                    fail(rel, n, "a test's name has no backslash or other escape in it")
             for name in CPP_TEST.findall(line):
                 parts = TEST_PARTS.search(name)
                 found.append((n, name, parts.group(1).replace(",", " ").split() if parts else []))

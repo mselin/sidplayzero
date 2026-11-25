@@ -73,3 +73,33 @@ class Command(unittest.TestCase):
         process = run([ROOT / "tools" / "test", "everything"])
         self.assertEqual(process.returncode, 2)
         self.assertIn("tools/test unit", process.stdout)
+
+
+class PythonTests(unittest.TestCase):
+    def test_failure_inside_a_subtest(self):
+        """TF-012 a Python test that fails only inside self.subTest is reported as failed, once, and one whose parts pass as passed"""
+        import importlib
+        import tempfile
+        from pathlib import Path
+        unit = importlib.import_module("testing.unit")
+        with tempfile.TemporaryDirectory(dir=Path(__file__).resolve().parent) as folder:
+            (Path(folder) / "test_sub.py").write_text(
+                "import unittest\n\n"
+                "class T(unittest.TestCase):\n"
+                "    def test_a(self):\n"
+                '        """TF-012 parts that fail"""\n'
+                "        for n in (1, 2, 3):\n"
+                "            with self.subTest(n=n):\n"
+                "                self.assertNotEqual(n, 2)\n"
+                "                self.assertNotEqual(n, 3)\n\n"
+                "    def test_b(self):\n"
+                '        """TF-012 parts that pass"""\n'
+                "        for n in (1, 2):\n"
+                "            with self.subTest(n=n):\n"
+                "                self.assertTrue(n)\n", encoding="utf-8")
+            folder = str(Path(folder).relative_to(Path(__file__).resolve().parents[2]))
+            results = {r.name: r for r in unit.python_results(folder, False, {})}
+        self.assertEqual(sorted(results), ["TF-012 parts that fail", "TF-012 parts that pass"])
+        self.assertEqual(results["TF-012 parts that fail"].outcome, "failed")
+        self.assertIn("n=2", results["TF-012 parts that fail"].message)
+        self.assertEqual(results["TF-012 parts that pass"].outcome, "passed")

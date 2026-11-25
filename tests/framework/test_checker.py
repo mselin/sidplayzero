@@ -162,6 +162,13 @@ class Tests(CheckerCase):
         self.add("tests/simulator/x.script", "# just a script\nkey Enter\n")
         self.refused("a test names the SPEC or TF items it checks")
 
+    def test_name_in_one_literal(self):
+        """TF-011 a C++ test whose name goes on in a second string literal, or holds an escape, is reported"""
+        self.add("tests/unit/x_test.cpp", 'TEST_CASE("SPEC-203 the first half "\n          "and the second") {}\n')
+        self.refused("a test's name is one string literal")
+        self.add("tests/unit/x_test.cpp", 'TEST_CASE("SPEC-203 a \\"quoted\\" word") {}\n')
+        self.refused("a test's name has no backslash")
+
     def test_python_test_is_read(self):
         """TF-011 a Python test's name is its docstring, and its items are checked too"""
         self.add("tests/integration/test_x.py",
