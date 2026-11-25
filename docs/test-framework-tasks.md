@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | **In progress.** This is the Phase 3 artifact: the list of what the test framework is made of. The framework itself follows it |
+| Status | **Built.** This is the Phase 3 artifact: the list of what the test framework is made of, with the state of each task at its end. The gate awaits one thing: the device level's two canaries, run on the device (TF-081) |
 | Date | 25 November 2026 |
 | Derives from | [`spec.md`](spec.md), approved 25 November 2026, section 15 above all |
 | Gate | Every level runs one passing and one deliberately failing test with one command |
@@ -315,7 +315,7 @@ failed "All checks passed", and closed without merging.
 | TF-080: the device script and the checklist | Done, against stand-ins |
 | TF-081: the device's canaries | The script is done and tested against stand-ins. **The run on the device needs the owner** |
 | TF-090: the workflow | Done |
-| TF-091: shown once | PROOF-LINK |
+| TF-091: shown once | Done, on 25 November 2026: [mselin/sidplayzero#3](https://github.com/mselin/sidplayzero/pull/3) had one line of the unit level's passing canary broken. Its "Unit level" job failed, naming that test in each of the three builds, and "All checks passed" failed with it. It was closed without merging |
 
 What the levels hold at the end of this phase, on the stub:
 
