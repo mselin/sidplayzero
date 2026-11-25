@@ -1,0 +1,4 @@
+# TF-052 a script that keeps the program running for a while, for tests that send it a signal
+# expect-status: 0
+expect screen = empty
+advance 20000

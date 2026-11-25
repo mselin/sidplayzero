@@ -332,7 +332,12 @@ TEST_PARTS = re.compile(r"\[parts:\s*([^\]]+)\]")
 def tests_in(rel, text):
     """The tests of one file, as (line number, name, parts)."""
     found = []
-    if rel.endswith(".cpp"):
+    if rel.endswith("_fuzz.cpp"):
+        for n, line in enumerate(text.split("\n"), 1):
+            if line.startswith("// test: "):
+                found.append((n, line[len("// test: "):].strip(), []))
+                break
+    elif rel.endswith(".cpp"):
         for n, line in enumerate(text.split("\n"), 1):
             for name in CPP_TEST.findall(line):
                 parts = TEST_PARTS.search(name)

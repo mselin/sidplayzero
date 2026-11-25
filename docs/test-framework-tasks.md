@@ -240,7 +240,8 @@ the documents there; without it the test is reported as skipped.
 
 **TF-060 Fuzzing.** `tools/test fuzz`: each target built with libFuzzer and the two sanitizers, run for
 15 s‡ from `tests/fuzz/corpus/`, stopped by a crash, a report or an input slower than 2 s‡. Targets are a
-list that Phase 4 adds to. In this phase there is one, over the tune check's header reader.
+list that Phase 4 adds to. In this phase there is one, over the lookup of a value in a screen description
+by its path, which is the only reader `core` has before the app is built.
 - Implements: SPEC-205
 - Shown by: `tools/test prove fuzz` builds a reader with a deliberate fault and sees the command fail
 

@@ -1,0 +1,11 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-or-later
+# A stand-in for a system program (TF-054; SPEC-007, SPEC-076): put first on a test's PATH, it writes its
+# own name and each of its arguments, one to a line, to the file named by SPZ_STANDIN_LOG, and answers as
+# SPZ_STANDIN_ANSWER says (what it prints) and SPZ_STANDIN_STATUS (how it ends, 0 if not set).
+{
+    basename "$0"
+    for argument in "$@"; do echo "  $argument"; done
+} >> "${SPZ_STANDIN_LOG:-/dev/null}"
+[ -n "${SPZ_STANDIN_ANSWER:-}" ] && printf '%s\n' "$SPZ_STANDIN_ANSWER"
+exit "${SPZ_STANDIN_STATUS:-0}"

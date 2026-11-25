@@ -8,8 +8,10 @@
 #include <unistd.h>
 
 #include <chrono>
+#include <csignal>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <memory>
@@ -45,6 +47,10 @@ std::vector<std::function<bool()>>& idle_checks() {
 
 Clock* g_clock = nullptr;
 std::uint32_t tick() { return static_cast<std::uint32_t>(g_clock->now_ms()); }
+
+// SIGTERM and SIGINT leave, as they do without a script (SPEC-201): the script ends there, with status 0.
+volatile std::sig_atomic_t g_signals = 0;
+void on_signal(int) { g_signals = g_signals + 1; }
 
 // How a script stops early: with the status the program ends with, and what to say.
 struct Stop {
@@ -136,6 +142,12 @@ public:
         const platform::DisplayKind kind = options_.headless ? platform::DisplayKind::Memory : platform::default_display();
         if (!platform::open_display(kind, &why)) return fail_plain(kStatusScriptError, why);
 
+        struct sigaction action;
+        std::memset(&action, 0, sizeof action);
+        action.sa_handler = on_signal;
+        sigaction(SIGTERM, &action, nullptr);
+        sigaction(SIGINT, &action, nullptr);
+
         int status = 0;
         int line_number = 0;
         std::string line;
@@ -153,7 +165,7 @@ public:
             }
         } catch (const Stop& stop) {
             status = stop.status;
-            report(line_number, line, stop);
+            if (status != 0) report(line_number, line, stop);
         }
         stop_app();
         if (!options_.metrics.empty()) {
@@ -187,6 +199,7 @@ private:
 
     // ---- time ----------------------------------------------------------------------------------------
     void run_ui_once() {
+        if (g_signals > 0) throw Stop{0, "told to leave by a signal", "", ""};
         if (clock_ == &real_clock_) real_clock_.run_due();
         lv_timer_handler();
     }
