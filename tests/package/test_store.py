@@ -124,12 +124,14 @@ class Store(unittest.TestCase):
 
     def test_store_accepts(self):
         """SPEC-223 the store's own check, at its pinned commit, reports no error on what the manifest publishes"""
-        self.assertEqual(self.errors(manifest()), [])
+        errors = [error.split(" / ")[0] for error in self.errors(manifest())]     # the English half of each
+        self.assertEqual(len(errors), 0, "the store's check reported: " + "; ".join(errors))
 
     def test_only_the_screenshots_are_missing(self):
         """SPEC-223 with stand-in screenshots of the right size the store's check reports nothing: the manifest waits for images and for nothing else"""
         found, files = self.with_screenshots()
-        self.assertEqual(self.errors(found, files), [])
+        errors = [error.split(" / ")[0] for error in self.errors(found, files)]
+        self.assertEqual(len(errors), 0, "the store's check reported: " + "; ".join(errors))
 
     def test_store_refuses_bad_copies(self):
         """SPEC-223 copies with a summary of 81 characters, a share code of five, an icon of 100 pixels and a screenshot 321 wide each get an error"""
