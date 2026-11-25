@@ -180,14 +180,17 @@ struct ListsWorld {
     }
 
     // Every write, rename, remove and make_folders the code under test asked of the fake files that did
-    // not go into `folder`: there must be none (SPEC-154).
+    // not go into `folder`: there must be none (SPEC-154). The listing, which this world builds for
+    // itself in its cache folder, is not counted.
     std::vector<std::string> changes_outside(const std::string& folder) const {
+        const std::string cache = temp.file("cache");
         std::vector<std::string> out;
         for (const fake::Files::Operation& op : files.log) {
             const bool changes = op.what == "write" || op.what == "rename" || op.what == "remove" || op.what == "make_folders";
             if (!changes) continue;
             for (const std::string& path : {op.path, op.to}) {
-                if (!path.empty() && path.compare(0, folder.size(), folder) != 0) out.push_back(op.what + " " + path);
+                if (path.empty() || path.compare(0, cache.size(), cache) == 0) continue;
+                if (path.compare(0, folder.size(), folder) != 0) out.push_back(op.what + " " + path);
             }
         }
         return out;
