@@ -12,7 +12,7 @@
 
 TEST_CASE("TF-014 canary: the unit level runs a test, and it passes") {
     CHECK(std::string(spz::app_name()) == "SidPlayZero");
-    CHECK(1 + 1 == 2);
+    CHECK(1 + 1 == 3);   // TF-091: broken on purpose, on a branch that is never merged
 }
 
 TEST_CASE("TF-014 canary: a test built to fail [canary-fails]") {
