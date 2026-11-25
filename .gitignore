@@ -5,6 +5,12 @@
 /tools/engine-bench/build/
 /tools/engine-bench/dist/
 
+# Made by tools/make_fixtures.py when the tests run (SPEC-252)
+/tests/fixtures/
+
+# Python
+__pycache__/
+
 # Results of tools/device-probe.sh: read them, send them, do not commit them
 sidplayzero-probe-*.txt
 

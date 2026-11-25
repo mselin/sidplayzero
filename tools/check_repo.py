@@ -13,6 +13,13 @@ Checks every file tracked by git:
   * docs/keymap.tsv, which is part of the specification (SPEC-094): six columns; one row for a place
     and key; a label on the keys 4 to 8 and on no other, at most seven characters long; key names,
     places and priorities that the specification has; no place changing a key that works everywhere.
+  * docs/test-framework-tasks.md: TF ids are used once and in order, and every task says what it
+    implements and how it is shown to work.
+  * Tests (TF-011): every test names the SPEC or TF items it checks, and they exist; the parts it
+    names are parts of SPEC-115.
+  * No music (SPEC-153): no SID tune outside the generated fixtures, and no C64 ROM.
+  * The workflow (SPEC-257): every job is one that "All checks passed" waits for, and the only secret
+    used is PRIVATE_TERMS.
   * Shell scripts parse (bash -n).
   * No private network addresses (10.x, 172.16-31.x, 192.168.x, and IPv6's unique-local and link-local
     ranges).
@@ -27,13 +34,17 @@ Checks every file tracked by git:
 Standard library only. Exits non-zero if anything fails.
 """
 
+import hashlib
 import os
 import re
 import subprocess
 import sys
 from pathlib import Path
 
-ROOT = Path(subprocess.check_output(["git", "rev-parse", "--show-toplevel"], text=True).strip())
+# The tests of this checker (tests/framework/test_checker.py) point it at a copy with one fault in it.
+_OTHER_ROOT = os.environ.get("SIDPLAYZERO_CHECK_ROOT")
+ROOT = Path(_OTHER_ROOT) if _OTHER_ROOT else Path(
+    subprocess.check_output(["git", "rev-parse", "--show-toplevel"], text=True, cwd=Path(__file__).resolve().parent).strip())
 PRIORITIES = ("Must", "Should", "Could", "Won't")
 SPEC_PRIORITIES = ("Must", "Should", "Could")
 SPEC_LINES = ("Covers", "Priority", "Oracle", "Level")
@@ -76,6 +87,8 @@ def fail(path, line, message):
 
 
 def tracked_files():
+    if _OTHER_ROOT:
+        return sorted(str(p.relative_to(ROOT)) for p in ROOT.rglob("*") if p.is_file())
     out = subprocess.check_output(["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard"], cwd=ROOT, text=True)
     return [p for p in out.split("\0") if p and (ROOT / p).is_file()]
 
@@ -283,6 +296,157 @@ def check_keymap(rel="docs/keymap.tsv"):
     return rows
 
 
+def check_tasks(specs, rel="docs/test-framework-tasks.md"):
+    """The checks on the test-framework tasks. Returns the TF ids it defines."""
+    text = read_text(rel)
+    if text is None:
+        return set()  # there are no tasks before Phase 3
+    blocks = re.split(r"(?m)^(?=\*\*TF-\d+ )", text)[1:]
+    ids = [re.match(r"\*\*TF-(\d+)", b).group(1) for b in blocks]
+    for i in sorted({i for i in ids if ids.count(i) > 1}):
+        fail(rel, 0, f"TF-{i} is defined more than once")
+    if not in_order(ids):
+        fail(rel, 0, "TF ids are not in ascending order")
+    for tid, block in zip(ids, blocks):
+        body = re.split(r"(?m)^#{2,3} ", block)[0]
+        for line in ("Implements", "Shown by"):
+            if body.count(f"\n- {line}:") != 1:
+                fail(rel, 0, f"TF-{tid} needs one '{line}' line")
+    for n, line in enumerate(text.split("\n"), 1):
+        for i in re.findall(r"SPEC-(\d+)", line):
+            if i not in specs:
+                fail(rel, n, f"SPEC-{i} is not defined in spec.md")
+        for i in re.findall(r"TF-(\d+)", line):
+            if i not in ids:
+                fail(rel, n, f"TF-{i} is not defined")
+    return set(ids)
+
+
+# Where tests live, and how a test's name is found in each kind of file (TF-011).
+CPP_TEST = re.compile(r'TEST_CASE\(\s*"((?:[^"\\]|\\.)*)"')
+PY_TEST = re.compile(r'(?m)^\s+def test\w*\(self[^)]*\):\s*\n\s+(?:r?"""|\'\'\')(.*)')
+TEST_ITEM = re.compile(r"\b(SPEC|TF)-(\d{3})\b")
+TEST_PARTS = re.compile(r"\[parts:\s*([^\]]+)\]")
+
+
+def tests_in(rel, text):
+    """The tests of one file, as (line number, name, parts)."""
+    found = []
+    if rel.endswith(".cpp"):
+        for n, line in enumerate(text.split("\n"), 1):
+            for name in CPP_TEST.findall(line):
+                parts = TEST_PARTS.search(name)
+                found.append((n, name, parts.group(1).replace(",", " ").split() if parts else []))
+    elif rel.endswith(".py") and Path(rel).name.startswith("test_"):
+        for match in PY_TEST.finditer(text):
+            name = match.group(1).strip().rstrip('"').rstrip("'").strip()
+            parts = TEST_PARTS.search(name)
+            found.append((text.count("\n", 0, match.start()) + 2, name,
+                          parts.group(1).replace(",", " ").split() if parts else []))
+    elif rel.endswith((".script", ".test.sh")):
+        head, parts = [], []
+        for line in text.split("\n"):
+            if not line.startswith("#"):
+                break
+            body = line.lstrip("#").strip()
+            if body.startswith("parts:"):
+                parts += body[len("parts:"):].replace(",", " ").split()
+            else:
+                head.append(body)
+        found.append((1, " ".join(head), parts))
+    return found
+
+
+def check_tests(files, specs, tasks):
+    """Every test names items that exist and parts that exist. Returns how many tests were read."""
+    count = 0
+    for rel in files:
+        if not rel.startswith("tests/") or rel.startswith("tests/fixtures/"):
+            continue
+        text = read_text(rel)
+        if text is None:
+            continue
+        for n, name, parts in tests_in(rel, text):
+            count += 1
+            items = TEST_ITEM.findall(name)
+            if not items:
+                fail(rel, n, "a test names the SPEC or TF items it checks")
+            for kind, number in items:
+                if number not in (specs if kind == "SPEC" else tasks):
+                    fail(rel, n, f"{kind}-{number} is not defined")
+            for part in parts:
+                if part not in PARTS:
+                    fail(rel, n, f"'{part}' is not a part of SPEC-115")
+    return count
+
+
+# SPEC-153. The ROMs are known by their SHA-1, as published in MAME's source (src/mame/commodore/c64.cpp).
+C64_ROMS = {
+    "1d503e56df85a62fee696e7618dc5b4e781df1bb": "KERNAL 901227-03",
+    "0e2e4ee3f2d41f00bed72f9ab588b83e306fdb13": "KERNAL 901227-02",
+    "87cc04d61fc748b82df09856847bb5c2754a2033": "KERNAL 901227-01",
+    "79015323128650c742a3694c9429aa91f355905e": "BASIC 901226-01",
+    "adc7c31e18c7c7413d54802ef2f4193da14711aa": "character ROM 901225-01",
+}
+
+
+def music_fault(data, rel, manifest):
+    """Why these bytes may not be here: a SID tune that is not a listed fixture, or a C64 ROM. Else None."""
+    if data[:4] in (b"PSID", b"RSID") and rel not in manifest:
+        return "a SID tune that is not one of the generated fixtures (SPEC-153)"
+    if len(data) in (8192, 4096):
+        rom = C64_ROMS.get(hashlib.sha1(data).hexdigest())
+        if rom:
+            return f"a Commodore 64 ROM, {rom} (SPEC-153)"
+    return None
+
+
+def check_music(files):
+    manifest_file = ROOT / "tests" / "fixtures" / "MANIFEST"
+    manifest = set()
+    if manifest_file.is_file():
+        manifest = {"tests/fixtures/" + line.split("\t")[0] for line in manifest_file.read_text().split("\n") if line}
+    for rel in files:
+        try:
+            data = (ROOT / rel).read_bytes()
+        except OSError:
+            continue
+        why = music_fault(data, rel, manifest)
+        if why:
+            fail(rel, 0, why)
+
+
+def check_workflow(rel=".github/workflows/ci.yml"):
+    """SPEC-257: nothing runs beside the one required job, and no secret but PRIVATE_TERMS is used."""
+    text = read_text(rel)
+    if text is None:
+        return
+    jobs, in_jobs = [], False
+    for line in text.split("\n"):
+        if re.match(r"^jobs:\s*$", line):
+            in_jobs = True
+        elif in_jobs and re.match(r"^\S", line):
+            in_jobs = False
+        elif in_jobs:
+            job = re.match(r"^  ([A-Za-z0-9_-]+):\s*$", line)
+            if job:
+                jobs.append(job.group(1))
+    gate = [j for j in jobs if re.search(rf"(?m)^  {re.escape(j)}:\s*\n(?:    .*\n|\s*\n)*?    name: All checks passed\s*$", text)]
+    if len(gate) != 1:
+        fail(rel, 0, 'one job must be named "All checks passed"')
+        return
+    block = re.search(rf"(?ms)^  {re.escape(gate[0])}:\s*\n(.*?)(?=^  \S|\Z)", text).group(1)
+    needs = re.search(r"(?m)^    needs:\s*\[([^\]]*)\]", block)
+    waited = [n.strip() for n in needs.group(1).split(",")] if needs else []
+    for job in jobs:
+        if job != gate[0] and job not in waited:
+            fail(rel, 0, f'the job "{job}" is not one that "All checks passed" waits for')
+    for n, line in enumerate(text.split("\n"), 1):
+        for secret in re.findall(r"secrets\.([A-Za-z0-9_]+)", line):
+            if secret != "PRIVATE_TERMS":
+                fail(rel, n, f"the workflow uses the secret {secret}; only PRIVATE_TERMS is allowed (SPEC-257)")
+
+
 def check_shell(files):
     for rel in files:
         if rel.endswith(".sh"):
@@ -317,6 +481,11 @@ def main():
     finds = check_findings(reqs, cons)
     covered = check_spec(reqs, cons, risks, finds)
     keys = check_keymap()
+    specs = set(re.findall(r"(?m)^\*\*SPEC-(\d+) ", read_text("docs/spec.md") or ""))
+    tasks = check_tasks(specs)
+    tests = check_tests(files, specs, tasks)
+    check_music(files)
+    check_workflow()
     if "--matrix" in sys.argv[1:] and covered is not None:
         for i in sorted(reqs, key=int):
             print(f"REQ-{i}: " + ", ".join(f"SPEC-{x}" for x in covered.get(i, [])))
@@ -328,6 +497,7 @@ def main():
         return 1
     spec = "" if covered is None else f"{sum(len(v) for v in covered.values())} coverage links from the specification, "
     spec += "" if keys is None else f"{keys} key map rows, "
+    spec += f"{len(tasks)} framework tasks, {tests} tests, " if tasks else ""
     print(f"OK: {len(files)} files checked, {len(reqs)} requirements, {len(cons)} constraints, {spec}"
           f"PRIVATE_TERMS {'set (' + str(terms) + ' terms)' if terms else 'not set'}.")
     return 0

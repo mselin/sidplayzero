@@ -1650,8 +1650,9 @@ The About screen shows the same text at any time (SPEC-103).
 
 **SPEC-153 No music in the package or the repository.** A check walks the repository and the built `.deb` and
 fails on any file whose first four bytes are `PSID` or `RSID`, unless it is under `tests/fixtures/` and named
-in that folder's manifest, and on any file of exactly 8,192 or 4,096 bytes whose SHA-256 is that of a known
-C64 KERNAL, BASIC or character ROM. The fixtures are written by a generator in the repository (SPEC-252).
+in that folder's manifest, and on any file of exactly 8,192 or 4,096 bytes whose SHA-1 is that of a C64
+KERNAL (901227-01, -02 or -03), BASIC (901226-01) or character ROM (901225-01), as MAME's source publishes
+them. The fixtures are written by a generator in the repository (SPEC-252).
 - Covers: REQ-087
 - Priority: Must
 - Oracle: the check passes on the real tree and fails when a tune that is not in the manifest is added.

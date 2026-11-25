@@ -1,0 +1,8 @@
+# The waiting list (SPEC-256, TF-012): tests that are written before what they test exists.
+# Columns, separated by tabs: test, reason, words.
+#   test    the test's whole name, as the level's report prints it
+#   reason  "code" for code that Phase 5 has yet to write, "images" for images that have yet to be approved
+#   words   words that the test's failure must contain
+# A listed test is in order while it fails with those words. It is a fault when it fails otherwise, and
+# when it passes: a test that starts to pass is taken off this list in the same change.
+test	reason	words

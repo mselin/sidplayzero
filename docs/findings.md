@@ -29,6 +29,17 @@ brief the project started from, so the findings below are raised against that br
 
 ## Closed
 
+### FIND-014 The check for C64 ROMs asked for checksums nobody publishes
+- Phase: 3, test framework
+- Observed: SPEC-153 has the repository's check recognise the C64's ROMs by their SHA-256. The checksums of
+  those ROMs that can be cited without having the ROMs are CRC-32 and SHA-1, in MAME's source
+  (`src/mame/commodore/c64.cpp`). Working out SHA-256 sums would have meant downloading the ROMs, which
+  this project does not do.
+- Concerns: SPEC-153
+- Resolution: SPEC-153 names the five ROM revisions and their SHA-1 as MAME publishes them, and
+  `tools/check_repo.py` holds those. Nothing the app does changes.
+- Status: closed. A correction to a check, not to behaviour; reported to the owner at the Phase 3 gate
+
 ### FIND-006 The complete HVSC archive cannot be relied on to unpack on the device
 - Phase: 1, requirements; confirmed with measurements in phase 2, specification
 - Observed: the complete collection is one 7-Zip archive of 81 MB whose tunes are in a single solid block

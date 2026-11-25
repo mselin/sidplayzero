@@ -1,0 +1,93 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+"""One command for each level of tests (docs/spec.md, SPEC-250).
+
+  tools/test unit           core and the fakes; the framework's own tests; the repository's checks
+  tools/test integration    the real engine, the real program, a local server, a real 7z
+  tools/test fuzz           the fuzz targets
+  tools/test package        the .deb for the device, and every check on it
+  tools/test host           the four above, in that order
+  tools/test simulator      the app drawing its real screens, driven by scripts
+  tools/test device         builds the .deb and says what to run on the device
+  tools/test prove [LEVEL]  shows that a level notices a failing test: it runs the level with a test
+                            that is built to fail, and succeeds only if exactly that test is reported
+
+Each ends with status 0 only if everything it ran was in order, and names what was not. A level that
+needs a program that is not installed stops and lists what is missing.
+"""
+
+import importlib
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from testing import common  # noqa: E402
+
+LEVELS = ["unit", "integration", "fuzz", "package", "simulator", "device"]
+HOST = ["unit", "integration", "fuzz", "package"]
+PROVABLE = ["unit", "integration", "fuzz", "package", "simulator"]
+
+
+def run_level(name):
+    try:
+        module = importlib.import_module(f"testing.{name}")
+    except ModuleNotFoundError:
+        common.say(f"== {name}: this level is not built yet (docs/test-framework-tasks.md)")
+        return 2
+    try:
+        results = module.level()
+    except common.Missing as missing:
+        common.say(f"== {name}: cannot run. Not installed: {', '.join(missing.programs)}")
+        return 3
+    except RuntimeError as error:
+        common.say(f"== {name}: could not be built or started:\n{error}")
+        return 4
+    waiting, faults = common.load_waiting()
+    return common.report(name, results, waiting, faults)
+
+
+def prove(name):
+    """TF-014: the level's own command must fail, naming the failing canaries and nothing else."""
+    env = dict(os.environ, SIDPLAYZERO_CANARIES="1")
+    process = subprocess.run([sys.executable, __file__, name], env=env, text=True, stdout=subprocess.PIPE,
+                             stderr=subprocess.STDOUT, errors="replace")
+    named = [line.strip() for line in process.stdout.split("\n") if line.startswith(f"  {name}: ")]
+    canaries = [line for line in named if common.CANARY_FAILS in line]
+    others = [line for line in named if common.CANARY_FAILS not in line]
+    passed_some = " 0 passed" not in process.stdout and "passed" in process.stdout
+    ok = process.returncode == 1 and canaries and not others and passed_some
+    if ok:
+        common.say(f"== prove {name}: in order. The level passed its other tests, ended with status "
+                   f"{process.returncode}, and named {len(canaries)} test(s) built to fail:")
+        for line in canaries:
+            common.say("     " + line.split(" :: ")[0])
+        return 0
+    common.say(f"== prove {name}: NOT IN ORDER. Status {process.returncode}; failing canaries named: {len(canaries)}; "
+               f"other tests named: {len(others)}. The level's output ended:\n" + common.tail(process.stdout, 25))
+    return 1
+
+
+def main(arguments):
+    if not arguments or arguments[0] in ("-h", "--help"):
+        print(__doc__.strip())
+        return 0 if arguments else 2
+    word = arguments[0]
+    if word == "prove":
+        names = arguments[1:] or PROVABLE
+        if any(name not in PROVABLE for name in names):
+            print("tools/test prove takes: " + ", ".join(PROVABLE), file=sys.stderr)
+            return 2
+        return max(prove(name) for name in names)
+    if word == "host":
+        return max(run_level(name) for name in HOST)
+    if word in LEVELS and len(arguments) == 1:
+        return run_level(word)
+    print(__doc__.strip(), file=sys.stderr)
+    return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
