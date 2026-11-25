@@ -1,0 +1,12 @@
+# SPEC-201 leaving while a download is held open cuts it short, and the app still ends with status 0
+# fakes: fakes/keep_hold_download
+expect screen = empty
+key Enter
+expect panel.id = notice-panel
+key Enter
+expect job.kind = setup
+expect-requests 1
+hold Esc 1000
+# The set-up never finished, so nothing of it is in the collection folder (SPEC-140).
+expect-file C64Music/DOCUMENTS/Songlengths.md5 absent
+expect-file C64Music/DOCUMENTS/hv_sids.txt absent

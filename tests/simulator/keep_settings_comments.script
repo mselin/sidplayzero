@@ -1,0 +1,20 @@
+# SPEC-133 SPEC-130 a settings file with only comments and an unknown key gives no notice and no copy, and keeps both when a setting is changed
+# fixture: keep/settings_comments.ini .config/sidplayzero/settings.ini
+expect screen = empty
+expect notice = null
+expect-file .config/sidplayzero/settings.ini.bad absent
+key Tab
+expect screen = settings
+expect notice = null
+expect rows[1].text = Engine
+key Down
+expect rows[1].highlighted = true
+key Enter
+# The change is saved at once (SPEC-130), and the lines the app did not understand are still there.
+expect-file .config/sidplayzero/settings.ini contains "engine = "
+expect-file .config/sidplayzero/settings.ini contains "# a comment of the user's own"
+expect-file .config/sidplayzero/settings.ini contains "future_key = something a newer version wrote"
+expect-file .config/sidplayzero/settings.ini.bad absent
+restart
+expect notice = null
+expect-file .config/sidplayzero/settings.ini.bad absent

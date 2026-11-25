@@ -1,0 +1,21 @@
+# SPEC-207 with the backlight at 70 % and screen_off_after at 10: after 10 s of playing the backlight is off and state.ini holds 70; a key puts it back and does nothing else
+# parts: screen-off
+# fixture: collections/85/C64Music C64Music
+# fixture: keep/settings_screen_off_10.ini .config/sidplayzero/settings.ini
+# fakes: fakes/keep_backlight_70
+# args: --backend fake
+key Enter
+key Enter
+key Enter
+expect screen = playing
+expect player.state = playing
+expect player.path = /DEMOS/A-F/Clock_Demo.sid
+advance 10000
+expect-log backlight contains "set 0"
+expect-file .local/state/sidplayzero/state.ini contains "backlight_saved = 70"
+# Down is "next tune" here, and this is the folder's only tune: had the key done its work, playing would have stopped.
+key Down
+expect-log backlight contains "set 70"
+expect screen = playing
+expect player.state = playing
+expect player.path = /DEMOS/A-F/Clock_Demo.sid

@@ -1,0 +1,25 @@
+# SPEC-135 with resume_on_start on, a start plays the restored tune from its beginning; one that is absent by then is not fetched
+# parts: resume
+# fixture: collections/85/C64Music C64Music
+# fixture: keep/settings_resume_on.ini .config/sidplayzero/settings.ini
+# args: --backend fake
+#
+# No http.tsv: any request fails this run.
+key Enter
+key Enter
+key Enter
+expect player.state = playing
+expect player.path = /DEMOS/A-F/Clock_Demo.sid
+advance 1500
+expect player.elapsed_ms > 1000
+restart
+expect player.state = playing
+expect player.path = /DEMOS/A-F/Clock_Demo.sid
+expect player.elapsed_ms < 100
+# The tune's file goes; HVSC's listing still has it, so it is now an absent tune.
+remove C64Music/DEMOS/A-F/Clock_Demo.sid
+restart
+expect screen = browser
+expect player.state = idle
+expect player.path = /DEMOS/A-F/Clock_Demo.sid
+expect-requests 0

@@ -1,0 +1,13 @@
+# SPEC-133 an empty settings file gives the defaults and no notice
+# fixture: keep/settings_empty.ini .config/sidplayzero/settings.ini
+expect screen = empty
+expect notice = null
+expect-file .config/sidplayzero/settings.ini.bad absent
+key Tab
+expect screen = settings
+expect notice = null
+expect rows[0].text = "Collection folder"
+expect rows[1].text = Engine
+# The default length is on the first screenful, at its default.
+expect text contains "Default length"
+expect text contains 3:30

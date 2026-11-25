@@ -1,0 +1,25 @@
+# SPEC-131 a moved highlight is in state.ini two seconds after the first change not yet saved
+# fixture: collections/85/C64Music C64Music
+key End
+key Enter
+key End
+key Enter
+key Enter
+expect title = /MUSICIANS/T/Tester_Tom
+key Down
+expect rows[1].text = Needs_BASIC.sid
+expect rows[1].highlighted = true
+advance 1000
+key Down
+expect rows[2].text = New_Chip.sid
+expect rows[2].highlighted = true
+advance 1000
+# Two seconds after the first key of this script: the file holds the highlight as it is now.
+expect-file .local/state/sidplayzero/state.ini contains "browser_folder = /MUSICIANS/T/Tester_Tom"
+expect-file .local/state/sidplayzero/state.ini contains "browser_entry = New_Chip.sid"
+key Down
+advance 1000
+key Down
+expect position = 5/7
+advance 1000
+expect-file .local/state/sidplayzero/state.ini contains "browser_entry = Three_Chips_3SID.sid"

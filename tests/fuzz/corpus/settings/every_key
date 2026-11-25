@@ -1,0 +1,18 @@
+# SidPlayZero settings, typed in by hand
+
+collection = /media/card/My SID Music
+engine = light
+sample_rate = 44100
+when_song_ends = next_tune
+repeat_all = on
+shuffle = on
+default_length = 4:05
+sid_model = 8580
+clock = ntsc
+rom_kernal = /media/card/roms/kernal.bin
+rom_basic = /media/card/roms/basic.bin
+rom_chargen = /media/card/roms/chargen.bin
+resume_on_start = on
+screen_off_after = 120
+url_files = https://mirror.example.org/hvsc/C64Music
+url_archive = https://mirror.example.org/hvsc/HVSC_{release}-all-of-them.7z
