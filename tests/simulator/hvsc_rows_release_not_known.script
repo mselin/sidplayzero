@@ -1,0 +1,12 @@
+# SPEC-102 SPEC-140 with a song length file and no hv_sids.txt, HVSC is set up and its release is not known
+# fixture: collections/85/C64Music/DOCUMENTS/Songlengths.md5 C64Music/DOCUMENTS/Songlengths.md5
+expect screen = browser
+expect rows[2].text = MUSICIANS
+key Tab
+key 5
+expect screen = hvsc
+expect lines contains "HVSC, release not known"
+expect rows matches ^(?![\s\S]*Get HVSC)
+expect rows matches ^(?![\s\S]*Download everything)
+expect rows matches "Rebuild the index"
+expect-requests 0

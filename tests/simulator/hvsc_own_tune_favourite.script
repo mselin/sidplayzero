@@ -1,0 +1,33 @@
+# SPEC-154 a tune of the user's own at /My Rips/Cool Söng.sid becomes a favourite and is still in Favourites after a restart
+# parts: playlists
+# args: --backend fake
+# There is no http.tsv for this test, so the fake HttpClient fails the run if it is called at all.
+put fixtures/own C64Music
+advance 5000
+expect screen = browser
+key Enter
+expect title = "/My Rips"
+expect rows[0].text = "Cool Söng.sid"
+key 7
+expect notice.id = MSG_FAV_ADDED
+expect rows[0].marks contains favourite
+expect-file .local/share/sidplayzero/playlists/Favourites.m3u8 contains "/My Rips/Cool Söng.sid"
+advance 2100
+restart
+expect screen = browser
+expect title = "/My Rips"
+expect rows[0].text = "Cool Söng.sid"
+expect rows[0].marks contains favourite
+# It is in the Favourites playlist, and plays from there.
+key 6
+expect screen = playlists
+expect rows[0].text contains Favourites
+key Enter
+expect screen = playlist
+expect rows[0].marks matches ^(?![\s\S]*missing)
+expect rows[0].marks matches ^(?![\s\S]*absent)
+key Enter
+expect screen = playing
+expect player.state = playing
+expect player.path = "/My Rips/Cool Söng.sid"
+expect-requests 0

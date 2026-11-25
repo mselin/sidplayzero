@@ -1,0 +1,18 @@
+# SPEC-145 SPEC-144 the conditions are checked again when the row is chosen: with the memory gone by then, nothing is downloaded and the text explains
+# parts: download-all
+# fakes: fakes/hvsc_archive
+# fixture: collections/85/C64Music/DOCUMENTS C64Music/DOCUMENTS
+key Tab
+key 5
+expect rows matches "Download everything"
+fake memory.available_mib 100
+# The row before the last one, "Rebuild the index".
+key End
+key Up
+key Enter
+expect panel.id = notice-panel
+key Enter
+expect-requests 0
+expect job = null
+expect-file .sidplayzero-staging absent
+expect text contains "(300 MiB free, 450 MiB needed)"

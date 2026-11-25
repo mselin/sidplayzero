@@ -1,0 +1,20 @@
+# SPEC-145 with 449 MiB of memory and swap the row is absent and the text gives the number; with 450 MiB it is offered
+# parts: download-all
+# fakes: fakes/hvsc_archive
+# fixture: collections/85/C64Music/DOCUMENTS C64Music/DOCUMENTS
+fake memory.available_mib 249
+key Tab
+key 5
+expect screen = hvsc
+expect rows matches ^(?![\s\S]*Download everything)
+expect text contains "This device does not have enough free memory to unpack HVSC (449 MiB free, 450 MiB needed)."
+expect text contains "Tunes are fetched as you play them. To have everything, copy a C64Music folder into"
+expect text contains /tmp/sidplayzero-test/home/C64Music
+expect-requests 0
+# The conditions are looked at when the screen opens: with one MiB more, 700 MiB free and a 7z, it is offered.
+key 4
+fake memory.available_mib 250
+key 5
+expect rows matches "Download everything"
+expect text matches ^(?![\s\S]*enough free memory)
+expect text matches ^(?![\s\S]*Tunes are fetched as you play them)

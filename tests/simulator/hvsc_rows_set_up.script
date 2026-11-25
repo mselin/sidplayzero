@@ -1,0 +1,20 @@
+# SPEC-102 with HVSC set up the HVSC screen tells its release and how many tunes HVSC lists and the device has, and Get HVSC is not offered
+# fixture: collections/85/C64Music/DOCUMENTS C64Music/DOCUMENTS
+# fixture: collections/85/C64Music/MUSICIANS/H C64Music/MUSICIANS/H
+expect screen = browser
+key Tab
+key 5
+expect screen = hvsc
+expect stack = ["browser","settings","hvsc"]
+expect lines contains "HVSC #85"
+# HVSC lists eleven tunes, and two of them are on the device.
+expect lines matches "\b11\b"
+expect lines matches "\b2\b"
+expect rows matches ^(?![\s\S]*Get HVSC)
+expect rows matches "Rebuild the index"
+expect rows[0].highlighted = true
+expect actions[0] = Back
+expect job = null
+expect-requests 0
+key Esc
+expect screen = settings

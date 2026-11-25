@@ -1,0 +1,12 @@
+# SPEC-102 SPEC-145 with HVSC set up and its release not known, Download everything is simply absent: the rows are Check for a newer release and Rebuild the index, with no explanation
+# parts: releases download-all
+# fakes: fakes/hvsc_archive
+# fixture: collections/85/C64Music/DOCUMENTS/Songlengths.md5 C64Music/DOCUMENTS/Songlengths.md5
+key Tab
+key 5
+expect screen = hvsc
+expect lines contains "HVSC, release not known"
+expect rows[0].text = "Check for a newer release"
+expect rows[1].text = "Rebuild the index"
+expect rows matches ^\[\{[^{}]*\},\{[^{}]*\}\]$
+expect text matches ^(?![\s\S]*Tunes are fetched as you play them)

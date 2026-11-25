@@ -1,0 +1,32 @@
+# SPEC-152 SPEC-143 with the notice not accepted, unattended playback that reaches an absent tune makes no request and opens no panel
+# fakes: fakes/hvsc_server
+# fixture: collections/85/C64Music/DOCUMENTS C64Music/DOCUMENTS
+# fixture: collections/85/C64Music/MUSICIANS/T/Tester_Tom/Changed.sid C64Music/MUSICIANS/T/Tester_Tom/Changed.sid
+# args: --backend fake
+expect screen = browser
+key Down
+key Down
+key Enter
+key Down
+key Enter
+key Enter
+expect title = /MUSICIANS/T/Tester_Tom
+expect rows[0].text = Changed.sid
+expect rows[0].marks = []
+expect rows[1].marks contains absent
+key Enter
+expect player.state = playing
+expect player.path = /MUSICIANS/T/Tester_Tom/Changed.sid
+# The song is two seconds long, so the entry after it would be fetched ahead from its start.
+advance 1000
+expect-requests 0
+expect panel = null
+fake backend song_ended
+# Every entry after it is absent, and none may be requested: playback ends.
+expect-requests 0
+expect panel = null
+expect player.state = idle
+expect notice.id matches "^(MSG_NOTICE_NEEDED|MSG_REST_ABSENT)$"
+advance 20000
+expect-requests 0
+expect panel = null

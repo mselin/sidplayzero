@@ -1,0 +1,40 @@
+# SPEC-102 SPEC-148 a check that finds a newer release adds the row Update to #85 after it; updating makes it the release and takes the row away
+# parts: releases
+# fakes: fakes/hvsc_accepted
+# fixture: collections/84/C64Music C64Music
+key Tab
+key 5
+expect screen = hvsc
+expect lines contains "HVSC #84"
+expect rows[0].text = "Check for a newer release"
+expect rows matches ^(?![\s\S]*Update to)
+key Enter
+expect-requests 1
+expect-request 1 https://hvsc.c64.org/download/C64Music/DOCUMENTS/hv_sids.txt
+expect notice.id = MSG_HVSC_NEWER
+expect notice.text contains 85
+expect rows[0].text = "Check for a newer release"
+expect rows[1].text = "Update to #85"
+expect lines contains "HVSC #84"
+advance 4000
+key Down
+expect rows[1].highlighted = true
+key Enter
+expect notice.id = MSG_HVSC_READY
+expect notice.text contains 85
+expect-requests 6
+expect-file C64Music/DOCUMENTS/hv_sids.txt contains "Release 85"
+# The tune release 85 renamed was on the device: it is at its new name, and was not asked for.
+expect-file C64Music/MUSICIANS/T/Tester_Tom/Renamed.sid exists
+expect-file C64Music/MUSICIANS/T/Tester_Tom/Old_Name.sid absent
+key Tab
+key 5
+expect lines contains "HVSC #85"
+expect rows[0].text = "Check for a newer release"
+expect rows matches ^(?![\s\S]*Update to)
+# Checking again, when the notices of the update have had their time: this is the newest.
+advance 10000
+key Enter
+expect-requests 7
+expect notice.id = MSG_HVSC_NEWEST
+expect rows matches ^(?![\s\S]*Update to)

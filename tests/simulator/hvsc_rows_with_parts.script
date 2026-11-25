@@ -1,0 +1,15 @@
+# SPEC-102 with HVSC set up, its release known and room to unpack, the rows are Check for a newer release, Download everything and Rebuild the index
+# parts: releases download-all
+# fakes: fakes/hvsc_archive
+# fixture: collections/85/C64Music/DOCUMENTS C64Music/DOCUMENTS
+key Tab
+key 5
+expect screen = hvsc
+expect lines contains "HVSC #85"
+expect rows[0].text = "Check for a newer release"
+expect rows[0].highlighted = true
+expect rows[1].text = "Download everything"
+expect rows[2].text = "Rebuild the index"
+expect rows matches ^\[\{[^{}]*\},\{[^{}]*\},\{[^{}]*\}\]$
+expect text matches ^(?![\s\S]*Tunes are fetched as you play them)
+expect-requests 0
