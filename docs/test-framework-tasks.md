@@ -304,4 +304,26 @@ failed "All checks passed", and closed without merging.
 
 | Task | State |
 |---|---|
-| TF-001 to TF-091 | Not started |
+| TF-001 to TF-005: the build and the stub | Done |
+| TF-010 to TF-014: `tools/test`, the waiting list, parts, the proof | Done |
+| TF-020 to TF-023: the unit level | Done |
+| TF-030, TF-031: fixtures; no music | Done. The playlists, import files, archives, limit files and the large tree come with Phase 4's tests, as TF-030 says |
+| TF-040 to TF-046: the simulator level | Done |
+| TF-050 to TF-056: the integration level | Done |
+| TF-060: fuzzing | Done |
+| TF-070 to TF-073: the package level | Done |
+| TF-080: the device script and the checklist | Done, against stand-ins |
+| TF-081: the device's canaries | The script is done and tested against stand-ins. **The run on the device needs the owner** |
+| TF-090: the workflow | Done |
+| TF-091: shown once | PROOF-LINK |
+
+What the levels hold at the end of this phase, on the stub:
+
+| Level | Command | Tests | Built to fail, and caught by `tools/test prove` |
+|---|---|---|---|
+| host-unit | `tools/test unit` | 86, in three builds | A failing check in each build; a read past an array's end, in the sanitizer build |
+| simulator | `tools/test simulator` | 32, in two builds | A script that expects a wrong title; a failing C++ test |
+| host-integration | `tools/test integration` | 29 | Two different subtunes expected to sound the same; a data race |
+| (fuzzing) | `tools/test fuzz` | 1 target | A reader that reads past its input |
+| host-package | `tools/test package` | 25 | A file expected in the package that is not there |
+| device | `tools/device-run.sh --prove` | 2 checks | A version the stub does not have |

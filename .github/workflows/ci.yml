@@ -1,5 +1,9 @@
 name: CI
 
+# The checks on every pull request (docs/spec.md, SPEC-257): each level of tests that can run without the
+# device, and for each the proof that it notices a failing test (docs/test-framework-tasks.md, TF-014).
+# The device level is never run here.
+
 on:
   pull_request:
   push:
@@ -22,19 +26,110 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Check the documents, the scripts and private details
+      - name: Check the documents, the tests' names and private details
         env:
           PRIVATE_TERMS: ${{ secrets.PRIVATE_TERMS }}
         run: python3 tools/check_repo.py
       - name: Lint the shell scripts
-        run: git ls-files -z '*.sh' | xargs -0 --no-run-if-empty shellcheck
+        run: git ls-files -z '*.sh' 'tests/integration/standins/*' | xargs -0 --no-run-if-empty shellcheck
+
+  unit:
+    name: Unit level
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install what the level needs
+        run: sudo apt-get update -q && sudo apt-get install -y -q ninja-build
+      - name: Let the sanitizers map their memory
+        run: sudo sysctl -w vm.mmap_rnd_bits=28
+      - name: tools/test unit
+        env:
+          PRIVATE_TERMS: ${{ secrets.PRIVATE_TERMS }}
+        run: tools/test unit
+      - name: The level notices a failing test
+        run: tools/test prove unit
+
+  simulator:
+    name: Simulator level
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install what the level needs
+        run: sudo apt-get update -q && sudo apt-get install -y -q ninja-build libsdl2-dev xvfb
+      - name: tools/test simulator
+        run: tools/test simulator
+      - name: The level notices a failing test
+        run: tools/test prove simulator
+      - name: Keep what the scripts wrote, if something was not in order
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: simulator-out
+          path: build/simulator-out
+          if-no-files-found: ignore
+
+  integration:
+    name: Integration level and fuzzing
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install what the levels need
+        run: >
+          sudo apt-get update -q && sudo apt-get install -y -q
+          ninja-build libsdl2-dev xvfb 7zip pkg-config clang libclang-rt-dev
+      - name: Let the sanitizers map their memory
+        run: sudo sysctl -w vm.mmap_rnd_bits=28
+      - name: Pinned downloads
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .cache/downloads
+          key: downloads-${{ hashFiles('cmake/pins.cmake') }}
+      - name: tools/test integration
+        run: tools/test integration
+      - name: tools/test fuzz
+        run: tools/test fuzz
+      - name: The levels notice a failing test
+        run: tools/test prove integration fuzz
+
+  package:
+    name: Package level
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install what the level needs
+        run: >
+          sudo apt-get update -q && sudo apt-get install -y -q
+          ninja-build g++-aarch64-linux-gnu qemu-user-static pkg-config
+      - name: Pinned downloads
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .cache/downloads
+          key: downloads-${{ hashFiles('cmake/pins.cmake') }}
+      - name: tools/test package
+        env:
+          PRIVATE_TERMS: ${{ secrets.PRIVATE_TERMS }}
+        run: tools/test package
+      - name: The level notices a failing test
+        run: tools/test prove package
 
   # The one check that branch protection requires, so jobs can be added or renamed
   # above without touching the repository settings.
   ok:
     name: All checks passed
     if: always()
-    needs: [repo]
+    needs: [repo, unit, simulator, integration, package]
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
