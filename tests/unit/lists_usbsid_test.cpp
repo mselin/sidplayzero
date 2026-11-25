@@ -38,7 +38,7 @@ TEST_CASE("SPEC-191 the setting `output` is software, the default, or usbsid [pa
     CHECK(spz::Output{} == spz::Output::Software);             // the default
 }
 
-TEST_CASE("SPEC-191 SPEC-078 a backend that reports the device gone gives MSG_USBSID_MISSING with the USBSID-Pico, and MSG_NO_SOUND with the software backend [parts: usbsid]") {
+TEST_CASE("SPEC-191 a backend that reports the device gone gives MSG_USBSID_MISSING with the USBSID-Pico, and MSG_NO_SOUND with the software backend [parts: usbsid]") {
     CHECK(std::string(spz::device_gone_message(spz::Output::Usbsid)) == "MSG_USBSID_MISSING");
     CHECK(std::string(spz::device_gone_message(spz::Output::Software)) == "MSG_NO_SOUND");
     CHECK(spz::is_message(spz::device_gone_message(spz::Output::Usbsid)));

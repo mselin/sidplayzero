@@ -4,7 +4,7 @@
 # args: --engine real
 #
 # The settings file holds one line, engine = accurate, so that the engine does not depend on the speed
-# measurement of SPEC-072. The samples are saved as structure_engine_render.raw in the --out folder.
+# measurement that "auto" goes by. The samples are saved as structure_engine_render.raw in the --out folder.
 expect screen = browser
 expect rows[0].text = commando_test.sid
 key Enter

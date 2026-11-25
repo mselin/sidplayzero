@@ -81,7 +81,7 @@ TEST_CASE("SPEC-173 SPEC-154 a tune outside the collection is present while its 
     CHECK(join(world.changes_outside(world.playlists_folder)) == "");    // tunes are only read
 }
 
-TEST_CASE("SPEC-173 SPEC-047 in a collection that is not HVSC's, an entry is present or missing: nothing is absent [parts: playlists]") {
+TEST_CASE("SPEC-173 in a collection that is not HVSC's, an entry is present or missing: nothing is absent [parts: playlists]") {
     ListsWorld world("C64Music", false);
     CHECK(world.resolver->resolve(spz::Entry{kCommando, 0, kMd5Commando}).found == spz::Found::Present);
     world.take_away(kClockDemo);

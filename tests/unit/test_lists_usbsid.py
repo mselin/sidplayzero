@@ -56,13 +56,13 @@ def run_cases(pattern):
 
 class HardwareAbilities(unittest.TestCase):
     def test_player_tests_pass_with_the_hardwares_abilities(self):
-        """SPEC-191 the player's tests of SPEC-060 to SPEC-069 pass against a fake backend whose can() is the hardware's [parts: usbsid]"""
+        """SPEC-191 the player's own unit tests pass against a fake backend whose can() is the hardware's [parts: usbsid]"""
         if "usbsid" not in parts_built(BUILD):
             self.skipTest("needs the part usbsid")
         # First, that the fake backend took the hardware's abilities in such a run.
         proof = run_cases("*SPEC-191 in a run that asks for the hardware*")
         self.assertEqual(proof.get(PROOF), "", f"the fake backend did not take the hardware's can(): {proof.get(PROOF)!r}")
-        # Then the player's tests, every one that names an item from SPEC-060 to SPEC-069.
+        # Then the player's tests: every one that names an item of the player, 060 to 069, as SPEC-191 says.
         outcomes = run_cases(",".join(f"*{item}*" for item in PLAYER_ITEMS))
         self.assertGreater(len(outcomes), 0, "no test of the player ran: none names SPEC-060 to SPEC-069")
         failed = sorted(f"{name}: {' '.join(why.split())[:200]}" for name, why in outcomes.items() if why)

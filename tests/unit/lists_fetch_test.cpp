@@ -295,7 +295,7 @@ TEST_CASE("SPEC-174 SPEC-152 with HVSC's notice not accepted the job asks first:
     CHECK(rig.watcher.ended[0].message == "MSG_FETCHED_SOME");
 }
 
-TEST_CASE("SPEC-174 SPEC-141 with less than 8 MiB free on the card the job makes no request [parts: playlists]") {
+TEST_CASE("SPEC-174 with less than 8 MiB free on the card the job makes no request [parts: playlists]") {
     Rig rig;
     const std::vector<spz::Entry> entries = three_absent(&rig);
     rig.world.files.set_free_bytes(8u * 1024 * 1024 - 1);
@@ -352,7 +352,7 @@ TEST_CASE("SPEC-174 a file the server does not have is left absent and the job g
     CHECK(rig.found(kHuelsbeck) == spz::Found::Present);
 }
 
-TEST_CASE("SPEC-174 SPEC-147 Stop ends the job after the file in flight [parts: playlists]") {
+TEST_CASE("SPEC-174 Stop ends the job after the file in flight [parts: playlists]") {
     Rig rig;
     const std::vector<spz::Entry> entries = three_absent(&rig);
     rig.fetcher.while_in_flight = [&rig] { rig.job.stop(); };  // "Stop", and Enter on its question
