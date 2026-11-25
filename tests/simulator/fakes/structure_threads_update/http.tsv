@@ -1,0 +1,5 @@
+# SPEC-022, SPEC-148: the server has release 86. The check gets its answer; the update's first document,
+# the song length database, is held back; the tune that is not on the device is served at once.
+https://hvsc.c64.org/download/C64Music/DOCUMENTS/hv_sids.txt	200	hv_sids_86.txt
+https://hvsc.c64.org/download/C64Music/DOCUMENTS/Songlengths.md5	200	fixtures/collections/85/C64Music/DOCUMENTS/Songlengths.md5	stall
+https://hvsc.c64.org/download/C64Music/DEMOS/A-F/Clock_Demo.sid	200	fixtures/collections/85/C64Music/DEMOS/A-F/Clock_Demo.sid

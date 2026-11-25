@@ -1,0 +1,87 @@
+# SPEC-171 Fav marks a tune and unmarks it, marks subtune 3 while it plays, the star shows in the browser, Fav there adds a second entry, and a restart keeps the stars and the file
+# parts: playlists
+# fixture: lists/small/C64Music C64Music
+# args: --backend fake
+#
+# The collection has two tunes, each alone in its folder: Commando.sid and Three_Songs.sid, which has
+# three subtunes and starts at the second. The files under lists-expected are what SPEC-170 says
+# Favourites' file holds (tools/fixture_makers/lists.py writes them).
+expect screen = browser
+expect rows[0].text = MUSICIANS
+put fixtures/lists/expected lists-expected
+key Enter
+key Enter
+key Enter
+expect title = /MUSICIANS/H/Hubbard_Rob
+expect rows[0].text = Commando.sid
+expect rows[0].marks = []
+expect actions[3] = Fav
+
+# Marking a tune twice in the browser adds then removes one entry.
+key 7
+expect notice.id = MSG_FAV_ADDED
+expect rows[0].marks contains favourite
+expect-file .local/share/sidplayzero/playlists/Favourites.m3u8 equals lists-expected/favourites_one.m3u8
+advance 3000
+key 7
+expect notice.id = MSG_FAV_REMOVED
+expect rows[0].marks = []
+advance 3000
+
+# Subtune 3, marked on the now-playing screen, is an entry with subtune=3.
+key Left
+key Left
+expect title = /MUSICIANS
+key Down
+key Enter
+key Enter
+expect title = /MUSICIANS/T/Tester_Tom
+expect rows[0].text = Three_Songs.sid
+key Enter
+expect screen = playing
+expect player.subtune = 2
+key Right
+expect player.subtune = 3
+expect actions[3] = Fav
+key 7
+expect notice.id = MSG_FAV_ADDED
+expect-file .local/share/sidplayzero/playlists/Favourites.m3u8 contains "#SIDTUNE:subtune=3 md5=d06b7955032f0cc8cd8cb358935291f6"
+
+# The star then shows in the browser, and Fav there adds a second entry, without a number.
+key Esc
+expect screen = browser
+expect rows[0].text = Three_Songs.sid
+expect rows[0].marks contains favourite
+advance 3000
+key 7
+expect notice.id = MSG_FAV_ADDED
+expect rows[0].marks contains favourite
+expect-file .local/share/sidplayzero/playlists/Favourites.m3u8 equals lists-expected/favourites_two.m3u8
+
+# Favourites is listed first with its two entries, and has no Rename and no Delete.
+key 6
+expect screen = playlists
+expect rows[0].text contains Favourites
+expect rows[0].highlighted = true
+expect text matches Favourites\D*2
+expect actions[2] = ""
+expect actions[3] = ""
+key Esc
+expect screen = browser
+
+# After a restart the stars and the file are the same.
+restart
+expect screen = browser
+expect title = /MUSICIANS/T/Tester_Tom
+expect rows[0].text = Three_Songs.sid
+expect rows[0].marks contains favourite
+expect-file .local/share/sidplayzero/playlists/Favourites.m3u8 equals lists-expected/favourites_two.m3u8
+key Left
+key Left
+expect title = /MUSICIANS
+key Up
+key Enter
+key Enter
+expect title = /MUSICIANS/H/Hubbard_Rob
+expect rows[0].text = Commando.sid
+expect rows[0].marks = []

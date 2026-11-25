@@ -1,0 +1,55 @@
+# SPEC-022 with the index build held by slow files on the long worker, Enter on an absent tune makes its request at once
+# fixture: collections/85/C64Music/DOCUMENTS C64Music/DOCUMENTS
+# fixture: collections/85/C64Music/GAMES C64Music/GAMES
+# fixture: collections/85/C64Music/MUSICIANS C64Music/MUSICIANS
+# fakes: fakes/structure_threads
+# args: --backend fake
+#
+# /DEMOS/A-F/Clock_Demo.sid is listed by HVSC and not on the device. Its folder is opened first, so that
+# the browser has it in memory; then every listing of a folder is made to take a minute, and the index is
+# built again: its walk through the collection's folders is held on the long worker from then on.
+expect screen = browser
+expect rows[0].text = DEMOS
+key Enter
+key Enter
+expect title = /DEMOS/A-F
+expect rows[0].text = Clock_Demo.sid
+expect rows[0].marks contains absent
+fake files.list_delay_ms 60000
+
+# "Rebuild the index" is the last row of the HVSC screen.
+key Tab
+expect screen = settings
+key 5
+expect screen = hvsc
+key End
+key Enter
+key Esc
+key Esc
+expect screen = browser
+# The Search screen says that the index is being built.
+key 5
+expect screen = search
+expect text contains Indexing
+key Esc
+expect screen = browser
+expect title = /DEMOS/A-F
+expect rows[0].text = Clock_Demo.sid
+
+# Enter on the absent tune, and Enter on HVSC's notice: the request is made at once, with no time passing.
+key Enter
+expect panel.id = notice-panel
+key Enter
+expect-requests 1
+expect-request 1 https://hvsc.c64.org/download/C64Music/DEMOS/A-F/Clock_Demo.sid
+expect player.state = fetching
+
+# The index is still being built, and the tune arrives all the same.
+fake http release https://hvsc.c64.org/download/C64Music/DEMOS/A-F/Clock_Demo.sid
+expect player.state = playing
+expect player.path = /DEMOS/A-F/Clock_Demo.sid
+key Esc
+expect screen = browser
+key 5
+expect screen = search
+expect text contains Indexing

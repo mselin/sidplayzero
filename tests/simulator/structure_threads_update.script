@@ -1,0 +1,52 @@
+# SPEC-022 SPEC-148 with an update's download stalled on the long worker, Enter on an absent tune makes its request at once, and the tune plays while the download still waits
+# parts: releases
+# fixture: collections/85/C64Music/DOCUMENTS C64Music/DOCUMENTS
+# fixture: collections/85/C64Music/GAMES C64Music/GAMES
+# fixture: collections/85/C64Music/MUSICIANS C64Music/MUSICIANS
+# fakes: fakes/structure_threads_update
+# args: --backend fake
+#
+# HVSC is set up at release 85, and /DEMOS/A-F/Clock_Demo.sid is listed and not on the device. The fake
+# server has release 86, and holds back the first document of the update, the song length database.
+expect screen = browser
+expect rows[0].text = DEMOS
+key Enter
+key Enter
+expect title = /DEMOS/A-F
+expect rows[0].text = Clock_Demo.sid
+expect rows[0].marks contains absent
+
+# "Check for a newer release" is the first use of the network: HVSC's notice, then the check.
+key Tab
+key 5
+expect screen = hvsc
+expect rows[0].text = Check for a newer release
+key Enter
+expect panel.id = notice-panel
+key Enter
+expect panel = null
+expect notice.id = MSG_HVSC_NEWER
+expect-requests 1
+expect-request 1 https://hvsc.c64.org/download/C64Music/DOCUMENTS/hv_sids.txt
+expect rows[1].text = Update to #86
+
+# "Update": its job starts on the long worker and waits for the server.
+key Down
+key Enter
+expect job.kind = update
+expect-requests 2
+expect-request 2 https://hvsc.c64.org/download/C64Music/DOCUMENTS/Songlengths.md5
+key 4
+key 4
+expect screen = browser
+expect title = /DEMOS/A-F
+expect rows[0].text = Clock_Demo.sid
+
+# Enter on the absent tune: its request is the next one, at once, and it plays.
+key Enter
+expect-requests 3
+expect-request 3 https://hvsc.c64.org/download/C64Music/DEMOS/A-F/Clock_Demo.sid
+expect player.state = playing
+expect player.path = /DEMOS/A-F/Clock_Demo.sid
+expect job.kind = update
+expect-file C64Music/DEMOS/A-F/Clock_Demo.sid exists

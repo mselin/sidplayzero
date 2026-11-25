@@ -1,0 +1,159 @@
+# SPEC-172 SPEC-170 a playlist is made, three tunes are added, the third is moved to the top, the three play in the new order, and the playlist is renamed and deleted, its file following every step
+# parts: playlists
+# fixture: collections/85/C64Music C64Music
+# args: --engine fake
+#
+# The tunes are three of the fixture collection whose lengths are 2 seconds, each alone in its folder.
+# The files under lists-expected are what SPEC-170 says the playlist's file holds after each step
+# (tools/fixture_makers/lists.py writes them).
+expect screen = browser
+expect title = /
+expect rows[0].text = DEMOS
+put fixtures/lists/expected lists-expected
+
+# "Lists", then "New": a playlist named Loading.
+key 6
+expect screen = playlists
+expect rows[0].text contains Favourites
+expect list.total = 1
+expect actions[1] = New
+key 5
+expect panel.id = prompt
+type Loading
+key Enter
+expect panel = null
+expect list.total = 2
+expect rows[1].text contains Loading
+expect-file .local/share/sidplayzero/playlists/Loading.m3u8 equals lists-expected/empty.m3u8
+
+# "Add" in the browser, three times.
+key Esc
+expect screen = browser
+key Enter
+key Enter
+expect title = /DEMOS/A-F
+expect rows[0].text = Clock_Demo.sid
+expect actions[4] = Add
+key 8
+expect panel.id = pick-playlist
+expect panel.rows[0].text contains Favourites
+expect panel.rows[1].text contains Loading
+key Down
+expect panel.rows[1].highlighted = true
+key Enter
+expect panel = null
+expect notice.id = MSG_ADDED
+expect notice.text contains Loading
+key Left
+key Left
+expect title = /
+key Down
+key Enter
+key Enter
+expect rows[0].text = Either_Chip.sid
+key 8
+key Down
+key Enter
+expect notice.id = MSG_ADDED
+key Left
+key Left
+key Down
+key Enter
+key Enter
+key Down
+key Enter
+expect title = /MUSICIANS/H/Huelsbeck_Chris
+expect rows[0].text = Huelsbeck_Test.sid
+key 8
+key Down
+key Enter
+expect notice.id = MSG_ADDED
+expect-file .local/share/sidplayzero/playlists/Loading.m3u8 equals lists-expected/three.m3u8
+
+# The Playlists screen gives the number of entries; Enter opens the playlist.
+key 6
+expect screen = playlists
+expect text matches Loading\D*3
+key Home
+key Down
+key Enter
+expect screen = playlist
+expect list.total = 3
+expect rows[0].kind = entry
+expect rows[0].text = Sixty Hertz
+expect rows[1].text = Either Chip
+expect rows[2].text = Hülsbeck Tëst
+expect actions[1] = Up
+expect actions[2] = Down
+
+# "Up" twice: the third entry goes to the top.
+key End
+key 5
+expect rows[1].text = Hülsbeck Tëst
+key Home
+key Down
+key 5
+expect rows[0].text = Hülsbeck Tëst
+expect rows[1].text = Sixty Hertz
+expect rows[2].text = Either Chip
+expect-file .local/share/sidplayzero/playlists/Loading.m3u8 equals lists-expected/three_moved.m3u8
+
+# Enter plays from that entry, and the three play in the new order, two seconds each.
+key Home
+key Enter
+expect screen = playing
+expect player.state = playing
+expect player.path = /MUSICIANS/H/Huelsbeck_Chris/Huelsbeck_Test.sid
+expect player.length_ms = 2000
+expect player.mode = subtunes
+advance 1000
+expect player.path = /MUSICIANS/H/Huelsbeck_Chris/Huelsbeck_Test.sid
+advance 2000
+expect player.state = playing
+expect player.path = /DEMOS/A-F/Clock_Demo.sid
+advance 2000
+expect player.state = playing
+expect player.path = /GAMES/A-F/Either_Chip.sid
+advance 2000
+expect player.state = idle
+
+# "Rename": the playlist and its file are called Turbo.
+key Esc
+expect screen = playlist
+key Esc
+expect screen = playlists
+key Home
+key Down
+expect rows[1].highlighted = true
+expect actions[2] = Rename
+key 6
+expect panel.id = prompt
+key End
+key Backspace
+key Backspace
+key Backspace
+key Backspace
+key Backspace
+key Backspace
+key Backspace
+type Turbo
+key Enter
+expect panel = null
+expect rows[1].text contains Turbo
+expect-file .local/share/sidplayzero/playlists/Turbo.m3u8 equals lists-expected/three_renamed.m3u8
+expect-file .local/share/sidplayzero/playlists/Loading.m3u8 absent
+
+# "Delete" asks first: ESC is no, Enter is yes.
+expect actions[3] = Delete
+key 7
+expect panel.id = confirm
+key Esc
+expect panel = null
+expect-file .local/share/sidplayzero/playlists/Turbo.m3u8 exists
+key 7
+expect panel.id = confirm
+key Enter
+expect panel = null
+expect list.total = 1
+expect rows[0].text contains Favourites
+expect-file .local/share/sidplayzero/playlists/Turbo.m3u8 absent

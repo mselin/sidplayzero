@@ -1,0 +1,16 @@
+# SPEC-009 a settings file written by hand from SPEC-130's table loads: no fault is found in it, and the tune that is played follows its values
+# fixture: structure/settings.ini .config/sidplayzero/settings.ini
+# fixture: tunes/commando_test.sid C64Music/commando_test.sid
+# args: --backend fake
+#
+# The file has a comment, an empty line, and three settings: engine = light, default_length = 0:07 and
+# sample_rate = 44100. The collection is not HVSC's, so the tune's length is the default length.
+expect screen = browser
+expect notice = null
+expect-file .config/sidplayzero/settings.ini.bad absent
+expect rows[0].text = commando_test.sid
+key Enter
+expect player.state = playing
+expect player.engine = light
+expect player.length_ms = 7000
+expect-file .config/sidplayzero/settings.ini contains "# written by hand"
