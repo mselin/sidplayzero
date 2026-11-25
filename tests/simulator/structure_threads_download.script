@@ -1,0 +1,55 @@
+# SPEC-022 while a download is stalled for 30 s, a folder opens within 300 ms and a volume key reaches the system volume within 100 ms of the fake clock
+# fixture: collections/85/C64Music/DOCUMENTS C64Music/DOCUMENTS
+# fixture: collections/85/C64Music/GAMES C64Music/GAMES
+# fixture: collections/85/C64Music/MUSICIANS C64Music/MUSICIANS
+# fakes: fakes/structure_threads
+# args: --backend fake
+#
+# The collection is the fixture collection without its DEMOS folder, so /DEMOS/A-F/Clock_Demo.sid is
+# listed by HVSC and not on the device. The fake server holds its download back until it is released.
+expect screen = browser
+expect rows[0].text = DEMOS
+key Enter
+key Enter
+expect title = /DEMOS/A-F
+expect rows[0].text = Clock_Demo.sid
+expect rows[0].marks contains absent
+
+# Enter on the absent tune: the first use of the network asks with HVSC's notice, and then fetches.
+key Enter
+expect panel.id = notice-panel
+key Enter
+expect panel = null
+expect player.state = fetching
+expect-requests 1
+expect-request 1 https://hvsc.c64.org/download/C64Music/DEMOS/A-F/Clock_Demo.sid
+
+# The fetch worker waits for the server. The UI thread and the quick worker go on.
+expect screen = playing
+key Esc
+expect screen = browser
+key Left
+key Left
+expect title = /
+key Down
+key Down
+key Enter
+advance 300
+expect title = /MUSICIANS
+expect rows[0].text = H
+expect rows[1].text = T
+key VolumeUp
+advance 100
+expect-log volume contains "set 45"
+expect notice.id = MSG_VOLUME
+expect player.state = fetching
+expect-requests 1
+
+# Thirty seconds on, the download is still the one request, and when the server answers the tune plays.
+advance 29600
+expect player.state = fetching
+expect-requests 1
+fake http release https://hvsc.c64.org/download/C64Music/DEMOS/A-F/Clock_Demo.sid
+expect player.state = playing
+expect player.path = /DEMOS/A-F/Clock_Demo.sid
+expect-file C64Music/DEMOS/A-F/Clock_Demo.sid exists

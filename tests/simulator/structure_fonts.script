@@ -1,0 +1,90 @@
+# SPEC-010 the seven fixture tunes whose titles hold every printable Windows-1252 character show those characters, as Unicode, on the now-playing screen
+# fixture: tunes/cp1252_1.sid C64Music/cp1252_1.sid
+# fixture: tunes/cp1252_2.sid C64Music/cp1252_2.sid
+# fixture: tunes/cp1252_3.sid C64Music/cp1252_3.sid
+# fixture: tunes/cp1252_4.sid C64Music/cp1252_4.sid
+# fixture: tunes/cp1252_5.sid C64Music/cp1252_5.sid
+# fixture: tunes/cp1252_6.sid C64Music/cp1252_6.sid
+# fixture: tunes/cp1252_7.sid C64Music/cp1252_7.sid
+# args: --backend fake
+#
+# The titles below are the fixtures' own, 218 characters between them: U+0020 to U+007E, the 27 that
+# Windows-1252 has at 0x80 to 0x9F, and U+00A0 to U+00FF. The fourth holds a no-break space and the
+# fifth a soft hyphen, which an editor may not show. tools/make_fixtures.py, cp1252_titles(), makes them.
+expect screen = browser
+expect list.total = 7
+expect rows[0].text = cp1252_1.sid
+key Enter
+expect screen = playing
+expect player.path = /cp1252_1.sid
+expect lines[0] = ! "#$%&'()*+,-./0123456789:;<=>?
+expect lines[1] = Windows-1252, part 1 of 7
+expect text contains ! "#$%&'()*+,-./0123456789:;<=>?
+shot structure_fonts_1
+dump structure_fonts_1
+key Esc
+expect screen = browser
+key Down
+key Enter
+expect screen = playing
+expect player.path = /cp1252_2.sid
+expect lines[0] = @ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_
+expect lines[1] = Windows-1252, part 2 of 7
+expect text contains @ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_
+shot structure_fonts_2
+dump structure_fonts_2
+key Esc
+expect screen = browser
+key Down
+key Enter
+expect screen = playing
+expect player.path = /cp1252_3.sid
+expect lines[0] = `abcdefghijklmnopqrstuvwxyz{|}~€
+expect lines[1] = Windows-1252, part 3 of 7
+expect text contains `abcdefghijklmnopqrstuvwxyz{|}~€
+shot structure_fonts_3
+dump structure_fonts_3
+key Esc
+expect screen = browser
+key Down
+key Enter
+expect screen = playing
+expect player.path = /cp1252_4.sid
+expect lines[0] = ‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ ¡¢£¤¥
+expect lines[1] = Windows-1252, part 4 of 7
+expect text contains ‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ ¡¢£¤¥
+shot structure_fonts_4
+dump structure_fonts_4
+key Esc
+expect screen = browser
+key Down
+key Enter
+expect screen = playing
+expect player.path = /cp1252_5.sid
+expect lines[0] = ¦§¨©ª«¬­®¯°±²³´µ¶·¸¹º»¼½¾¿ÀÁÂÃÄÅ
+expect lines[1] = Windows-1252, part 5 of 7
+expect text contains ¦§¨©ª«¬­®¯°±²³´µ¶·¸¹º»¼½¾¿ÀÁÂÃÄÅ
+shot structure_fonts_5
+dump structure_fonts_5
+key Esc
+expect screen = browser
+key Down
+key Enter
+expect screen = playing
+expect player.path = /cp1252_6.sid
+expect lines[0] = ÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäå
+expect lines[1] = Windows-1252, part 6 of 7
+expect text contains ÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäå
+shot structure_fonts_6
+dump structure_fonts_6
+key Esc
+expect screen = browser
+key Down
+key Enter
+expect screen = playing
+expect player.path = /cp1252_7.sid
+expect lines[0] = æçèéêëìíîïðñòóôõö÷øùúûüýþÿ
+expect lines[1] = Windows-1252, part 7 of 7
+expect text contains æçèéêëìíîïðñòóôõö÷øùúûüýþÿ
+shot structure_fonts_7
+dump structure_fonts_7

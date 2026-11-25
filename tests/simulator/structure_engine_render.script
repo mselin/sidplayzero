@@ -1,0 +1,18 @@
+# SPEC-003 the app renders ten seconds of a fixture tune through the engine library, for the comparison with what the sidplayfp program renders (tests/integration/test_structure.py makes it)
+# fixture: tunes/commando_test.sid C64Music/commando_test.sid
+# fixture: structure/engine_accurate.ini .config/sidplayzero/settings.ini
+# args: --engine real
+#
+# The settings file holds one line, engine = accurate, so that the engine does not depend on the speed
+# measurement of SPEC-072. The samples are saved as structure_engine_render.raw in the --out folder.
+expect screen = browser
+expect rows[0].text = commando_test.sid
+key Enter
+expect player.state = playing
+expect player.engine = accurate
+expect player.subtune = 1
+advance 10000
+expect player.state = playing
+expect-samples frames = 480000
+save-samples structure_engine_render
+quit

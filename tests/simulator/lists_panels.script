@@ -1,0 +1,99 @@
+# SPEC-114 SPEC-172 SPEC-175 the panels of the playlists part open on their keys, name themselves, keep the keys 4 to 8 from acting, and close with ESC and Enter: pick-playlist, more-playlist and import, and the text panel after an import
+# parts: playlists
+# fixture: collections/85/C64Music C64Music
+# fixture: lists/import/vsid.m3u C64Music/vsid.m3u
+# args: --backend fake
+#
+# vsid.m3u is a playlist as VICE's VSID writes it, with two tunes of the collection, put in the
+# collection root, which is one of the two places the import panel looks in.
+expect screen = browser
+expect rows[0].text = DEMOS
+key Enter
+key Enter
+expect rows[0].text = Clock_Demo.sid
+
+# pick-playlist: "Add" opens it. It lists the playlists and "New playlist…".
+key 8
+expect panel.id = pick-playlist
+expect place = pick-playlist
+expect panel.rows[0].text contains Favourites
+expect panel.rows[1].text contains New playlist
+key 4
+key 5
+key 6
+key 7
+key 8
+expect panel.id = pick-playlist
+expect screen = browser
+# ESC closes it and adds nothing.
+key Esc
+expect panel = null
+expect notice = null
+# Enter adds the tune to the highlighted playlist and closes it.
+key 8
+expect panel.id = pick-playlist
+key Enter
+expect panel = null
+expect notice.id = MSG_ADDED
+expect notice.text contains Favourites
+advance 3000
+
+# more-playlist: "More" on the Playlist screen, with "Fetch missing".
+key 6
+expect screen = playlists
+key Home
+key Enter
+expect screen = playlist
+expect list.total = 1
+expect actions[4] = More
+key 8
+expect panel.id = more-playlist
+expect place = more-playlist
+expect panel.rows[0].text = Fetch missing
+key 4
+key 5
+key 6
+key 7
+key 8
+expect panel.id = more-playlist
+expect screen = playlist
+expect list.total = 1
+key Esc
+expect panel = null
+expect screen = playlist
+
+# import: "Import" on the Playlists screen lists the files that can be imported.
+key Esc
+expect screen = playlists
+expect list.total = 1
+expect actions[4] = Import
+key 8
+expect panel.id = import
+expect place = import
+expect panel.rows[0].text contains vsid.m3u
+key 4
+key 5
+key 6
+key 7
+key 8
+expect panel.id = import
+expect screen = playlists
+key Esc
+expect panel = null
+expect list.total = 1
+
+# Enter imports the file into a new playlist, and a text panel says how many entries were imported.
+key 8
+expect panel.id = import
+key Enter
+expect panel.id = text
+expect panel.text contains 2
+key Enter
+expect panel = null
+expect screen = playlists
+expect list.total = 2
+expect text matches vsid\D*2
+expect-file .local/share/sidplayzero/playlists/vsid.m3u8 contains "#PLAYLIST:vsid"
+expect-file .local/share/sidplayzero/playlists/vsid.m3u8 contains "/MUSICIANS/H/Hubbard_Rob/Commando.sid"
+expect-file .local/share/sidplayzero/playlists/vsid.m3u8 contains "/MUSICIANS/T/Tester_Tom/Three_Songs.sid"
+expect-file C64Music/vsid.m3u exists

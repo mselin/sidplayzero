@@ -1,0 +1,21 @@
+# SPEC-022 the audio callback of a test build, which aborts if it allocates or takes a lock, plays two seconds of a fixture tune with the real engine without that abort, every frame delivered
+# fixture: tunes/commando_test.sid C64Music/commando_test.sid
+# args: --engine real
+#
+# The collection is one tune, not HVSC's, so its length is the default length. The software backend runs
+# with the real engine, and the recording sink pulls through the same audio callback as the device's.
+expect screen = browser
+expect rows[0].text = commando_test.sid
+key Enter
+expect player.state = playing
+advance 2000
+expect player.state = playing
+expect-samples frames = 96000
+expect player.underrun_frames = 0
+key Esc
+key Down
+key Up
+advance 500
+expect-samples frames = 120000
+expect player.underrun_frames = 0
+quit

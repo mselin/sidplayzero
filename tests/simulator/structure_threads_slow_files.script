@@ -1,0 +1,25 @@
+# SPEC-022 with files that take 2 s to list a folder, a key is still answered within 100 ms
+# fixture: collections/85/C64Music C64Music
+# fakes: fakes/structure_threads_slow
+# args: --backend fake
+#
+# The quick worker is busy with the first folder for two seconds of the fake clock. The keys below need
+# nothing of it: they are answered on the UI thread.
+expect screen = browser
+advance 200
+expect text contains Reading
+key Tab
+advance 100
+expect screen = settings
+key Down
+advance 100
+expect rows[1].highlighted = true
+key Esc
+advance 100
+expect screen = browser
+expect text contains Reading
+
+# Two seconds after the start the folder is there.
+advance 1600
+expect rows[0].text = DEMOS
+expect rows[0].highlighted = true
