@@ -29,6 +29,16 @@ brief the project started from, so the findings below are raised against that br
 
 ## Closed
 
+### FIND-015 The test commands were required to be in the README
+- Phase: 4, tests
+- Observed: REQ-161's acceptance had the test commands "in the README", and SPEC-250 put the list of what
+  each level needs there too. On 25 November 2026 the owner asked for the way of working to be moved out of
+  the README, so that the README is about taking the software into use.
+- Concerns: REQ-161, SPEC-250
+- Resolution: the commands, what each level needs, the phases and their rules are in `CONTRIBUTING.md`,
+  which the README links to. REQ-161's acceptance and SPEC-250 say so.
+- Status: closed. The change is the owner's own request
+
 ### FIND-014 The check for C64 ROMs asked for checksums nobody publishes
 - Phase: 3, test framework
 - Observed: SPEC-153 has the repository's check recognise the C64's ROMs by their SHA-256. The checksums of

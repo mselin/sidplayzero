@@ -15,6 +15,7 @@ Changes since approval:
 | FIND-011: REQ-011 pointed at the wrong requirement for stepping past the last subtune | REQ-011 now says that next and previous subtune, past either end, go to the next or previous tune (REQ-012) | Accepted with the specification, 25 November 2026 |
 | FIND-012: REQ-051's acceptance needed HVSC's tunes on the host, where REQ-087 forbids them | REQ-051's acceptance now uses the test tunes on the host | Accepted with the specification, 25 November 2026 |
 | FIND-013: the brightness keys do nothing while an app runs unless the app handles them | REQ-129 added: brightness keys (Should). CON-09 names those keys too | Accepted with the specification, 25 November 2026 |
+| FIND-015: the owner asked for the way of working to be kept out of the README | REQ-161's acceptance names `CONTRIBUTING.md` as where the test commands are | The owner's own request, 25 November 2026 |
 
 ## 1. What SidPlayZero is
 
@@ -885,7 +886,8 @@ the device, for speed, sound and the real keyboard.
 automatically on every proposed change.
 - Why: tests that are awkward to run do not get run.
 - Priority: Must for the commands, Should for running them automatically (section 7)
-- Acceptance: the commands are in the README and do what it says on a clean checkout.
+- Acceptance: the commands are in `CONTRIBUTING.md`, which the README links to, and do what it says on a
+  clean checkout.
 
 **REQ-162 The device run is one sitting.** The tests on the device are one script and a short checklist that
 a person runs once, at the device. The script writes a results file that holds no host name, user name or
