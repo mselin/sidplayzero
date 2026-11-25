@@ -2,6 +2,8 @@
 /build/
 /dist/
 /.cache/
+/tools/engine-bench/build/
+/tools/engine-bench/dist/
 
 # Results of tools/device-probe.sh: read them, send them, do not commit them
 sidplayzero-probe-*.txt

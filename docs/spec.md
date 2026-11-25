@@ -98,10 +98,10 @@ SPEC-072.
   three-SID fixture tunes (SPEC-072's table); the engine's name is in the screen description of the
   now-playing screen.
 - Level: host-unit, simulator
-- Evidence (R2, R3): on an x86-64 host reSIDfp rendered a one-SID tune at 12 to 17 times real time, a two-SID
-  tune at 9 to 11 times and a three-SID tune at 6 times; sidlite rendered all of them at 55 to 78 times. The
-  device's processor is roughly ten times slower, which puts reSIDfp near the limit for one SID and under it
-  for more. SPEC-072 decides from a measurement on the device itself, and SPEC-262 gets that measurement
+- Evidence (R2, R3): on an x86-64 host the benchmark program of SPEC-262 gave, for reSIDfp, 15 to 24 times
+  real time with one SID chip, 10 to 12 with two and 7 to 8 with three; and for sidlite 125 to 175 times
+  with any number. The device's processor is roughly ten times slower, which puts reSIDfp near the limit for
+  one SID and under it for more. SPEC-072 decides from a measurement on the device itself, and SPEC-262 gets that measurement
   before the thresholds are fixed.
 
 **SPEC-005 Sound goes out through miniaudio.** Samples are handed to the system through miniaudio 0.11.25, a
@@ -2376,8 +2376,8 @@ have been timed on the device. For that, the repository builds a small program, 
 the same libraries, for arm64 and linked statically so that it runs on the stock image with nothing
 installed. It renders its built-in tune set up for one, two and three chips, with each engine, at 44,100 and
 48,000 Hz, ten seconds each after a second of warming up, and prints the twelve speed factors with the
-processor's model and clock speed. `tools/device-probe.sh --engine-bench` runs it and puts its lines in the
-probe's results file. When the figures are in, SPEC-072's threshold and table, SPEC-004's default and
+processor's model and clock speed. It is built by `tools/engine-bench/build.sh`, and
+`tools/device-probe.sh --engine-bench PATH` runs it and puts its lines in the probe's results file. When the figures are in, SPEC-072's threshold and table, SPEC-004's default and
 REQ-050's budget are confirmed, or a finding is raised and they are changed before Phase 5 begins.
 - Covers: REQ-051, REQ-050
 - Priority: Must

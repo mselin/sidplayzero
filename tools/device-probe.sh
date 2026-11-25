@@ -23,23 +23,37 @@
 #                                  memory and time that took, and deletes the archive. Needs the
 #                                  7zip package. Expect several minutes during which the device is
 #                                  short of memory and slow; stop other apps first.
+#   ./device-probe.sh --engine-bench ./sidplayzero-bench
+#                                  times the two engines the app will ship (libsidplayfp 3.1.2),
+#                                  for tunes with one, two and three SID chips. The program is
+#                                  built by tools/engine-bench/build.sh and copied to the device
+#                                  beforehand; it needs nothing installed, reads no tune file and
+#                                  uses no network. About three minutes, longer on a slow device.
 #
-# The collection is looked for in $HVSC_BASE, then in ~/C64Music.
+# The options can be combined. The collection is looked for in $HVSC_BASE, then in ~/C64Music.
 
 set -u
 
 BENCH=0
 FETCH=0
 UNPACK=0
-for arg in "$@"; do
-  case "$arg" in
+ENGINE_BENCH=""
+while [ $# -gt 0 ]; do
+  case "$1" in
     --bench) BENCH=1 ;;
     --fetch) FETCH=1 ;;
     --unpack-test) UNPACK=1 ;;
+    --engine-bench)
+      [ $# -ge 2 ] || { echo "--engine-bench needs the path of the sidplayzero-bench program" >&2; exit 2; }
+      ENGINE_BENCH="$2"; shift ;;
     -h|--help) sed -n '2,/^$/p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
-    *) echo "unknown option: $arg" >&2; exit 2 ;;
+    *) echo "unknown option: $1" >&2; exit 2 ;;
   esac
+  shift
 done
+if [ -n "$ENGINE_BENCH" ] && [ ! -x "$ENGINE_BENCH" ]; then
+  echo "$ENGINE_BENCH is not a program that can be run (chmod +x it first)" >&2; exit 2
+fi
 
 OUT="sidplayzero-probe-$(date +%Y%m%d-%H%M%S).txt"
 KEYBOARD=/dev/input/by-path/platform-3f804000.i2c-event
@@ -65,7 +79,7 @@ access() { # access <path>: which of read/write this user has
 
 probe() {
   echo "# SidPlayZero device probe"
-  echo "probe_version: 1"
+  echo "probe_version: 2"
   echo "date_utc: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
   section "System"
@@ -138,6 +152,7 @@ probe() {
   fi
 
   [ "$BENCH" = 1 ] && bench "$base"
+  [ -n "$ENGINE_BENCH" ] && engine_bench
   [ "$UNPACK" = 1 ] && unpack_test
   echo
   echo "# end of probe"
@@ -221,6 +236,15 @@ unpack_test() {
     echo "out-of-memory kills in the kernel log: unknown (reading the kernel log is not permitted)"
   fi
   rm -f "$f" "$log"
+}
+
+# Times the engines the app will ship, with the program built by tools/engine-bench/build.sh.
+# Its lines are "engine_bench_<engine>_<chips>sid_<rate> = <seconds of sound per second of processor time>".
+engine_bench() {
+  section "Engine benchmark (libsidplayfp 3.1.2, both engines; SPEC-262)"
+  echo "before: $(grep -E '^(MemAvailable)' /proc/meminfo | tr -s ' ') load=$(cut -d' ' -f1-3 /proc/loadavg)"
+  "$ENGINE_BENCH" 2>&1 || echo "(engine benchmark: exit $?)"
+  echo "temperature after: $( (cat /sys/class/thermal/thermal_zone0/temp 2>/dev/null || echo unknown) )"
 }
 
 probe > "$OUT" 2>&1

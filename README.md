@@ -35,6 +35,7 @@ settle it, and carried forward from there.
 | [`docs/spec-review.md`](docs/spec-review.md) | The independent review of the specification, and what was done about each point |
 | [`docs/findings.md`](docs/findings.md) | Things that turned out differently from what an earlier document said |
 | [`tools/device-probe.sh`](tools/device-probe.sh) | Collects facts about a CardputerZero that the requirements depend on. It changes nothing on the device |
+| [`tools/engine-bench/`](tools/engine-bench) | A small program that times the two engines the app will ship, for the same visit to the device. `build.sh` builds it as a static arm64 program; the probe runs it with `--engine-bench` |
 | [`tools/check_repo.py`](tools/check_repo.py) | The repository's own checks, run on every pull request |
 | [`.github/rulesets/`](.github/rulesets) | The branch and tag protection of this repository, as files that GitHub can import |
 
