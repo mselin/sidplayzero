@@ -109,3 +109,121 @@ SPEC-164 the clock filter alone removes exactly the tunes of the other clock [pa
 SPEC-164 the filter panel has four lines, each changed with Left and Right; Enter applies them and ESC leaves them as they were; each filter alone, and all together, remove exactly the fixture tunes that do not fit	code	expect screen = browser
 SPEC-164 the year filters alone remove exactly the tunes outside the years, and a tune with no year fits only when both say any [parts: filters]	code	not built yet
 SPEC-164 with no filter set nothing is left out, and a filter knows whether any of its four lines is set [parts: filters]	code	not built yet
+SPEC-130 SPEC-009 a hand-written file with every key of the table gives every setting its value [parts: modes shuffle rate force roms resume screen-off download-all]	code	not built yet
+SPEC-130 SPEC-009 a settings file written by hand from the table loads, and what the app writes is UTF-8 text	code	not built yet
+SPEC-130 SPEC-022 a change is in force at once, and its save is the quick worker's	code	not built yet
+SPEC-130 SPEC-132 the settings file is written through the safe write, every time a setting changes	code	not built yet
+SPEC-130 SPEC-133 a value the table does not allow is refused for a setting that is always built	code	not built yet
+SPEC-130 a file with a comment and an unknown key keeps both when it is saved again	code	not built yet
+SPEC-130 a file with only one key gives that setting and the defaults for the rest	code	not built yet
+SPEC-130 each ROM setting takes a path, or nothing, and keeps it [parts: roms]	code	not built yet
+SPEC-130 each setting that is always built, set to each of its values and to the ends of its range, is read back after a reload	code	not built yet
+SPEC-130 resume_on_start takes each of its values and keeps it [parts: resume]	code	not built yet
+SPEC-130 sample_rate takes each of its values and keeps it [parts: rate]	code	not built yet
+SPEC-130 screen_off_after takes 0 and 10 to 3600 seconds, and keeps them [parts: screen-off]	code	not built yet
+SPEC-130 shuffle takes each of its values and keeps it [parts: shuffle]	code	not built yet
+SPEC-130 sid_model and clock take each of their values and keep them [parts: force]	code	not built yet
+SPEC-130 the keys are those of the table, and with no file every setting has its default	code	not built yet
+SPEC-130 url_archive takes an https address that holds {release}, and keeps it [parts: download-all]	code	not built yet
+SPEC-130 when_song_ends and repeat_all take each of their values and keep them [parts: modes]	code	not built yet
+SPEC-131 SPEC-022 the save after two seconds is handed to the quick worker, not done where the timer fires	code	not built yet
+SPEC-131 SPEC-132 the state file is written through the safe write	code	not built yet
+SPEC-131 SPEC-201 at exit the file is written at once with what is remembered then	code	not built yet
+SPEC-131 a highlight moved once every second for 20 s is saved at least every two seconds	code	not built yet
+SPEC-131 a moved highlight is in state.ini two seconds after the first change not yet saved	code	expect title = /MUSICIANS/T/Tester_Tom
+SPEC-131 a queue that came from a playlist is made again from the playlist's entries [parts: playlists]	code	not built yet
+SPEC-131 a queue that came from a search is restored as the one current entry alone	code	not built yet
+SPEC-131 a remembered folder that is only in the listing still opens; one that is in neither gives its parent	code	not built yet
+SPEC-131 at start the browser opens the remembered folder with the remembered entry highlighted	code	not built yet
+SPEC-131 stopping three levels down and starting again gives the same folder, highlight, current entry and queue	code	not built yet
+SPEC-131 stopping three levels down in the fixture tree and starting again gives the same folder, highlight and current entry	code	expect title = /MUSICIANS
+SPEC-131 the current entry is restored into an idle player, with the queue made again from its folder	code	not built yet
+SPEC-131 the file is written two seconds after the first change not yet saved, and not before	code	not built yet
+SPEC-131 the other kinds of queue, a query and a name with spaces, and a tune outside the collection come back as they were	code	not built yet
+SPEC-131 with no current entry remembered, the player is left as it is	code	not built yet
+SPEC-131 with no state file nothing is remembered, and reading it makes nothing	code	not built yet
+SPEC-131 with the remembered folder removed, the nearest parent that is there opens, and the root if none is, as the browser shows it	code	expect screen = browser
+SPEC-131 with the remembered folder removed, the nearest parent that is there opens, and the root if none is	code	not built yet
+SPEC-132 SPEC-130 with a failure at every operation of a settings save in turn, the file is the old or the new one and loads without a fault	code	not built yet
+SPEC-132 SPEC-131 with a failure at every operation of a state save in turn, the file is the old or the new one, whole	code	not built yet
+SPEC-132 SPEC-134 a save makes the target's folder first when it is not there	code	not built yet
+SPEC-132 SPEC-202 a partial download is kept until it is 7 days old, and then removed with its .meta	code	not built yet
+SPEC-132 SPEC-202 the temporary files of a folder are removed, and nothing else in it	code	not built yet
+SPEC-132 a download written at the temporary name is flushed, renamed over the target, and the folder flushed	code	not built yet
+SPEC-132 a save writes a new file beside the target, flushes it, renames it over the target and flushes the folder, in that order	code	not built yet
+SPEC-132 at every moment of a save, what is at the target is the whole old file or the whole new one	code	not built yet
+SPEC-132 the same with no file there before: afterwards there is the whole new file, or none	code	not built yet
+SPEC-132 the temporary file is in the target's folder, named as the target with a dot in front and .tmp-sidplayzero added	code	not built yet
+SPEC-132 with a failure at every operation of a save in turn, the file read back is complete and is the old or the new contents	code	not built yet
+SPEC-133 SPEC-130 a settings file with only comments and an unknown key gives no notice and no copy, and keeps both when a setting is changed	code	expect screen = settings
+SPEC-133 SPEC-204 a file larger than 64 KiB is not used at all; one of exactly 64 KiB is	code	not built yet
+SPEC-133 SPEC-204 a state file larger than 64 KiB, or not valid UTF-8, is not used at all	code	not built yet
+SPEC-133 a file that is not valid UTF-8 is not used at all, though most of its lines are good	code	not built yet
+SPEC-133 a file with only comments and an unknown key gives no notice and no copy	code	not built yet
+SPEC-133 a key the app does not know is kept and otherwise ignored	code	not built yet
+SPEC-133 a known key given twice is a fault, and the last one wins	code	not built yet
+SPEC-133 a line that is neither empty, a comment nor key = value is a fault, and the rest of the file is used	code	not built yet
+SPEC-133 a settings file of random bytes is not used at all: defaults, the notice once, and the bytes kept in settings.ini.bad	code	not built yet
+SPEC-133 a state file of random bytes is not used, and there is no copy of it and no notice	code	not built yet
+SPEC-133 a value that is not allowed for its key is a fault: that setting keeps its default, the others are used	code	not built yet
+SPEC-133 an empty file gives the defaults and no notice	code	not built yet
+SPEC-133 an empty settings file gives the defaults and no notice	code	expect screen = settings
+SPEC-133 in a state file a faulty line or value costs only its own key, and an unknown key is kept	code	not built yet
+SPEC-133 started twice with a faulty file that is not saved in between, the second copy is settings.ini.bad.2	code	not built yet
+SPEC-133 started twice with a faulty settings file that is not saved in between, the second copy is settings.ini.bad.2	code	expect notice.id = MSG_SETTINGS_RESET
+SPEC-133 started with a settings.ini of random bytes, the app starts, shows the notice, and settings.ini.bad holds the original bytes	code	expect notice.id = MSG_SETTINGS_RESET
+SPEC-133 the copy is made before anything is written, and the file the app then writes has no fault	code	not built yet
+SPEC-134 a folder is made when something is first written into it, and not before	code	not built yet
+SPEC-134 each XDG variable moves its own folder and no other	code	not built yet
+SPEC-134 the import and export folders are beside the playlists, and each kept file has its folder	code	not built yet
+SPEC-134 with each variable set, the settings and the state appear under it	code	not built yet
+SPEC-134 with no XDG variable set, the four folders are the ones under the home folder	code	not built yet
+SPEC-135 with resume_on_start off, or with an absent tune, the player is not asked to play [parts: resume]	code	not built yet
+SPEC-135 with resume_on_start on and the recorded tune present, the player is asked to play it after start [parts: resume]	code	not built yet
+SPEC-135 with resume_on_start on, a start plays the restored tune from its beginning; one that is absent by then is not fetched	code	expect player.state = playing
+SPEC-154 SPEC-131 a saved path that is not a collection path is dropped by the state reader; one with a space or an accent is kept	code	not built yet
+SPEC-200 started with a network that fails the test if it is used, the app shows the browser and answers a key	code	expect screen = browser
+SPEC-201 SPEC-131 a held ESC stops the player, writes state.ini and leaves with status 0; the next start has the tune as its current entry, idle	code	expect screen = playing
+SPEC-201 leaving while a download is held open cuts it short, and the app still ends with status 0	code	expect panel.id = notice-panel
+SPEC-202 SPEC-132 at start the app removes the temporary files a killed run left in its own folders, and those in a folder of the collection as it lists it	code	expect screen = browser
+SPEC-202 SPEC-132 at start the temporary files go from the app's own folders, and partial downloads past their age from the cache	code	not built yet
+SPEC-202 SPEC-134 the clean-up at start makes no folder that is not there yet, and writes nothing	code	not built yet
+SPEC-204 a file of exactly its limit is read whole	code	not built yet
+SPEC-204 a file one byte past its limit is refused with its message, unread, within two seconds	code	not built yet
+SPEC-204 a file that is not there is not a file that is too large	code	not built yet
+SPEC-204 a line longer than 4,096 bytes is cut there: a file with a million-character line loads within two seconds	code	not built yet
+SPEC-204 a zero byte ends its line, and a file with zero bytes inside loads within two seconds	code	not built yet
+SPEC-204 lines end at LF or CRLF, and the last line need not end at all	code	not built yet
+SPEC-204 the limits are those of the table, and a size is refused from one byte past its limit	code	not built yet
+SPEC-207 SPEC-022 turning the screen off is the quick worker's work: the timer itself touches neither the card nor the backlight [parts: screen-off]	code	not built yet
+SPEC-207 SPEC-200 a start that finds backlight_saved = 70 in state.ini sets the backlight to 70	code	expect-log backlight contains "set 70"
+SPEC-207 SPEC-200 a start with backlight_saved = 70 sets the backlight to 70 and clears the key [parts: screen-off]	code	not built yet
+SPEC-207 SPEC-201 the brightness is put back when the app exits, and backlight_saved is cleared [parts: screen-off]	code	not built yet
+SPEC-207 SPEC-201 with the screen turned off by the app, leaving puts the brightness back	code	expect player.state = playing
+SPEC-207 any key turns the screen back on and does nothing else [parts: screen-off]	code	not built yet
+SPEC-207 killed while the screen was off, the next start finds backlight_saved and puts the brightness back [parts: screen-off]	code	not built yet
+SPEC-207 the brightness is put back when playback pauses or stops, and backlight_saved is cleared [parts: screen-off]	code	not built yet
+SPEC-207 the seconds are counted from the last key, and only while a tune plays and the setting is above 0 [parts: screen-off]	code	not built yet
+SPEC-207 with a backlight that cannot be changed the setting is not available, and nothing is ever turned off [parts: screen-off]	code	not built yet
+SPEC-207 with a backlight that cannot be changed, the setting's row reads "Not available on this device"	code	expect screen = settings
+SPEC-207 with the backlight at 70 % and screen_off_after at 10: after 10 s of playing the backlight is off and state.ini holds 70; a key puts it back and does nothing else	code	expect screen = playing
+SPEC-207 with the backlight at 70 % and the setting at 10, after 10 s of playing without a key the backlight is at 0 and state.ini holds 70 [parts: screen-off]	code	not built yet
+SPEC-207 with the screen turned off by the app, pausing puts the brightness back	code	expect player.state = playing
+SPEC-240 every measurement that a budget is held against is one the app writes	code	not built yet
+SPEC-241 SPEC-112 from the key events answered come the middle, the 95-in-100 and the longest time	code	not built yet
+SPEC-241 SPEC-201 a run started with --metrics writes, when it exits, a file whose keys are exactly those that apply off the device	code	the measurements file's keys are not those that apply off the device: it lacks ['engine_library', 'exit_ms', 'start_ms', 'user_groups'] and has [] beside them
+SPEC-241 SPEC-240 every measurement of the two tables can be recorded, and the file holds one line key = value for each and nothing else	code	not built yet
+SPEC-241 a key recorded again holds the newer value, and each measurement is told as it is taken	code	not built yet
+SPEC-241 each value has the form of its key: a number, yes or no, or one of its words	code	not built yet
+SPEC-241 each value in the measurements file has the form of its key	code	'start_ms' not found in {'app_version': '0.1.0'} : the measurements file has no start_ms; it holds: ['app_version']
+SPEC-241 no value in the measurements file holds the name of the user or of the machine	code	'user_groups' not found in {'app_version': '0.1.0'} : the measurements file has no user_groups; it holds: ['app_version']
+SPEC-241 nothing else is written: a key that is in neither table is refused	code	not built yet
+SPEC-241 the measurements are written to the file that was asked for, through the Files seam	code	not built yet
+SPEC-241 the measurements file says what the conditions for the complete download found [parts: download-all]	code	'memory_check_mib' not found in {'app_version': '0.1.0'} : the measurements file has no memory_check_mib; it holds: ['app_version']
+SPEC-241 the user_groups line leaves out the group named after the user	code	not built yet
+SPEC-202 killed with SIGKILL at a random moment in its first four seconds and started again, 50 times: every start reaches the browser, and the folder and entry restored were highlighted in the 10 s before the kill	code	expect screen = browser
+SPEC-132 the real program is killed with SIGKILL at 20 random moments while a script makes it save, and after each kill every kept file loads	code	not built yet
+SPEC-200 a second copy of the real program, started while the first runs, says that SidPlayZero is already running, exits with status 1 and touches nothing; the first carries on	code	2 != 1 : the second copy's exit status
+SPEC-201 the same with SIGINT	code	expect screen = browser
+SPEC-201 playing a fixture tune and sent SIGTERM, the real program ends with status 0 within 1 s, state.ini names the tune, and no child process is left	code	expect screen = browser
+SPEC-201 the same with a fake download held open: the download is cut short, and nothing of it is in the collection	code	expect screen = browser

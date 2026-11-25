@@ -1,4 +1,4 @@
-# SPEC-131 with the remembered folder removed, the nearest parent that is there opens, and the root if none is
+# SPEC-131 with the remembered folder removed, the nearest parent that is there opens, and the root if none is, as the browser shows it
 # fixture: tunes/commando_test.sid C64Music/One/Two/Three/Deep.sid
 # fixture: tunes/two_sid.sid C64Music/One/Two/Beside.sid
 # fixture: tunes/three_sid.sid C64Music/Top.sid
