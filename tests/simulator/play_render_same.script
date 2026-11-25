@@ -1,0 +1,51 @@
+# SPEC-070 a fixture played with the real engine while three folders and Settings are opened, and played again with nothing pressed: the underrun counter stays 0 and the two recordings are equal
+# fixture: collections/85/C64Music C64Music
+# fixture: tunes/own_tune.sid C64Music/Own.sid
+# fakes: fakes/play_accurate
+expect screen = browser
+expect rows[3].text = Own.sid
+key End
+expect rows[3].highlighted = true
+key Enter
+expect screen = playing
+expect player.state = playing
+expect player.engine = accurate
+save-samples before
+# 1,800 ms of the tune, with the screens busy.
+advance 500
+key 4
+expect screen = browser
+key Home
+key Enter
+expect title = /DEMOS
+advance 300
+key Left
+key Down
+key Enter
+expect title = /GAMES
+advance 300
+key Left
+key Down
+key Enter
+expect title = /MUSICIANS
+advance 300
+key Tab
+expect screen = settings
+advance 400
+key Esc
+key Left
+expect title = /
+save-samples busy
+expect player.state = playing
+expect player.underrun_frames = 0
+# The same tune again from its start, for the same time, and nothing pressed.
+key End
+key Enter
+expect screen = playing
+expect player.state = playing
+save-samples between
+advance 1800
+save-samples quiet
+expect player.underrun_frames = 0
+expect-samples frames = 172800
+expect-same busy quiet

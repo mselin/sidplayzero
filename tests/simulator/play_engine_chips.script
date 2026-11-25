@@ -1,0 +1,58 @@
+# SPEC-004 SPEC-072 for the one-, two- and three-SID fixtures alike, the now-playing screen names the engine the setting gives: light for `auto` while nothing is measured, accurate for `accurate` and light for `light`
+# fixture: play/C64Music/CHIPS C64Music
+# fakes: fakes/play_engines
+# args: --backend fake
+# `auto`, the default, with no measurement stored yet: sidlite for every number of chips.
+expect screen = browser
+expect rows[0].text = One_Chip.sid
+expect rows[1].text = Three_Chips_3SID.sid
+expect rows[2].text = Two_Chips_2SID.sid
+key Enter
+expect player.state = playing
+expect player.chips = 1
+expect player.engine = light
+expect lines[4] contains light
+key Down
+expect player.chips = 3
+expect player.engine = light
+expect lines[4] contains light
+key Down
+expect player.chips = 2
+expect player.engine = light
+expect lines[4] contains light
+# `accurate`: reSIDfp for every number of chips.
+put accurate.ini .config/sidplayzero/settings.ini
+restart
+expect screen = browser
+key Home
+key Enter
+expect player.state = playing
+expect player.chips = 1
+expect player.engine = accurate
+expect lines[4] contains accurate
+key Down
+expect player.chips = 3
+expect player.engine = accurate
+expect lines[4] contains accurate
+key Down
+expect player.chips = 2
+expect player.engine = accurate
+expect lines[4] contains accurate
+# `light`: sidlite for every number of chips.
+put light.ini .config/sidplayzero/settings.ini
+restart
+expect screen = browser
+key Home
+key Enter
+expect player.state = playing
+expect player.chips = 1
+expect player.engine = light
+expect lines[4] contains light
+key Down
+expect player.chips = 3
+expect player.engine = light
+expect lines[4] contains light
+key Down
+expect player.chips = 2
+expect player.engine = light
+expect lines[4] contains light

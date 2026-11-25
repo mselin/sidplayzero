@@ -1,0 +1,26 @@
+# SPEC-004 SPEC-072 the now-playing screen names the engine: light for `auto` while nothing is measured, and accurate or light as the setting says
+# fixture: play/C64Music/QUEUE C64Music
+# fakes: fakes/play_engines
+# args: --backend fake
+expect screen = browser
+expect rows[0].text = A_One.sid
+key Enter
+expect screen = playing
+expect player.state = playing
+expect player.engine = light
+expect lines[4] contains light
+# With the setting changed to `accurate`, at the next start.
+put accurate.ini .config/sidplayzero/settings.ini
+restart
+expect screen = browser
+key Enter
+expect player.state = playing
+expect player.engine = accurate
+expect lines[4] contains accurate
+# And to `light`.
+put light.ini .config/sidplayzero/settings.ini
+restart
+key Enter
+expect player.state = playing
+expect player.engine = light
+expect lines[4] contains light

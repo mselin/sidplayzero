@@ -1,0 +1,24 @@
+# SPEC-096 SPEC-066 Backspace on the now-playing screen starts the playing subtune again from its beginning
+# parts: restart
+# fixture: play/C64Music/QUEUE C64Music
+# args: --backend fake
+expect screen = browser
+key Down
+key Enter
+key Right
+expect player.path = /B_Three.sid
+expect player.subtune = 3
+advance 3000
+expect player.elapsed_ms = 3000
+key Backspace
+expect player.state = playing
+expect player.subtune = 3
+expect player.elapsed_ms = 0
+advance 1000
+expect player.elapsed_ms = 1000
+# Paused, it starts again and plays.
+key Enter
+expect player.state = paused
+key Backspace
+expect player.state = playing
+expect player.elapsed_ms = 0

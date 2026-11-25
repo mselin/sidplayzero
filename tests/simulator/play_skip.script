@@ -1,0 +1,22 @@
+# SPEC-096 SPEC-066 holding Right for 400 ms or more skips ahead, and releasing it does not change the subtune; a short press of Right is next subtune
+# parts: skip
+# fixture: play/C64Music/QUEUE C64Music
+# args: --engine fake
+expect screen = browser
+key Down
+key Enter
+expect player.path = /B_Three.sid
+expect player.subtune = 2
+advance 1000
+# Held for 1,400 ms: skipping for the last second of it, at four times real time or more.
+hold Right 1400
+expect player.subtune = 2
+expect player.state = playing
+expect player.elapsed_ms > 5000
+expect player.underrun_frames = 0
+# Afterwards it plays on at its own speed, and a second later no underrun has been counted.
+advance 1000
+expect player.underrun_frames = 0
+expect player.subtune = 2
+key Right
+expect player.subtune = 3

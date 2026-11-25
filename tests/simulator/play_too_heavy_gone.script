@@ -1,0 +1,32 @@
+# SPEC-079 once MSG_TOO_HEAVY has gone, 10 s after it appeared, L does nothing, and a second burst of underruns on the same tune does nothing
+# parts: too-slow
+# fixture: play/C64Music/QUEUE C64Music
+# fakes: fakes/play_accurate
+# args: --backend fake
+expect screen = browser
+key Enter
+expect player.engine = accurate
+fake backend underrun 1
+advance 1000
+fake backend underrun 1
+advance 1000
+fake backend underrun 1
+advance 5000
+expect notice.id = MSG_TOO_HEAVY
+# It shows for 10 s from when it appeared, which was at most five seconds ago.
+advance 11000
+expect notice = null
+key L
+expect player.engine = accurate
+expect player.state = playing
+expect notice = null
+# The same tune, a second burst: the player acts once for each tune loaded.
+fake backend underrun 1
+advance 1000
+fake backend underrun 1
+advance 1000
+fake backend underrun 1
+advance 5000
+expect notice = null
+expect player.engine = accurate
+expect player.state = playing

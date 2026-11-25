@@ -1,0 +1,28 @@
+# SPEC-079 playing with the light engine already, underruns in three separate seconds raise the notice MSG_CANNOT_KEEP_UP, and the tune plays on as it was
+# parts: too-slow
+# fixture: play/C64Music/QUEUE C64Music
+# fakes: fakes/play_light
+# args: --backend fake
+expect screen = browser
+key Enter
+expect player.state = playing
+expect player.engine = light
+advance 2000
+fake backend underrun 1
+advance 1000
+fake backend underrun 1
+advance 1000
+expect notice = null
+fake backend underrun 1
+# A notice shows for 3 s: two seconds on, one raised at any moment since is still there.
+advance 2000
+expect notice.id = MSG_CANNOT_KEEP_UP
+expect notice.text = "This tune is too heavy for this device"
+expect player.engine = light
+expect player.state = playing
+# Nothing was loaded again: the tune is six seconds in.
+expect player.elapsed_ms = 6000
+# L has nothing to offer here.
+key L
+expect player.engine = light
+expect player.elapsed_ms = 6000

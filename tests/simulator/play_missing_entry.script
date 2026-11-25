@@ -1,0 +1,33 @@
+# SPEC-069 a playlist entry that is missing shows MSG_ENTRY_MISSING when a key chooses it, and is passed over at once, without the message, when playback reaches it by itself
+# parts: playlists
+# fixture: play/C64Music C64Music
+# fakes: fakes/play_missing
+# args: --backend fake
+expect screen = browser
+# "Lists", and the playlist of three entries whose second names a tune that is nowhere.
+key 6
+expect screen = playlists
+expect rows[1].text contains Gaps
+key Down
+key Enter
+expect screen = playlist
+expect rows[1].marks contains missing
+key Down
+key Enter
+expect screen = playing
+expect player.state = failed
+expect player.message = MSG_ENTRY_MISSING
+expect player.path = /NOWHERE/Gone.sid
+expect lines[5] contains "This tune is not on the device and not in HVSC"
+# Chosen with a key, it stays there.
+advance 5000
+expect player.state = failed
+# The entry before it plays, and when its song ends the missing one is passed over.
+key Up
+expect player.path = /QUEUE/A_One.sid
+expect player.state = playing
+fake backend song_ended
+expect player.path = /QUEUE/C_Two_Chips.sid
+expect player.state = playing
+expect player.message = null
+expect-requests 0

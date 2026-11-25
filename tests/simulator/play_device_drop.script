@@ -1,0 +1,16 @@
+# SPEC-078 the sound device dropped for 300 ms in the middle of a tune: the player stays Playing, no notice is raised and no underrun counted (tests/simulator/test_play.py looks at the samples)
+# fixture: play/C64Music/QUEUE C64Music
+# args: --engine fake
+expect screen = browser
+key Enter
+expect player.state = playing
+expect player.path = /A_One.sid
+advance 1000
+fake sink drop 300
+expect player.state = playing
+advance 2000
+expect player.state = playing
+expect notice = null
+expect player.underrun_frames = 0
+expect-samples frames > 96000
+save-samples dropped

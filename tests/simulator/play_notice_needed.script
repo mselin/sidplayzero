@@ -1,0 +1,19 @@
+# SPEC-069 SPEC-152 with HVSC's notice not accepted, playback that reaches absent tunes by itself passes them over at once, makes no request, and says MSG_NOTICE_NEEDED
+# fixture: play/C64Music C64Music
+# args: --backend fake
+expect screen = browser
+key Down
+key Down
+key Down
+key Enter
+expect title = /FETCH
+expect rows[0].text = A_Present.sid
+key Enter
+expect player.state = playing
+expect player.path = /FETCH/A_Present.sid
+# The song ends. The three entries after it are not on the device; the one after those is.
+fake backend song_ended
+expect player.path = /FETCH/E_Present.sid
+expect player.state = playing
+expect notice.id = MSG_NOTICE_NEEDED
+expect-requests 0

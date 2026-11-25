@@ -1,0 +1,78 @@
+# SPEC-096 SPEC-060 the now-playing screen's lines in the states a tune passes on its way: nothing playing, fetching, waiting, playing and failed
+# fixture: play/C64Music C64Music
+# fakes: fakes/play_stalled
+# args: --backend fake
+expect screen = browser
+# Idle, no current entry.
+key P
+expect screen = playing
+expect player.state = idle
+expect lines[0] = "Nothing is playing"
+expect lines[1] = ""
+expect lines[2] = ""
+expect lines[3] = ""
+expect lines[4] = ""
+expect lines[5] matches "^(?!.*(Stopped|Playing|Paused|Loading|Fetching)).*$"
+key Esc
+expect screen = browser
+# Into the folder whose tunes HVSC lists and the device does not have.
+key Down
+key Down
+key Down
+key Enter
+expect title = /FETCH
+expect rows[1].text = B_Absent.sid
+key Down
+# Fetching: Enter on an absent tune asks for it at once; the fake holds the answer back.
+key Enter
+expect screen = playing
+expect player.state = fetching
+expect player.path = /FETCH/B_Absent.sid
+expect-requests 1
+expect-request 1 https://hvsc.c64.org/download/C64Music/FETCH/B_Absent.sid
+expect lines[0] = B_Absent.sid
+expect lines[1] = ""
+expect lines[2] = ""
+expect lines[3] contains 3
+expect lines[3] contains 0:05
+expect lines[4] = ""
+expect lines[5] contains "Fetching…"
+# Waiting: a step to another absent tune. It is not asked for until it has been current for 700 ms.
+key Down
+expect player.state = waiting
+expect player.path = /FETCH/C_Absent.sid
+expect lines[0] = C_Absent.sid
+expect lines[1] = ""
+expect lines[3] contains 1
+expect lines[3] contains 0:02
+expect lines[4] = ""
+expect lines[5] contains "Fetching…"
+expect-requests 1
+advance 690
+expect player.state = waiting
+expect-requests 1
+advance 10
+expect player.state = fetching
+expect-requests 2
+expect-request 2 https://hvsc.c64.org/download/C64Music/FETCH/C_Absent.sid
+# Playing: the answer comes, and the lines are the header's.
+fake http release https://hvsc.c64.org/download/C64Music/FETCH/C_Absent.sid
+expect player.state = playing
+expect-file C64Music/FETCH/C_Absent.sid exists
+expect lines[0] = "Fetch Folder, Absent C"
+expect lines[1] = "Test Author"
+expect lines[3] contains "1 of 1"
+expect lines[4] contains "1 SID"
+expect lines[5] contains Playing
+# Failed: the next tune is one HVSC's site does not have.
+key Down
+expect player.path = /FETCH/D_Absent.sid
+advance 700
+expect player.state = failed
+expect player.message = MSG_FETCH_NOT_FOUND
+expect lines[0] = D_Absent.sid
+expect lines[1] = ""
+expect lines[2] = ""
+expect lines[3] = ""
+expect lines[4] = ""
+expect lines[5] contains "Not on HVSC's site"

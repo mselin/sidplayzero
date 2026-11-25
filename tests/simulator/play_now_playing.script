@@ -1,0 +1,75 @@
+# SPEC-096 with the fixture "Commando Test" playing, the now-playing screen's player and lines hold what its header and its database entry say; Enter pauses, and Stop leaves the player Idle with "Stopped"
+# fixture: collections/85/C64Music C64Music
+# args: --backend fake
+expect screen = browser
+key Down
+key Down
+key Enter
+expect title = /MUSICIANS
+key Enter
+expect title = /MUSICIANS/H
+key Enter
+expect title = /MUSICIANS/H/Hubbard_Rob
+expect rows[0].text = Commando.sid
+key Enter
+# Playing a tune opens the now-playing screen.
+expect screen = playing
+expect place = playing
+expect player.state = playing
+expect player.message = null
+expect player.path = /MUSICIANS/H/Hubbard_Rob/Commando.sid
+expect player.subtune = 1
+expect player.subtunes = 1
+expect player.elapsed_ms = 0
+expect player.length_ms = 3500
+expect player.chips = 1
+expect player.model = 6581
+expect player.clock = PAL
+expect player.engine = light
+expect lines[0] = "Commando Test"
+expect lines[1] = "Test Author"
+expect lines[2] = "2026 SidPlayZero"
+expect lines[3] contains "1 of 1"
+expect lines[3] contains 0:00
+expect lines[3] contains 0:03
+expect lines[4] contains 6581
+expect lines[4] contains PAL
+expect lines[4] contains "1 SID"
+expect lines[4] contains light
+expect lines[5] contains Playing
+expect actions[0] = Browse
+expect actions[1] = Stop
+# Line 4 is live: the fake backend's position moves with the fake clock.
+advance 2000
+expect player.elapsed_ms = 2000
+expect lines[3] contains 0:02
+expect lines[3] contains 0:03
+# Enter pauses and plays on.
+key Enter
+expect player.state = paused
+expect lines[5] contains Paused
+expect lines[0] = "Commando Test"
+advance 1000
+expect player.elapsed_ms = 2000
+expect lines[3] contains 0:02
+key Enter
+expect player.state = playing
+expect lines[5] contains Playing
+# Stop: Idle, with the entry still there, as when it last played.
+key 5
+expect screen = playing
+expect player.state = idle
+expect player.path = /MUSICIANS/H/Hubbard_Rob/Commando.sid
+expect lines[0] = "Commando Test"
+expect lines[1] = "Test Author"
+expect lines[2] = "2026 SidPlayZero"
+expect lines[3] contains "1 of 1"
+expect lines[3] contains 0:00
+expect lines[3] contains 0:03
+expect lines[4] contains 6581
+expect lines[4] contains PAL
+expect lines[5] contains Stopped
+# And it can be played again.
+key Enter
+expect player.state = playing
+expect player.elapsed_ms = 0
