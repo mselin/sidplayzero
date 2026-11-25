@@ -49,7 +49,7 @@ def doctest_results(program, where, known, canaries, must_only, env=None):
                 continue
             if CANARY_FAILS in test.name and not canaries:
                 continue
-            if must_only and test.parts:
+            if (must_only and test.parts) or "usbsid" in test.parts:    # no build of the tests has usbsid (SPEC-115)
                 results.append(Result(test.name, SKIPPED, "needs the part " + ", ".join(test.parts), where))
             elif test.name in seen:
                 results.append(Result(test.name, *seen[test.name], where))

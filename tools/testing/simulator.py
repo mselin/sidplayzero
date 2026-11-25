@@ -153,7 +153,7 @@ def script_results(program, where, canaries, must_only, keep):
                 continue
             if Path(test.path).name in RUN_BY_OTHER_TESTS:
                 continue
-            if must_only and test.parts:
+            if (must_only and test.parts) or "usbsid" in test.parts:    # no build of the tests has usbsid (SPEC-115)
                 results.append(Result(test.name, SKIPPED, "needs the part " + ", ".join(test.parts), where))
                 continue
             out = keep / (where.replace(" ", "-") or "all") / Path(test.path).stem

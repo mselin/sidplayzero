@@ -609,3 +609,92 @@ SPEC-149 an archive with a link that points outside is refused by the real 7z pa
 SPEC-149 an archive whose entries add up to more than 2 GiB is refused by the real 7z path [parts: download-all]	code	not built yet
 SPEC-149 an archive with more than 200,000 entries is refused by the real 7z path [parts: download-all]	code	not built yet
 SPEC-149 an archive with a second top-level folder is refused by the real 7z path [parts: download-all]	code	not built yet
+SPEC-179 Export writes #EXTM3U, #PLAYLIST:, and for each entry #EXTINF: and the HVSC path, with ?N for a subtune number, and MSG_EXPORTED gives the path [parts: playlists export]	code	not built yet
+SPEC-179 an entry whose title is not known is exported as its path alone [parts: playlists export]	code	not built yet
+SPEC-179 Export replaces a file of that name [parts: playlists export]	code	not built yet
+SPEC-179 exporting a playlist and importing the file gives a playlist with the same tunes, subtune numbers and order [parts: playlists export]	code	not built yet
+SPEC-174 a playlist with three absent entries makes three requests, in order, for those paths only, and all three become present [parts: playlists]	code	not built yet
+SPEC-174 while it runs the job shows n of m, and between two files it pauses 250 ms [parts: playlists]	code	not built yet
+SPEC-174 a playlist with 250 absent entries makes 200 requests, and the notice says 50 remain [parts: playlists]	code	not built yet
+SPEC-174 Enter on another absent tune while the job runs puts that tune's request next in the log [parts: playlists]	code	not built yet
+SPEC-174 SPEC-152 with HVSC's notice not accepted the job asks first: no request until Enter, and none at all after ESC [parts: playlists]	code	not built yet
+SPEC-174 with less than 8 MiB free on the card the job makes no request [parts: playlists]	code	not built yet
+SPEC-174 the job stops at the first failure for lack of network [parts: playlists]	code	not built yet
+SPEC-174 a file the server does not have is left absent and the job goes on to the next [parts: playlists]	code	not built yet
+SPEC-174 Stop ends the job after the file in flight [parts: playlists]	code	not built yet
+SPEC-170 a playlist written by hand with the optional lines loads: name, subtunes, MD5s, titles and lengths [parts: playlists]	code	not built yet
+SPEC-170 a playlist written by hand without the optional lines loads, and each entry means its tune's default subtune [parts: playlists]	code	not built yet
+SPEC-170 lines the app does not know are kept with the entry they come before [parts: playlists]	code	not built yet
+SPEC-170 saved again after its entries are reordered, each unknown line is still before its entry [parts: playlists]	code	not built yet
+SPEC-170 the app writes the form the specification shows, line for line [parts: playlists]	code	not built yet
+SPEC-170 a playlist written by hand in the app's own form comes back byte for byte when saved [parts: playlists]	code	not built yet
+SPEC-170 a playlist's file is named after the playlist, with other characters than letters, digits, space, - and _ replaced by _ [parts: playlists]	code	not built yet
+SPEC-170 SPEC-062 a playlist read from the playlists folder gives the queue its file describes, subtunes and all [parts: playlists]	code	not built yet
+SPEC-009 SPEC-170 what the app writes for a playlist is valid UTF-8 text, and it loads again as it was [parts: playlists]	code	not built yet
+SPEC-009 SPEC-172 every playlist file the app writes into its folder is valid UTF-8 text [parts: playlists]	code	not built yet
+SPEC-154 SPEC-170 the playlist reader keeps an entry whose path is no collection path, and it is a missing entry, never a file [parts: playlists]	code	not built yet
+SPEC-204 SPEC-170 a playlist file of 4 MiB is read, and one a byte longer is refused with MSG_FILE_TOO_LARGE [parts: playlists]	code	not built yet
+SPEC-204 SPEC-170 a playlist holds at most 20,000 entries: the rest is not read, and MSG_LIST_CUT says so [parts: playlists]	code	not built yet
+SPEC-204 SPEC-170 a million-character line is cut at 4,096 bytes and a zero byte ends its line, within two seconds [parts: playlists]	code	not built yet
+SPEC-175 the import panel lists the files ending in .m3u, .m3u8, .js2, .json or .spl in the import folder and in the collection root [parts: playlists]	code	not built yet
+SPEC-175 each player's M3U dialect, written as that player writes it, imports with the expected tunes, subtunes and order [parts: playlists]	code	not built yet
+SPEC-175 a file with the same entry twice gives two entries [parts: playlists]	code	not built yet
+SPEC-175 mix.m3u holding #PLAYLIST:Favourites becomes the playlist Favourites 2, and one without that line becomes mix [parts: playlists]	code	not built yet
+SPEC-175 an imported name loses its control characters and is cut so that, with the number added, it is at most 40 characters [parts: playlists]	code	not built yet
+SPEC-175 an entry's subtune comes from the first that applies: #SIDTUNE, #PHOSPHOR song=N, a leading {N}, an ending ?N, an ending /tune_NNN.sid [parts: playlists]	code	not built yet
+SPEC-175 an M3U file is read as UTF-8 if it is valid UTF-8 and as Latin-1 if not, with either kind of line ending [parts: playlists]	code	not built yet
+SPEC-175 a line starting file:// has that removed and its %XX sequences decoded; empty lines and # lines are no entries [parts: playlists]	code	not built yet
+SPEC-178 one entry for each form of path imports as its tune, and one that matches nothing is reported and kept as a missing entry [parts: playlists]	code	not built yet
+SPEC-178 a path matches a tune that is in the listing or under the root: an absent tune, and one of the user's own [parts: playlists]	code	not built yet
+SPEC-178 the file's name alone finds a tune only if exactly one tune in the listing has that name [parts: playlists]	code	not built yet
+SPEC-154 SPEC-178 the importers take no path that is not a collection path: it becomes a missing entry, and nothing is written under the root [parts: playlists]	code	not built yet
+SPEC-204 SPEC-175 a file to import one byte past 4 MiB is refused with MSG_FILE_TOO_LARGE and makes no playlist; past 20,000 entries the list is cut [parts: playlists]	code	not built yet
+SPEC-176 JSidplay2's .js2 and .json files import with the expected tunes in order, and neither carries subtunes [parts: playlists import-more]	code	not built yet
+SPEC-176 a .json file that is not an array of objects imports nothing, makes no playlist, and gives MSG_IMPORT_NOTHING [parts: playlists import-more]	code	not built yet
+SPEC-177 Sidplay/w's two forms of .spl file, written as the specification's samples with the fixture tunes' names, import with the expected tunes and subtunes [parts: playlists import-more]	code	not built yet
+SPEC-177 a .spl file's keys are read without regard to case, keys the app does not know are ignored, and BaseDir goes only in front of names that are not full paths [parts: playlists import-more]	code	not built yet
+SPEC-173 an entry is found in this order: a file at its path; a tune with its MD5 at another path; absent if HVSC lists the path; else missing [parts: playlists]	code	not built yet
+SPEC-173 an entry whose MD5 is a listed tune's at another path, not on the device, is absent at that path and so is fetched from there [parts: playlists]	code	not built yet
+SPEC-173 SPEC-154 a tune outside the collection is present while its file is there, and a tune of the user's own is found at its path [parts: playlists]	code	not built yet
+SPEC-173 in a collection that is not HVSC's, an entry is present or missing: nothing is absent [parts: playlists]	code	not built yet
+SPEC-173 after a folder is renamed in the collection and in the listing, every entry that pointed into it resolves and is queued at its new path, and the next save corrects the file [parts: playlists]	code	not built yet
+SPEC-173 one of the user's own tunes, moved, is found by its MD5 through the index [parts: playlists]	code	not built yet
+SPEC-173 a playlist of present, missing, present queues the first and third as present, and still holds three entries afterwards [parts: playlists]	code	not built yet
+SPEC-170 SPEC-173 what is known of a tune for its lines in the file: the file's MD5, the header's author and title, the listing's length [parts: playlists]	code	not built yet
+SPEC-171 Favourites always exists, is listed first, and cannot be renamed or deleted [parts: playlists]	code	not built yet
+SPEC-172 SPEC-170 a new playlist is listed with no entries, and its file is there at once [parts: playlists]	code	not built yet
+SPEC-172 a name is 1 to 40 characters with no control characters [parts: playlists]	code	not built yet
+SPEC-172 a second playlist with the same name in other case is refused with MSG_NAME_TAKEN, and so is Favourites [parts: playlists]	code	not built yet
+SPEC-170 two playlists whose names give the same file name get two files, the second with a number added [parts: playlists]	code	not built yet
+SPEC-172 SPEC-170 Add puts a tune at the end with MSG_ADDED, and the file holds what is known of each tune [parts: playlists]	code	not built yet
+SPEC-172 adding an entry that is already there adds nothing and gives MSG_ALREADY_THERE [parts: playlists]	code	not built yet
+SPEC-172 SPEC-062 Up moves the third entry to the top in two steps, the file follows, and the queue is in the new order [parts: playlists]	code	not built yet
+SPEC-172 Remove takes one entry out, and the file follows [parts: playlists]	code	not built yet
+SPEC-172 SPEC-170 Rename gives the playlist and its file the new name, and Delete removes both [parts: playlists]	code	not built yet
+SPEC-172 SPEC-173 the Playlist screen's rows: the title or else the file's name, the subtune number, and the mark for absent and missing [parts: playlists]	code	not built yet
+SPEC-172 SPEC-132 a change is written to a new file beside the playlist, flushed, renamed over it, and the folder flushed [parts: playlists]	code	not built yet
+SPEC-172 SPEC-132 a save that fails at any of its operations leaves the old playlist or the new one, whole [parts: playlists]	code	not built yet
+SPEC-171 marking a tune twice adds then removes one entry, with MSG_FAV_ADDED and MSG_FAV_REMOVED [parts: playlists]	code	not built yet
+SPEC-171 marking subtune 3 while it plays adds an entry with subtune=3, the browser's star shows, Fav in the browser adds a second entry without a number, and a restart keeps both [parts: playlists]	code	not built yet
+SPEC-171 the star on the now-playing screen: an entry for the playing subtune, or one without a number while the default subtune plays [parts: playlists]	code	not built yet
+SPEC-171 Fav on the now-playing screen acts on the playing subtune's entry and leaves the tune's other entry alone [parts: playlists]	code	not built yet
+SPEC-154 SPEC-171 a tune of the user's own, with a space and an accent in its path, becomes a favourite and is still one after a restart [parts: playlists]	code	not built yet
+SPEC-021 building and opening the listing goes through Files: the fake counts each operation, and a fake that refuses leaves core no other way to the file	code	not built yet
+SPEC-172 SPEC-171 Add from the now-playing screen's More panel adds the playing subtune, Add in the browser adds the tune without a number, an entry that is already there gives MSG_ALREADY_THERE, and Fav and Add act on a search result	code	expect screen = browser
+SPEC-171 Fav marks a tune and unmarks it, marks subtune 3 while it plays, the star shows in the browser, Fav there adds a second entry, and a restart keeps the stars and the file	code	expect screen = browser
+SPEC-173 SPEC-069 a playlist of present, missing, present shows the missing entry with its mark, plays the first and the third, still holds three entries, and gives MSG_ENTRY_MISSING when the missing one is chosen	code	expect screen = browser
+SPEC-172 a second playlist with the same name in other case is refused with MSG_NAME_TAKEN, and so is the name Favourites	code	expect screen = browser
+SPEC-114 SPEC-172 SPEC-175 the panels of the playlists part open on their keys, name themselves, keep the keys 4 to 8 from acting, and close with ESC and Enter: pick-playlist, more-playlist and import, and the text panel after an import	code	expect screen = browser
+SPEC-172 SPEC-170 a playlist is made, three tunes are added, the third is moved to the top, the three play in the new order, and the playlist is renamed and deleted, its file following every step	code	expect screen = browser
+SPEC-022 the audio callback of a test build, which aborts if it allocates or takes a lock, plays two seconds of a fixture tune with the real engine without that abort, every frame delivered	code	expect screen = browser
+SPEC-003 the app renders ten seconds of a fixture tune through the engine library, for the comparison with what the sidplayfp program renders (tests/integration/test_structure.py makes it)	code	expect screen = browser
+SPEC-010 the seven fixture tunes whose titles hold every printable Windows-1252 character show those characters, as Unicode, on the now-playing screen	code	expect screen = browser
+SPEC-009 a settings file written by hand from SPEC-130's table loads: no fault is found in it, and the tune that is played follows its values	code	expect screen = browser
+SPEC-022 while a download is stalled for 30 s, a folder opens within 300 ms and a volume key reaches the system volume within 100 ms of the fake clock	code	expect screen = browser
+SPEC-022 with the index build held by slow files on the long worker, Enter on an absent tune makes its request at once	code	expect screen = browser
+SPEC-022 with files that take 2 s to list a folder, a key is still answered within 100 ms	code	expect screen = browser
+SPEC-022 SPEC-148 with an update's download stalled on the long worker, Enter on an absent tune makes its request at once, and the tune plays while the download still waits	code	expect screen = browser
+SPEC-010 the 12-pixel font has a glyph for each of the 218 printable Windows-1252 characters	code	not built yet
+SPEC-010 the 14-pixel font has a glyph for each of the 218 printable Windows-1252 characters	code	not built yet
+SPEC-010 two runs of the script that shows every printable Windows-1252 character give the same pixels, and each tune's title is drawn	code	the script stopped at: expect screen = browser
+SPEC-020 in the program's build, `platform` is where the engine, miniaudio and libcurl are used: a file of it can include each	code	no file of platform is built with a path to miniaudio.h
