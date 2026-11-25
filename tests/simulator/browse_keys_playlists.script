@@ -1,0 +1,60 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPEC-095 the browser's keys 6, 7 and 8 are "Lists", "Fav" and "Add"; "Fav" and "Add" have no label, and do nothing, when a folder is highlighted
+# parts: playlists
+# fixture: collections/85/C64Music C64Music
+# args: --backend fake
+
+expect screen = browser
+expect title = /
+
+# A folder is highlighted.
+expect rows[0].kind = folder
+expect rows[0].highlighted = true
+expect actions[2] = Lists
+expect actions[3] = ""
+expect actions[4] = ""
+key 7
+expect notice = null
+expect panel = null
+expect screen = browser
+key 8
+expect notice = null
+expect panel = null
+expect screen = browser
+
+# A tune is highlighted.
+key Enter
+key Enter
+expect title = /DEMOS/A-F
+expect rows[0].kind = tune
+expect rows[0].highlighted = true
+expect actions[0] = ""
+expect actions[1] = Search
+expect actions[2] = Lists
+expect actions[3] = Fav
+expect actions[4] = Add
+
+# "Fav" makes the tune a favourite, and again takes it out.
+key 7
+expect notice.id = MSG_FAV_ADDED
+expect rows[0].marks contains favourite
+advance 3000
+expect notice = null
+key 7
+expect notice.id = MSG_FAV_REMOVED
+expect rows[0].marks = []
+advance 3000
+
+# "Add" asks which playlist.
+key 8
+expect panel.id = pick-playlist
+key Esc
+expect panel = null
+expect screen = browser
+
+# "Lists" opens the Playlists screen.
+key 6
+expect screen = playlists
+key Esc
+expect screen = browser
+expect title = /DEMOS/A-F

@@ -1,0 +1,24 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPEC-048 with a panel open over the empty screen, a tune put into the root makes the browser appear when the panel is closed, and not before
+
+expect screen = empty
+key Enter
+expect panel.id = notice-panel
+expect screen = empty
+
+put fixtures/tunes/commando_test.sid C64Music/Commando.sid
+advance 5000
+expect screen = empty
+expect panel.id = notice-panel
+advance 10000
+expect screen = empty
+expect panel.id = notice-panel
+
+# ESC closes the panel and cancels what was asked for: nothing is fetched, and the browser is there.
+key Esc
+expect panel = null
+expect screen = browser
+expect place = browser
+expect title = /
+expect rows[0].text = Commando.sid
+expect-requests 0

@@ -1,0 +1,162 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPEC-164 the filter panel has four lines, each changed with Left and Right; Enter applies them and ESC leaves them as they were; each filter alone, and all together, remove exactly the fixture tunes that do not fit
+# parts: filters
+# fixture: collections/85/C64Music C64Music
+
+# Every tune's path has the word "sid": eleven results.
+expect screen = browser
+key 5
+type sid
+key Enter
+expect place = search-results
+expect list.total = 11
+expect position = 1/11
+expect rows[0].text = Clock_Demo.sid
+expect rows[4].text = Changed.sid
+expect actions[2] = Filter
+
+# The panel: four lines, each "any" until it is changed.
+key 6
+expect panel.id = filter
+expect place = filter
+expect panel.rows matches ^\[(\{[^{}]*\},?){4}\]$
+expect panel.rows[0].highlighted = true
+expect panel.rows[0] contains any
+expect panel.rows[1] contains any
+expect panel.rows[2] contains any
+expect panel.rows[3] contains any
+
+# The first line is the chip model: any, 6581, 8580.
+key Right
+expect panel.rows[0] contains 6581
+key Right
+expect panel.rows[0] contains 8580
+key Left
+expect panel.rows[0] contains 6581
+key Left
+expect panel.rows[0] contains any
+
+# The second is the clock: any, PAL, NTSC. Alone, NTSC leaves the one NTSC tune.
+key Down
+expect panel.rows[1].highlighted = true
+key Right
+expect panel.rows[1] contains PAL
+key Right
+expect panel.rows[1] contains NTSC
+key Enter
+expect panel = null
+expect place = search-results
+expect list.total = 1
+expect position = 1/1
+expect rows[0].text = Clock_Demo.sid
+
+# The panel shows what is set, and ESC leaves it as it was.
+key 6
+expect panel.id = filter
+expect panel.rows[1] contains NTSC
+key Home
+key Down
+key Left
+expect panel.rows[1] contains PAL
+key Esc
+expect panel = null
+expect list.total = 1
+expect rows[0].text = Clock_Demo.sid
+key 6
+expect panel.rows[1] contains NTSC
+
+# The third is the first year: any, then the years from 1982. Alone, 1987 leaves out the tune of 1985.
+key Home
+key Down
+key Left
+key Left
+expect panel.rows[1] contains any
+key Down
+expect panel.rows[2].highlighted = true
+key Right
+expect panel.rows[2] contains 1982
+key Right
+key Right
+key Right
+key Right
+key Right
+expect panel.rows[2] contains 1987
+key Enter
+expect list.total = 10
+expect rows[3].text = Huelsbeck_Test.sid
+expect rows[4].text = Needs_BASIC.sid
+
+# The fourth is the last year. Alone, 1986 leaves only the tune of 1985.
+key 6
+key Home
+key Down
+key Down
+key Left
+key Left
+key Left
+key Left
+key Left
+key Left
+expect panel.rows[2] contains any
+key End
+expect panel.rows[3].highlighted = true
+key Right
+expect panel.rows[3] contains 1982
+key Right
+key Right
+key Right
+key Right
+expect panel.rows[3] contains 1986
+key Enter
+expect list.total = 1
+expect rows[0].text = Changed.sid
+
+# The chip model alone: 8580 leaves the tune made for that chip. (One fixture tune is made for either
+# chip, and the specification does not say which chip filter such a tune fits.)
+key 6
+key End
+key Left
+key Left
+key Left
+key Left
+key Left
+expect panel.rows[3] contains any
+key Home
+key Right
+key Right
+expect panel.rows[0] contains 8580
+key Enter
+expect list.total < 3
+expect rows matches "text":"New_Chip\.sid"[,}]
+expect rows matches ^(?!.*(Commando|Clock_Demo|Changed|Huelsbeck_Test)\.sid)
+
+# All four together: a 6581, PAL, from 1984 to 1990. Two fixture tunes are that.
+key 6
+key Home
+key Left
+expect panel.rows[0] contains 6581
+key Down
+key Right
+expect panel.rows[1] contains PAL
+key Down
+key Right
+key Right
+key Right
+expect panel.rows[2] contains 1984
+key Down
+key Right
+key Right
+key Right
+key Right
+key Right
+key Right
+key Right
+key Right
+key Right
+expect panel.rows[3] contains 1990
+key Enter
+expect panel = null
+expect list.total = 2
+expect rows[0].text = Huelsbeck_Test.sid
+expect rows[1].text = Changed.sid
+expect-requests 0

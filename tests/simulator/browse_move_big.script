@@ -1,0 +1,74 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPEC-045 in a folder of 1,298 entries each key lands on the expected row and the position reads n/total; holding Down for one second moves 16 rows
+# fixture: collections/browse_big/C64Music C64Music
+
+# The collection is a listing alone: /BIG has 1,298 tunes, Tune_0001.sid to Tune_1298.sid, none of them
+# on the device.
+expect screen = browser
+expect title = /
+expect rows[0].text = BIG
+expect rows[0].highlighted = true
+key Enter
+expect title = /BIG
+expect list.total = 1298
+expect position = 1/1298
+expect rows[0].text = Tune_0001.sid
+expect rows[0].highlighted = true
+
+# Up and Down move one row and stop at the ends.
+key Up
+expect position = 1/1298
+expect rows[0].highlighted = true
+key Down
+expect position = 2/1298
+expect rows[1].text = Tune_0002.sid
+expect rows[1].highlighted = true
+expect rows[0].highlighted = false
+key Down
+expect position = 3/1298
+key Up
+expect position = 2/1298
+key Up
+key Up
+expect position = 1/1298
+
+# Home and End go to the first and the last entry.
+key End
+expect position = 1298/1298
+expect rows matches "text":"Tune_1298\.sid"[^{}]*"highlighted":true
+key Down
+expect position = 1298/1298
+key Up
+expect position = 1297/1298
+expect rows matches "text":"Tune_1297\.sid"[^{}]*"highlighted":true
+key Home
+expect position = 1/1298
+expect rows[0].text = Tune_0001.sid
+expect rows[0].highlighted = true
+
+# Page Down and Page Up move by the number of rows on the screen: six, or five where the detail line
+# has the sixth. test_browse.py reads that number from the screen and checks the step exactly.
+key PageDown
+expect position matches ^[67]/1298$
+key PageDown
+expect position matches ^1[13]/1298$
+key PageUp
+expect position matches ^[67]/1298$
+key PageUp
+expect position = 1/1298
+
+# The app makes its own key repeat: after 400 ms, 25 times a second. One second moves 16 rows.
+hold Down 1000
+expect position = 17/1298
+expect rows matches "text":"Tune_0017\.sid"[^{}]*"highlighted":true
+hold Up 1000
+expect position = 1/1298
+hold PageDown 1000
+expect position matches ^(81|97)/1298$
+key Home
+
+# A press shorter than 400 ms is one step, however often it comes.
+hold Down 390
+expect position = 2/1298
+hold Down 390
+expect position = 3/1298

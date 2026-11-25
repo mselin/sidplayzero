@@ -1,0 +1,51 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPEC-047 a root with three tunes and no DOCUMENTS folder lists three present tunes, and each plays for the default length
+# fixture: tunes/commando_test.sid C64Music/Commando.sid
+# fixture: tunes/three_subtunes.sid C64Music/Three_Songs.sid
+# fixture: tunes/two_sid.sid C64Music/Two_Chips.sid
+# args: --backend fake
+
+expect screen = browser
+expect title = /
+expect list.total = 3
+expect position = 1/3
+expect rows[0].text = Commando.sid
+expect rows[0].kind = tune
+expect rows[0].marks = []
+expect rows[1].text = Three_Songs.sid
+expect rows[1].kind = tune
+expect rows[1].marks = []
+expect rows[2].text = Two_Chips.sid
+expect rows[2].kind = tune
+expect rows[2].marks = []
+
+# The default length is 3:30 until the setting says otherwise: 210,000 ms. (HVSC's database gives the
+# first of these tunes 0:03.500; here there is no database.)
+key Enter
+expect screen = playing
+expect player.state = playing
+expect player.path = /Commando.sid
+expect player.length_ms = 210000
+key Esc
+expect screen = browser
+key Down
+key Enter
+expect player.state = playing
+expect player.path = /Three_Songs.sid
+expect player.subtune = 2
+expect player.subtunes = 3
+expect player.length_ms = 210000
+key Right
+expect player.subtune = 3
+expect player.length_ms = 210000
+key Esc
+expect screen = browser
+key Down
+key Enter
+expect player.state = playing
+expect player.path = /Two_Chips.sid
+expect player.length_ms = 210000
+key Esc
+expect screen = browser
+expect rows[2].highlighted = true
+expect-requests 0

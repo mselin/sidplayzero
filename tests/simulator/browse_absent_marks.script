@@ -1,0 +1,56 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPEC-049 in a folder with one present and one absent tune the second row has the mark "absent", and "fetching" while the fake HttpClient holds its request
+# fixture: collections/browse_pair/C64Music C64Music
+# fakes: fakes/browse_fetch
+# args: --backend fake
+
+# HVSC lists /PAIR/First_Here.sid and /PAIR/Second_Away.sid; only the first is on the device.
+expect screen = browser
+expect title = /
+expect rows[0].text = PAIR
+key Enter
+expect title = /PAIR
+expect list.total = 2
+expect rows[0].text = First_Here.sid
+expect rows[0].kind = tune
+expect rows[0].marks = []
+expect rows[1].text = Second_Away.sid
+expect rows[1].kind = tune
+expect rows[1].marks = ["absent"]
+expect-requests 0
+
+# Enter on the absent tune fetches it. It is the first use of the network, so HVSC's notice comes first.
+key Down
+expect rows[1].highlighted = true
+key Enter
+expect panel.id = notice-panel
+expect-requests 0
+key Enter
+expect panel = null
+expect-requests 1
+expect-request 1 https://hvsc.c64.org/download/C64Music/PAIR/Second_Away.sid
+expect player.state = fetching
+expect screen = playing
+
+# The fake server holds the request. In the browser the row's mark is the progress mark.
+key Esc
+expect screen = browser
+expect title = /PAIR
+expect rows[1].text = Second_Away.sid
+expect rows[1].marks contains fetching
+expect rows[0].marks = []
+advance 2000
+expect rows[1].marks contains fetching
+
+# The answer comes: the tune is on the device now, and its row is a present tune's.
+fake http release https://hvsc.c64.org/download/C64Music/PAIR/Second_Away.sid
+expect player.state = playing
+expect player.path = /PAIR/Second_Away.sid
+expect-file C64Music/PAIR/Second_Away.sid exists
+key Left
+expect title = /
+key Enter
+expect title = /PAIR
+expect rows[1].text = Second_Away.sid
+expect rows[1].marks matches ^(?!.*(absent|fetching))
+expect-requests 1

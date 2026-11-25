@@ -1,0 +1,84 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPEC-100 Search: a query typed on the fixture collection gives the expected rows; Enter plays a result and the results become the queue; "Folder" shows a result in the browser at its folder, highlighted
+# fixture: collections/85/C64Music C64Music
+# args: --backend fake
+
+expect screen = browser
+key 5
+expect screen = search
+expect stack = ["browser","search"]
+
+# The screen opens with the field in use. With an empty field Enter does nothing.
+expect place = search-field
+expect typing = true
+key Enter
+expect screen = search
+expect place = search-field
+expect typing = true
+
+# "chip" begins a word of four tunes: of their paths, and of the titles of those on the device.
+type chip
+expect fields matches "text":"chip"[,}]
+key Enter
+expect place = search-results
+expect typing = false
+expect list.total = 4
+expect position = 1/4
+expect rows[0].text = Either_Chip.sid
+expect rows[0].kind = tune
+expect rows[0].highlighted = true
+expect rows[0].marks = []
+expect rows[1].text = New_Chip.sid
+expect rows[2].text = Three_Chips_3SID.sid
+expect rows[3].text = Two_Chips_2SID.sid
+expect rows matches ^\[(\{[^{}]*\},?){4}\]$
+expect actions[0] = Edit
+expect actions[1] = Folder
+
+# Up from the first result returns to the field, Down from the field goes to the results, and so does "Edit".
+key Up
+expect place = search-field
+expect typing = true
+expect fields matches "text":"chip"[,}]
+key Down
+expect place = search-results
+expect position = 1/4
+key Down
+expect position = 2/4
+key Up
+expect position = 1/4
+expect place = search-results
+key 4
+expect place = search-field
+key Down
+expect place = search-results
+
+# Enter plays the result, and the queue becomes the results: the next tune is the second result, in
+# another folder, not the end of the first one's folder.
+key Enter
+expect screen = playing
+expect stack = ["browser","search","playing"]
+expect player.state = playing
+expect player.path = /GAMES/A-F/Either_Chip.sid
+key Next
+expect player.state = playing
+expect player.path = /MUSICIANS/T/Tester_Tom/New_Chip.sid
+key Esc
+expect screen = search
+expect place = search-results
+expect list.total = 4
+
+# "Folder" opens the highlighted result in the browser, at its folder, with the tune highlighted.
+key Home
+key Down
+key Down
+expect position = 3/4
+expect rows[2].text = Three_Chips_3SID.sid
+expect rows[2].highlighted = true
+key 5
+expect screen = browser
+expect stack = ["browser"]
+expect title = /MUSICIANS/T/Tester_Tom
+expect position = 5/7
+expect rows matches "text":"Three_Chips_3SID\.sid"[^{}]*"highlighted":true
+expect-requests 0

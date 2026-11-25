@@ -1,0 +1,67 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPEC-100 SPEC-161 while the index is being built, Search shows "Indexing n %" and searches what has been indexed so far
+# fixture: collections/85/C64Music C64Music
+# fakes: fakes/browse_slow_listing
+
+# Every listing of a folder takes one second of the fake clock. After the first second the browser has
+# its root, and the index build, which walks the folders one after another, has seen the root and no
+# tune yet. Its first step has given every tune HVSC lists a record all the same.
+advance 1000
+expect screen = browser
+expect title = /
+expect rows[0].text = DEMOS
+key 5
+expect screen = search
+expect place = search-field
+expect text matches Indexing [0-9]+ %
+
+# A word of a path finds its tune already.
+type clock
+key Enter
+expect place = search-results
+expect list.total = 1
+expect position = 1/1
+expect rows[0].text = Clock_Demo.sid
+expect text matches Indexing [0-9]+ %
+
+# A word of its title does not yet: its file has not been read.
+key 4
+expect place = search-field
+key End
+key Space
+type sixty
+expect fields matches "text":"clock sixty"[,}]
+key Enter
+expect text contains "No results"
+expect text matches Indexing [0-9]+ %
+key Esc
+expect screen = browser
+
+# A minute is far more than the walk needs. The index is complete, and the same query finds the tune.
+advance 60000
+key 5
+expect screen = search
+expect place = search-field
+expect text matches ^(?![\s\S]*Indexing)
+key End
+key Backspace
+key Backspace
+key Backspace
+key Backspace
+key Backspace
+key Backspace
+key Backspace
+key Backspace
+key Backspace
+key Backspace
+key Backspace
+expect fields matches "text":""[,}]
+type clock
+key Space
+type sixty
+key Enter
+expect place = search-results
+expect list.total = 1
+expect rows[0].text = Clock_Demo.sid
+expect text matches ^(?![\s\S]*Indexing)
+expect-requests 0
