@@ -1,0 +1,17 @@
+# TF-042 SPEC-253 put, remove, readonly, expect-file and restart do what the script language says
+# fakes: fakes/files
+expect-file C64Music/tune.txt absent
+put tune.txt C64Music/tune.txt
+expect-file C64Music/tune.txt exists
+expect-file C64Music/tune.txt contains "not a tune"
+put tune.txt C64Music/copy.txt
+expect-file C64Music/tune.txt equals C64Music/copy.txt
+remove C64Music/copy.txt
+expect-file C64Music/copy.txt absent
+readonly C64Music
+writable C64Music
+expect-file .local/state/sidplayzero/lock exists
+restart
+expect screen = empty
+quit
+expect-file C64Music/tune.txt exists

@@ -1,0 +1,6 @@
+# TF-045 the windowed build: run by test_simulator.py under a virtual display, with the real clock
+# expect-status: 0
+advance 200
+expect screen = empty
+shot window
+hold Esc 1100

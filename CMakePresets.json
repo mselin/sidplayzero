@@ -1,0 +1,52 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": { "major": 3, "minor": 31, "patch": 0 },
+  "configurePresets": [
+    {
+      "name": "linux-x86-64",
+      "displayName": "A Linux desktop: the app in a window of the device's size",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/linux-x86-64",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "SIDPLAYZERO_DISPLAY": "window"
+      }
+    },
+    {
+      "name": "cp0-cross",
+      "displayName": "The CardputerZero: arm64, drawing to the framebuffer",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/cp0-cross",
+      "toolchainFile": "${sourceDir}/cmake/toolchains/cp0-aarch64-linux-gnu.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "SIDPLAYZERO_DISPLAY": "framebuffer",
+        "SIDPLAYZERO_PACKAGE": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    { "name": "linux-x86-64", "configurePreset": "linux-x86-64" },
+    { "name": "cp0-cross", "configurePreset": "cp0-cross" }
+  ],
+  "packagePresets": [
+    { "name": "cp0-cross", "configurePreset": "cp0-cross", "generators": ["DEB"] }
+  ],
+  "workflowPresets": [
+    {
+      "name": "linux-x86-64",
+      "steps": [
+        { "type": "configure", "name": "linux-x86-64" },
+        { "type": "build", "name": "linux-x86-64" }
+      ]
+    },
+    {
+      "name": "cp0-cross-package",
+      "steps": [
+        { "type": "configure", "name": "cp0-cross" },
+        { "type": "build", "name": "cp0-cross" },
+        { "type": "package", "name": "cp0-cross" }
+      ]
+    }
+  ]
+}

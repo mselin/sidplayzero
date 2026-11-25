@@ -1,0 +1,16 @@
+# TF-042 SPEC-253 the fakes are set up from the fakes folder, changed by `fake`, and looked at by the expect commands
+# fakes: fakes/values
+# args: --backend fake --seed 1
+expect-requests 0
+fake memory.available_mib 450
+fake volume.level 55
+fake http down
+fake http up
+fake backend song_ended
+fake backend registers 1 1 80
+expect-samples frames = 0
+save-samples before
+save-samples after
+expect-same before after
+advance 100
+expect screen = empty

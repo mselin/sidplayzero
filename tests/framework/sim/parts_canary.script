@@ -1,0 +1,3 @@
+# TF-013 canary: a script that needs a part runs only where that part is built
+# parts: playlists
+expect screen = empty

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-or-later
 #
 # device-probe.sh: collects the facts about a CardputerZero that SidPlayZero's requirements
 # and specification depend on, and writes them to one text file to send back.

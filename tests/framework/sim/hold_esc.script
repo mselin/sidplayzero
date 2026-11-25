@@ -1,0 +1,11 @@
+# TF-042 SPEC-106 a held ESC shows its notice and then leaves, in the fake clock's time
+hold Esc 200
+expect notice = null
+press Esc
+advance 490
+expect notice = null
+advance 20
+expect notice.id = MSG_HOLD_TO_LEAVE
+release Esc
+expect notice = null
+hold Esc 1000

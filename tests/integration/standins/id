@@ -1,0 +1,8 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-or-later
+# A stand-in for id (TF-080): says who the tests want the device script to think is running it.
+case "${1:-}" in
+    -u) echo "${SPZ_FAKE_UID:-1000}" ;;
+    -un) echo "${SPZ_FAKE_USER:-tester}" ;;
+    *) echo "uid=${SPZ_FAKE_UID:-1000}(${SPZ_FAKE_USER:-tester})" ;;
+esac
