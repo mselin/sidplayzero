@@ -18,8 +18,8 @@ until that gate has passed.
 |---|---|---|---|
 | 1 | Requirements | [`docs/requirements.md`](docs/requirements.md) | Approved 25 November 2026 |
 | 2 | Specification | [`docs/spec.md`](docs/spec.md) and an independent review of it, [`docs/spec-review.md`](docs/spec-review.md) | Approved 25 November 2026, after independent review |
-| 3 | Test framework | [`docs/test-framework-tasks.md`](docs/test-framework-tasks.md), then the harness for the levels of tests | Built; the device level's proof awaits a run on the device |
-| 4 | Tests | `tests/`, each test tracing to the specification | Not started |
+| 3 | Test framework | [`docs/test-framework-tasks.md`](docs/test-framework-tasks.md), then the harness for the levels of tests | Built and merged 25 November 2026; the device level's proof is still owed |
+| 4 | Tests | `tests/`, each test tracing to the specification | In progress |
 | 5 | Implementation | `src/` | Not started |
 
 When a later phase finds that an earlier document is wrong or incomplete, the problem is not patched where it

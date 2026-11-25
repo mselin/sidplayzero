@@ -134,6 +134,7 @@ def level():
     known = sources.cpp_tests(["tests/unit", "tests/framework"])
     results = []
     programs = {}
+    run([sys.executable, ROOT / "tools" / "make_fixtures.py"], check=True)
     for folder, where, options in VARIANTS:
         with Timer(f"unit tests{': ' + where if where else ''}"):
             build = configure_and_build(BUILD / folder, {"SIDPLAYZERO_BUILD_APP": "OFF",

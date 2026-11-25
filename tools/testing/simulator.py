@@ -7,6 +7,8 @@ A test is a script. Comment lines at its top give its name and what it needs:
     # SPEC-048 the empty screen names the collection folder      <- the name, with the items it checks
     # parts: playlists                                           <- parts it needs (SPEC-115)
     # fakes: fakes/setup                                         <- the --fakes folder, beside the script
+    # fixture: collections/85/C64Music C64Music                  <- copies a folder or file of tests/fixtures
+    #                                                               into the home folder before the start
     # args: --backend fake                                       <- more options for the program
     # expect-status: 1                                           <- for the framework's own scripts only
 
@@ -19,6 +21,7 @@ import json
 import os
 import shlex
 import shutil
+import sys
 from pathlib import Path
 
 from . import png, screen, sources
@@ -28,6 +31,7 @@ from .unit import doctest_results, python_results
 
 SCRIPT_FOLDERS = ["tests/simulator", "tests/framework/sim"]
 GOLDEN = ROOT / "tests" / "golden"
+FIXTURES = ROOT / "tests" / "fixtures"
 TEST_ROOT = Path(os.environ.get("SIDPLAYZERO_TEST_ROOT", "/tmp/sidplayzero-test"))
 RUN_BY_OTHER_TESTS = {"window.script"}   # needs a window: tests/framework/sim/test_simulator.py runs it
 VARIANTS = [
@@ -38,13 +42,16 @@ VARIANTS = [
 
 def header(path):
     """The directive lines of a script's header: fakes, args, expect-status."""
-    found = {"fakes": "", "args": [], "status": 0}
+    found = {"fakes": "", "args": [], "status": 0, "fixtures": []}
     for line in Path(path).read_text(encoding="utf-8").split("\n"):
         if not line.startswith("#"):
             break
         text = line.lstrip("#").strip()
         if text.startswith("fakes:"):
             found["fakes"] = text[len("fakes:"):].strip()
+        elif text.startswith("fixture:"):
+            source, target = text[len("fixture:"):].split()
+            found["fixtures"].append((source, target))
         elif text.startswith("args:"):
             found["args"] = shlex.split(text[len("args:"):])
         elif text.startswith("expect-status:"):
@@ -90,13 +97,20 @@ def run_script(program, script, out, extra_args=(), prefix=(), timeout=180):
         fakes = script.parent / options["fakes"] if options["fakes"] else None
         if fakes and (fakes / "home").is_dir():
             shutil.copytree(fakes / "home", home, dirs_exist_ok=True)
+        for source, target in options["fixtures"]:
+            origin, place = FIXTURES / source, Path(home) / target
+            place.parent.mkdir(parents=True, exist_ok=True)
+            if origin.is_dir():
+                shutil.copytree(origin, place, dirs_exist_ok=True)
+            else:
+                shutil.copy(origin, place)
         command = [*prefix, program, "--script", script, "--out", out]
         if "--window" not in extra_args:
             command.insert(len(prefix) + 1, "--headless")
         if fakes:
             command += ["--fakes", fakes]
         command += options["args"] + [a for a in extra_args if a != "--window"]
-        process = run(command, env=home_environment(home), timeout=timeout)
+        process = run(command, env={**home_environment(home), "SPZ_FIXTURES": str(FIXTURES)}, timeout=timeout)
     return process.returncode, process.stdout, options
 
 
@@ -150,6 +164,7 @@ def script_results(program, where, canaries, must_only, keep):
 def level(variants=VARIANTS, extra_options=None, run_python=True):
     needs("cmake", "ninja", "c++", "cc", "python3", "git", "sdl2-config")
     canaries = canaries_wanted()
+    run([sys.executable, ROOT / "tools" / "make_fixtures.py"], check=True)
     keep = BUILD / "simulator-out"
     results = []
     for folder, where, options in variants:

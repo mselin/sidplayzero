@@ -6,3 +6,12 @@
 # A listed test is in order while it fails with those words. It is a fault when it fails otherwise, and
 # when it passes: a test that starts to pass is taken off this list in the same change.
 test	reason	words
+SPEC-203 every good fixture tune passes the check	code	not built yet
+SPEC-203 a tune that breaks any row of the table is refused with MSG_INVALID_SID	code	not built yet
+SPEC-203 the limits of the table are exact: 256 songs pass, a default song of 0 is read as 1	code	not built yet
+SPEC-203 a good tune cut short at any length is refused or passes, and never reads past its end	code	not built yet
+SPEC-203 SPEC-096 the header's fields are read as the fixture's header gives them	code	not built yet
+SPEC-098 SPEC-010 text from a tune's header is converted from Windows-1252, every printable character of it	code	not built yet
+SPEC-008 the MD5 function gives the test vectors of RFC 1321	code	not built yet
+SPEC-154 an HVSC path has HVSC's shape and alphabet and nothing else	code	not built yet
+SPEC-154 a collection path may have spaces and accents, and still no way out of the collection	code	not built yet

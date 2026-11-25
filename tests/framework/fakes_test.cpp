@@ -7,30 +7,10 @@
 
 #include "doctest.h"
 #include "fakes.h"
+#include "support.h"
 
-namespace {
-
-// A new, empty folder for one test, removed afterwards.
-struct TempFolder {
-    std::filesystem::path path;
-    TempFolder() {
-        static int counter = 0;
-        path = std::filesystem::temp_directory_path() /
-               ("spz-test-" + std::to_string(static_cast<long long>(std::hash<std::string>()(__FILE__))) + "-" +
-                std::to_string(++counter));
-        std::filesystem::remove_all(path);
-        std::filesystem::create_directories(path);
-    }
-    ~TempFolder() {
-        std::error_code ec;
-        std::filesystem::remove_all(path, ec);
-    }
-    std::string file(const std::string& name) const { return (path / name).string(); }
-};
-
-std::vector<std::uint8_t> bytes(const std::string& text) { return {text.begin(), text.end()}; }
-
-}  // namespace
+using spz::test::TempFolder;
+using spz::test::bytes;
 
 TEST_CASE("TF-021 the fake clock moves only when told, and fires timers in the order they fall due") {
     spz::fake::Clock clock;

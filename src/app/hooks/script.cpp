@@ -325,10 +325,10 @@ private:
     void put(std::string rest) {
         const std::string from = word(&rest);
         const std::string to = trim(rest);
-        if (fakes_.folder.empty() || from.empty() || to.empty()) throw Stop{kStatusScriptError, "put needs FROM and PATH, and a --fakes folder", "", ""};
+        if (from.empty() || to.empty()) throw Stop{kStatusScriptError, "put needs FROM and PATH", "", ""};
         std::error_code ec;
-        const fs::path source = fs::path(fakes_.folder) / from, target = in_home(to);
-        if (!fs::exists(source)) throw Stop{kStatusScriptError, "the fakes folder has no " + from, "", ""};
+        const fs::path source = fakes_.resolve(from), target = in_home(to);
+        if (!fs::exists(source)) throw Stop{kStatusScriptError, "there is no " + from + " to put", "", ""};
         fs::create_directories(target.parent_path(), ec);
         fs::copy(source, target, fs::copy_options::recursive | fs::copy_options::overwrite_existing, ec);
         if (ec) throw Stop{kStatusScriptError, "could not copy " + from + " to " + to + ": " + ec.message(), "", ""};
