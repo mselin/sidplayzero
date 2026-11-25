@@ -72,6 +72,19 @@ def home_environment(home):
     }
 
 
+def remove_home(home):
+    """Removes a home folder whole, even where a script's `readonly` took away the right to write."""
+    home = Path(home)
+    if not home.exists():
+        return
+    for folder, _, _ in os.walk(home):
+        try:
+            os.chmod(folder, 0o700)
+        except OSError:
+            pass
+    shutil.rmtree(home)
+
+
 @contextlib.contextmanager
 def new_home():
     """A new, empty home folder for one script. It is always the same path, so that what a script sees and
@@ -81,12 +94,12 @@ def new_home():
     with open(TEST_ROOT / ".lock", "w") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         home = TEST_ROOT / "home"
-        shutil.rmtree(home, ignore_errors=True)
+        remove_home(home)
         home.mkdir()
         try:
             yield str(home)
         finally:
-            shutil.rmtree(home, ignore_errors=True)
+            remove_home(home)
 
 
 def run_script(program, script, out, extra_args=(), prefix=(), timeout=180, collect=(), beside=None):
