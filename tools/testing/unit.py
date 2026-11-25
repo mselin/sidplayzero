@@ -146,7 +146,9 @@ def level():
             if folder == "unit-asan" and canaries:
                 results.append(asan_canary(program, where))
     with Timer("the framework's own tests, and the tests of the checker"):
-        results += python_results("tests/framework", canaries, {"SPZ_UNIT_BUILD": str(BUILD / "unit")})
+        env = {"SPZ_UNIT_BUILD": str(BUILD / "unit")}
+        results += python_results("tests/framework", canaries, env)
+        results += python_results("tests/unit", canaries, env)     # unit-level tests that are easier in Python
     with Timer("tools/check_repo.py"):
         process = run([sys.executable, ROOT / "tools" / "check_repo.py"])
         results.append(Result("the repository's checks (tools/check_repo.py)",

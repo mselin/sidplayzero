@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // TF-046: the simulator level's C++ canaries. Tests of the test framework, not of the app.
+#include <unistd.h>
+
 #include <cstdio>
+#include <cstdlib>
 #include <string>
 #include <vector>
 
@@ -48,7 +51,11 @@ TEST_CASE("TF-044 a picture of the screen is written as a PNG of 320 by 170") {
     REQUIRE(spz::ui::snapshot_rgb(&rgb, &width, &height));
     CHECK(width == 320);
     CHECK(height == 170);
-    const std::string path = std::string(std::tmpnam(nullptr)) + ".png";
+    char name[] = "/tmp/spz-picture-XXXXXX";
+    const int descriptor = mkstemp(name);
+    REQUIRE(descriptor >= 0);
+    close(descriptor);
+    const std::string path = name;
     REQUIRE(spz::ui::write_png(path, rgb, width, height));
     std::FILE* file = std::fopen(path.c_str(), "rb");
     REQUIRE(file != nullptr);

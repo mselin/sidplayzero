@@ -179,4 +179,5 @@ def level(variants=VARIANTS, extra_options=None, run_python=True):
                                        must_only=folder.endswith("-must"))
             if run_python and not where:
                 results += python_results("tests/framework/sim", canaries, {"SPZ_SIM_BUILD": str(build)})
+                results += python_results("tests/simulator", canaries, {"SPZ_SIM_BUILD": str(build)})
     return results
