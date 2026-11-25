@@ -24,3 +24,88 @@ SPEC-203 every bad fixture is refused with MSG_INVALID_SID by the real backend's
 SPEC-203 every good fixture, cut at every length from 0 to its size, goes to the real backend under AddressSanitizer with no report	code	not built yet
 SPEC-223 SPEC-255 the manifest has three to six screenshots of exactly 320×170, each one of the approved images	images	needs three to six approved images
 SPEC-223 the store's own check, at its pinned commit, reports no error on what the manifest publishes	images	screenshots is required
+SPEC-040 SPEC-048 the collection root does not have to exist: it is named all the same, and holds no entry	code	not built yet
+SPEC-040 a leading ~ is replaced by the home folder, and no other ~ is	code	not built yet
+SPEC-040 with HVSC_BASE set, the Settings row for the collection shows its value with "(from HVSC_BASE)", and Enter on the row changes nothing	code	expect screen = browser
+SPEC-040 with HVSC_BASE set, the collection root is the variable's value, whatever the setting says	code	not built yet
+SPEC-040 with HVSC_BASE unset and the setting set, the collection root is the setting's value	code	not built yet
+SPEC-040 with HVSC_BASE unset, changing the collection setting while the app runs makes the browser show the new root at once	code	the script ended with status 1 at: expect screen = browser
+SPEC-040 with neither HVSC_BASE nor the setting set, the collection root is C64Music in the home folder	code	not built yet
+SPEC-041 SPEC-154 a tune of the user's own in an HVSC root is listed as present, under a collection path with its space and its accent	code	not built yet
+SPEC-041 a folder that cannot be read shows no entries and the notice MSG_FOLDER_UNREADABLE	code	not built yet
+SPEC-041 a name is shown as it is when it is valid UTF-8, and with one ? for each byte that is not	code	not built yet
+SPEC-041 a name that is not valid UTF-8 is shown with ? for each bad byte, still opens and plays, and has no collection path	code	not built yet
+SPEC-041 a root of three tunes, a text file, a hidden file and DOCUMENTS, with a listing naming two of those tunes and two others, shows five tunes: three present, two absent	code	not built yet
+SPEC-041 only folders and files ending in .sid in any case are entries; names starting with a dot are left out, and so is DOCUMENTS, but only the root's	code	not built yet
+SPEC-041 the folders and tunes HVSC lists show beside what is on the device, and what both name shows once	code	not built yet
+SPEC-042 one name comes before another by its letters without regard to their case, then by its bytes	code	not built yet
+SPEC-042 the entries of a folder come out folders first, each group by name without regard to the case of ASCII letters, with ties broken by byte order	code	not built yet
+SPEC-043 SPEC-041 a folder that cannot be read arrives with no rows, and its notice is passed on once	code	not built yet
+SPEC-043 a file added to a folder that is kept in memory appears when the folder is opened again	code	not built yet
+SPEC-043 a file added to a folder that was listed before appears when the folder is opened again	code	expect screen = browser
+SPEC-043 a folder of 1,298 entries is listed, and the model gives any row from memory, in constant time	code	not built yet
+SPEC-043 a folder that has gained a present tune through the app is listed again when it is opened	code	not built yet
+SPEC-043 a folder whose entries take more than 150 ms to arrive says "Reading…" meanwhile, and shows them when they arrive	code	expect screen = browser
+SPEC-043 an empty folder shows (empty) and the position 0/0	code	not built yet
+SPEC-043 opening a folder asks the quick worker for its entries; if they take more than 150 ms the list says Reading meanwhile, and if they come sooner it never does	code	not built yet
+SPEC-043 the last 16 folders listed stay in memory: opening one of them again does not list it again, and a seventeenth pushes the oldest out	code	not built yet
+SPEC-043 the list draws only the rows that are on the screen, whatever the number of entries; an empty folder shows "(empty)" and the position 0/0	code	expect screen = browser
+SPEC-043 the list holds the same number of LVGL objects for a folder of 6 entries and for one of 1,298	code	the script ended with status 1 at: expect screen = browser
+SPEC-044 SPEC-095 Enter on a tune leaves the browser where it is and hands the tune to the caller; a folder can be shown with one of its entries highlighted	code	not built yet
+SPEC-044 a folder opens at its first entry, or at the entry highlighted the last time it was open; its parent opens with the folder just left highlighted; at the root nothing happens	code	not built yet
+SPEC-044 a folder opens with its first entry highlighted, or the one highlighted the last time it was open; Left or a short ESC goes to the parent with the folder just left highlighted; at the root they do nothing	code	expect screen = browser
+SPEC-045 Page Down and Page Up move by exactly the number of rows on the screen	code	the script ended with status 1 at: expect screen = browser
+SPEC-045 in a folder of 1,298 entries each key lands on the expected row and the position reads n/total; holding Down for one second moves 16 rows	code	expect screen = browser
+SPEC-045 no action but moving, deleting and stepping a value repeats: holding Enter for one second acts once, and so does holding Down on the now-playing screen	code	expect screen = browser
+SPEC-045 up and down move one row and stop at the ends, home and end go to the first and last entry, a page is the rows on the screen, and the position reads n/total	code	not built yet
+SPEC-046 SPEC-047 with no listing in the root, a present tune's length is the default length [parts: detail]	code	not built yet
+SPEC-046 SPEC-063 a present tune's length in the detail goes by its file's MD5, not by its path [parts: detail]	code	not built yet
+SPEC-046 a folder has no detail, and nothing is read to find that out [parts: detail]	code	not built yet
+SPEC-046 a present tune's detail is its title, its author and the length of its default subtune [parts: detail]	code	not built yet
+SPEC-046 an absent tune's detail is the number of its subtunes and the length of the first, from the listing, and no file is read for it [parts: detail]	code	not built yet
+SPEC-046 the detail line holds a present tune's title, author and length within 200 ms of the highlight resting on it; an absent tune's holds "not on device", the number of subtunes and the first length; a folder's holds nothing	code	expect screen = browser
+SPEC-047 a root with three tunes and no DOCUMENTS folder has no listing, and lists three present tunes	code	not built yet
+SPEC-047 a root with three tunes and no DOCUMENTS folder lists three present tunes, and each plays for the default length	code	expect screen = browser
+SPEC-047 with no listing in the root, the browser shows the folder tree as it is on the device	code	not built yet
+SPEC-048 a root holds no entry when it is empty or has only what the browser leaves out, and holds one as soon as it has a tune or a folder	code	not built yet
+SPEC-048 a root that has HVSC's documents and no tune yet holds entries: what HVSC lists	code	not built yet
+SPEC-048 a root that holds no entry gives the empty screen, and a tune put into the root makes the browser appear within 5 s	code	expect screen = browser
+SPEC-048 started with an empty home folder, the empty screen says no collection was found, names the root and has the one row "Get HVSC"; Enter opens the notice panel	code	expect panel.id = notice-panel
+SPEC-048 with a panel open over the empty screen, a tune put into the root makes the browser appear when the panel is closed, and not before	code	expect panel.id = notice-panel
+SPEC-048 with help open over the empty screen, a tune put into the root makes the browser appear when help is closed, and not before	code	expect place = help
+SPEC-049 in a folder with one present and one absent tune the second row has the mark "absent", and "fetching" while the fake HttpClient holds its request	code	expect screen = browser
+SPEC-095 the browser's keys 6, 7 and 8 are "Lists", "Fav" and "Add"; "Fav" and "Add" have no label, and do nothing, when a folder is highlighted	code	expect screen = browser
+SPEC-095 the browser's keys: Up and Down move, Enter or Right opens a folder or plays a tune, Left goes to the parent, "Playing" has a label only when the player has a current entry, and "Search" opens Search	code	expect screen = browser
+SPEC-100 SPEC-161 while the index is being built, Search shows "Indexing n %" and searches what has been indexed so far	code	expect screen = browser
+SPEC-100 SPEC-165 a query that matches nothing says "No results", and nothing is asked of HVSC's site; ESC closes Search from the list and from the field	code	expect screen = browser
+SPEC-100 Search: a query typed on the fixture collection gives the expected rows; Enter plays a result and the results become the queue; "Folder" shows a result in the browser at its folder, highlighted	code	expect screen = browser
+SPEC-100 in the search results the keys 7 and 8 are "Fav" and "Add", and act on the highlighted result	code	expect screen = browser
+SPEC-160 SPEC-047 with no listing in the root, every tune on the device has a record with its file's MD5	code	not built yet
+SPEC-160 an absent tune has a record with its path and nothing from a header	code	not built yet
+SPEC-160 an index built from the fixture collection and read back has one record per tune, with the fields of its file's header, and a tune of the user's own has its MD5	code	not built yet
+SPEC-160 search text is lower case, with accents taken off the letters and every character that is not a letter or a digit turned into a space	code	not built yet
+SPEC-160 the index's header holds its format number, the collection root, and the size and modification time of the song length database it was built from	code	not built yet
+SPEC-160 the search text of /MUSICIANS/H/Hubbard_Rob/Commando.sid contains the words hubbard, rob and commando	code	not built yet
+SPEC-161 SPEC-202 an index file that is cut short, or is no index at all, is refused, thrown away and built again	code	not built yet
+SPEC-161 a build handles 200 files at a time, and pauses 100 ms between two batches while a tune is playing and not otherwise	code	not built yet
+SPEC-161 a collection of 61,157 tunes: the build completes; interrupted after 10,000 tunes and started again it reads only the remaining files and equals an uninterrupted build	code	not built yet
+SPEC-161 a start with an index that fits reads no tune again; Rebuild the index reads them all; and only a build asked for by the user or made after set-up says MSG_INDEX_READY	code	not built yet
+SPEC-161 a tune that is fetched is added at once, from its file alone	code	not built yet
+SPEC-161 changing the root rebuilds the index: nothing of the collection of 61,157 tunes is left in it	code	not built yet
+SPEC-161 in the collection of 61,157 tunes, a tune added to the root, changed, and removed is found, updated and gone after the next start's step two, with only that file read	code	not built yet
+SPEC-161 step one gives every tune of the listing a record without opening any tune, which makes every path searchable	code	not built yet
+SPEC-161 the index is built again when the song length database is another one, and when the root is	code	not built yet
+SPEC-161 when the browser finds a folder changed, that folder alone is brought up to date	code	not built yet
+SPEC-162 a query is treated like search text and split at spaces into words	code	not built yet
+SPEC-162 a query with no word gives no search	code	not built yet
+SPEC-162 a search is one pass over the index, and one that runs past 2 s returns what it has by then	code	not built yet
+SPEC-162 an absent tune is found by a word from its path and not by its title	code	not built yet
+SPEC-162 at most 500 results are returned, the first in order of path, and the count is the true number of matches	code	not built yet
+SPEC-162 each query of a table gives exactly the expected tunes of the fixture collection, in order of path	code	not built yet
+SPEC-164 absent tunes, whose headers are not known, are left out while any filter is set [parts: filters]	code	not built yet
+SPEC-164 all four filters together remove exactly the tunes that do not fit every one [parts: filters]	code	not built yet
+SPEC-164 the chip model filter alone removes exactly the tunes of the other chip model [parts: filters]	code	not built yet
+SPEC-164 the clock filter alone removes exactly the tunes of the other clock [parts: filters]	code	not built yet
+SPEC-164 the filter panel has four lines, each changed with Left and Right; Enter applies them and ESC leaves them as they were; each filter alone, and all together, remove exactly the fixture tunes that do not fit	code	expect screen = browser
+SPEC-164 the year filters alone remove exactly the tunes outside the years, and a tune with no year fits only when both say any [parts: filters]	code	not built yet
+SPEC-164 with no filter set nothing is left out, and a filter knows whether any of its four lines is set [parts: filters]	code	not built yet
