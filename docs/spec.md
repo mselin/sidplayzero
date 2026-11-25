@@ -2331,7 +2331,7 @@ with status 0 only if everything it ran passed, and prints the names of what fai
 
 So REQ-161's three levels have the commands `tools/test host`, `tools/test simulator` and
 `tools/test device`. Each command says what it needs installed and stops with that list if something is
-missing; the list is in the README.
+missing; the list is in `CONTRIBUTING.md`, with the commands.
 - Covers: REQ-160, REQ-161
 - Priority: Must
 - Oracle: on a clean checkout each command runs; a deliberately failing test at each level makes its
