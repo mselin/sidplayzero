@@ -67,6 +67,9 @@ def part_faults(script):
             labels.setdefault((row["key"], row["label"]), []).append(row["part"])
     labels = {pair: parts[0] for pair, parts in labels.items() if all(part != "-" for part in parts)}
 
+    # In SPEC-260's key step no group of the key map applies: a key is only recorded, whatever part it is of.
+    if any(line.strip() == "expect place = key-step" for line in lines):
+        keys = {}
     faults = []
     for number, line in enumerate(lines, 1):
         words = line.strip().split(None, 1)

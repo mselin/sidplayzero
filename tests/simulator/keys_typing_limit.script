@@ -1,4 +1,4 @@
-# SPEC-099 the Search field holds 64 characters, and the 65th is not added
+# SPEC-099 the Search field holds 64 characters, and the 65th is not added, as the screen shows it
 # fixture: tunes/commando_test.sid C64Music/A_Commando.sid
 # fixture: tunes/three_subtunes.sid C64Music/B_Three.sid
 # fixture: tunes/two_sid.sid C64Music/C_Two.sid
