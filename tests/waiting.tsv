@@ -712,3 +712,252 @@ SPEC-002 the packaged program, run under emulation, prints libsidplayfp 3.1.2 by
 SPEC-011 no file under a "GPL version 2 only" notice is among the sources compiled into the package's program	code	the engine is not built in
 SPEC-011 the installed notices file names each component that is built in, each with its licence's text, beside the installed LICENSE	code	the notices file lacks
 SPEC-005 readelf -d lists neither libpulse nor libasound, and the program holds their names, to load them when it runs	code	miniaudio is not built in
+SPEC-141 SPEC-060 with a 30-second present tune followed by an absent one, the fetch-ahead goes out when 10 s remain and not before	code	not built yet
+SPEC-141 a song shorter than 10 s has its absent next entry fetched ahead from its start	code	not built yet
+SPEC-141 nothing is fetched ahead when the next entry is on the device, or when there is none	code	not built yet
+SPEC-141 SPEC-065 the fetch-ahead is for what will play next: while a tune still has a subtune to play, the entry after it is not fetched	code	not built yet
+SPEC-141 the 10 s are of the song, not of the clock: a pause puts the fetch-ahead off	code	not built yet
+SPEC-141 SPEC-063 no fetch-ahead is started when the song has no length	code	not built yet
+SPEC-141 SPEC-143 no fetch-ahead is started while absent tunes may not be requested: after a failed fetch, or with HVSC's notice not accepted	code	not built yet
+SPEC-141 a key that leaves the song gives up its fetch-ahead, unless it leads to that very tune	code	not built yet
+SPEC-141 SPEC-065 with `repeat` or `stop` nothing follows the song from the queue, so nothing is fetched ahead; with `next_tune` the next entry is, though the tune has subtunes left [parts: modes]	code	not built yet
+SPEC-141 SPEC-065 with repeat-all the entry after the last is the first, and it is fetched ahead if it is absent [parts: modes]	code	not built yet
+SPEC-025 SPEC-074 the software backend says it can mute voices and switch filters [parts: voices]	code	not built yet
+SPEC-025 SPEC-066 the software backend says it can skip [parts: skip]	code	not built yet
+SPEC-025 SPEC-073 load gives the engine the tune, the subtune and the settings, and opens the sink at the settings' rate	code	not built yet
+SPEC-025 SPEC-069 an engine that refuses the tune fails the load with its reason	code	not built yet
+SPEC-025 SPEC-080 the software backend can give a chip's last-written registers, as the engine has them [parts: bars]	code	not built yet
+SPEC-025 events reach the listener on the UI thread: nothing is told before the UI executor runs	code	not built yet
+SPEC-070 the render loop asks the engine for about 5 ms of samples at a time and writes them into the ring buffer	code	not built yet
+SPEC-070 the buffer holds 8,192 frames: the render loop keeps it at least half full and waits when it is full	code	not built yet
+SPEC-070 the sink is given 16-bit stereo frames as the engine made them, in order	code	not built yet
+SPEC-070 output for a subtune starts when 2,048 frames are in the buffer: until then the sink gets silence, and then the subtune's first sample	code	not built yet
+SPEC-070 SPEC-060 the frames received equal the frames produced, in order, across a pause and resume	code	not built yet
+SPEC-070 with the engine slower than real time, the sink plays what there is and silence for the rest, and the underrun counter rises by exactly the frames not delivered	code	not built yet
+SPEC-070 the underrun counter does not rise during the start of a subtune, a pause, a stop or the end of a song	code	not built yet
+SPEC-070 on stop() what is in the buffer is thrown away and the sink is silent from its next callback	code	not built yet
+SPEC-070 a new load() throws away what is in the buffer: the sink goes silent, and then gets the new subtune from its first sample	code	not built yet
+SPEC-066 SPEC-070 starting again: the same subtune loaded again sets position() to 0, and the sink then receives the tune's first samples	code	not built yet
+SPEC-064 with a 2.000-second length at 48,000 Hz the sink receives exactly 96,000 frames of the subtune, and song_ended comes after the last of them	code	not built yet
+SPEC-064 at a song's end every sample in the buffer is played, however the device asks for them	code	not built yet
+SPEC-064 SPEC-025 a length of 0 means never: the subtune goes on and song_ended is not reported	code	not built yet
+SPEC-066 holding skip for one second of the fake clock advances position() by at least four seconds of samples, and adds nothing to underruns() [parts: skip]	code	not built yet
+SPEC-066 SPEC-070 underruns are not counted while skipping, nor for one second after [parts: skip]	code	not built yet
+SPEC-073 with each value of the sample rate the sink is opened at that rate and receives that many frames per second of song [parts: rate]	code	not built yet
+SPEC-073 a change of the rate takes effect when the next tune is loaded: the stream is opened again at the new rate [parts: rate]	code	not built yet
+SPEC-074 a voice muted and a filter switched off while a tune plays reach the engine within one render chunk [parts: voices]	code	not built yet
+SPEC-078 if the sink cannot be opened the load fails with MSG_NO_SOUND, and the next load tries again	code	not built yet
+SPEC-078 the device dropped for 300 ms mid-tune: device_lost, the stream closed and opened again, device_back, and the frames received complete and in order	code	not built yet
+SPEC-078 while the device is lost the render loop waits, and position() stands still	code	not built yet
+SPEC-078 a device that does not come back: five attempts 200 ms apart, then device_gone; resume() opens the sink again and carries on from the same sample	code	not built yet
+SPEC-072 with `auto`, a tune of n SID chips is played with reSIDfp when the stored factor divided by n is at least 2.5: the item's table	code	not built yet
+SPEC-072 the threshold is 2.5 for each chip, and reSIDfp is chosen at exactly that	code	not built yet
+SPEC-072 until the measurement is done, `auto` means sidlite	code	not built yet
+SPEC-004 `accurate` is reSIDfp and `light` is sidlite, whatever was measured and however many chips	code	not built yet
+SPEC-004 SPEC-072 with a stored speed measurement, each setting gives the expected engine for the one-, two- and three-SID fixture tunes	code	not built yet
+SPEC-004 SPEC-072 a player that has been given no measurement plays `auto` with sidlite	code	not built yet
+SPEC-072 the two speed factors are kept in the cache folder and read back as they were	code	not built yet
+SPEC-072 a new measurement is due when nothing is stored, and when the app's version or the sample rate has changed	code	not built yet
+SPEC-072 SPEC-202 stored factors that are cut short are thrown away: a new measurement is due	code	not built yet
+SPEC-072 an engine is measured by rendering the built-in tune for 0.5 s untimed and then three runs of 1 s, and the slowest run gives the factor	code	not built yet
+SPEC-072 the measurement is made at the sample rate in use, and for the engine asked for	code	not built yet
+SPEC-072 the built-in tune the engines are measured with is a valid tune for one SID chip	code	not built yet
+SPEC-067 for each tune the backend is given the sample rate, the engine, and the model and clock left to the tune's header	code	not built yet
+SPEC-067 SPEC-096 the model and clock in effect are the header's, and 6581 and PAL when the header does not say	code	not built yet
+SPEC-077 SPEC-067 `sid_model` and `clock` set to a value force it for every tune, and the screen is told it is forced [parts: force]	code	not built yet
+SPEC-079 `auto` playing with reSIDfp: after underruns in three separate seconds the subtune is loaded again from its beginning with sidlite, with the notice MSG_SWITCHED_LIGHT [parts: too-slow]	code	not built yet
+SPEC-079 after that switch, `auto` uses sidlite for the rest of the run for tunes with that many chips or more, and for no others [parts: too-slow]	code	not built yet
+SPEC-079 `accurate`: the notice MSG_TOO_HEAVY offers the light engine, and L while it shows loads the subtune again with sidlite, for this tune only [parts: too-slow]	code	not built yet
+SPEC-079 once MSG_TOO_HEAVY has gone, 10 s after it appeared, L does nothing [parts: too-slow]	code	not built yet
+SPEC-079 L does nothing when nothing was offered [parts: too-slow]	code	not built yet
+SPEC-079 playing with sidlite already: the notice MSG_CANNOT_KEEP_UP, and nothing is loaded again [parts: too-slow]	code	not built yet
+SPEC-079 the player acts once for each tune loaded: a second burst on the same tune does nothing, and one on the next tune counts anew [parts: too-slow]	code	not built yet
+SPEC-079 underruns in fewer than three separate seconds, or spread over more than ten seconds, are not acted on [parts: too-slow]	code	not built yet
+SPEC-069 a queue of a good tune, five truncated ones and another good one plays the first and ends Idle with MSG_STOPPED_BAD_FILES after the fifth bad file	code	not built yet
+SPEC-069 a queue of good, bad, good plays both good ones, the bad one shown for 2 s in between	code	not built yet
+SPEC-069 a bad file chosen with Enter leaves the player Failed and does not advance	code	not built yet
+SPEC-069 an entry that plays resets the count of bad files: four, a good one and four more do not stop playback	code	not built yet
+SPEC-069 SPEC-065 after a failed entry at the end of the queue there is no next entry: the player is Idle, without a notice	code	not built yet
+SPEC-069 the engine refuses a tune: MSG_ENGINE_REFUSED; attended it stays Failed, unattended the next entry plays after 2 s	code	not built yet
+SPEC-069 SPEC-068 a tune that needs BASIC with no ROM set: MSG_NEEDS_BASIC, and it is not given to the backend; unattended the next entry plays after 2 s	code	not built yet
+SPEC-069 each kind of failed fetch has its message, and a tune chosen with Enter stays Failed with it	code	not built yet
+SPEC-069 unattended, a fetch that fails because the file is not there or does not match counts as a bad file: the next entry follows after 2 s, absent or not	code	not built yet
+SPEC-069 SPEC-143 unattended, a fetch that fails for the network, the size, the card or the folder is not a bad file: after 2 s the next present entry plays, and no absent one is requested	code	not built yet
+SPEC-069 SPEC-143 when no present entry is left after such a failure, playback ends: Idle with the notice MSG_REST_ABSENT	code	not built yet
+SPEC-069 SPEC-143 an absent entry that may not be requested is passed over at once, unattended: no request, no message, no wait	code	not built yet
+SPEC-069 SPEC-152 with HVSC's notice not accepted, an absent entry is passed over at once, unattended, and the notice MSG_NOTICE_NEEDED is raised once	code	not built yet
+SPEC-069 sound cannot be opened: MSG_NO_SOUND, and the player stays Failed, unattended too	code	not built yet
+SPEC-069 five bad files in a row of the five kinds that count stop unattended playback: invalid, refused, needing BASIC, not found, not matching	code	not built yet
+SPEC-069 a playlist entry that is missing is passed over at once, unattended, and its message is not shown [parts: playlists]	code	not built yet
+SPEC-069 a missing entry chosen with Enter shows MSG_ENTRY_MISSING, and the player stays Failed [parts: playlists]	code	not built yet
+SPEC-068 the fixture tune marked as needing BASIC fails with MSG_NEEDS_BASIC when no ROM is set, and never reaches the backend	code	not built yet
+SPEC-068 with no ROM named in the settings nothing is read and nothing is ignored [parts: roms]	code	not built yet
+SPEC-068 a tune that needs BASIC is handed to the backend when a BASIC ROM file of the right size is set [parts: roms]	code	not built yet
+SPEC-068 each ROM is used if its file has the right size: 8,192 bytes for the KERNAL and BASIC, 4,096 for the characters, and all three reach the backend [parts: roms]	code	not built yet
+SPEC-068 a ROM file of the wrong size, or one that is not there, is ignored, which is what the notice MSG_ROM_IGNORED tells at start [parts: roms]	code	not built yet
+SPEC-063 each fixture subtune reports the length the database gives, to the millisecond	code	not built yet
+SPEC-063 a tune copied to another path is still found by its MD5	code	not built yet
+SPEC-063 a different tune put at a listed path reports the default, not that path's lengths	code	not built yet
+SPEC-063 a tune the database leaves out reports the default length, 3:30	code	not built yet
+SPEC-063 SPEC-047 with no listing every tune has the default length	code	not built yet
+SPEC-063 the default length is the setting `default_length`, from 0:05 to 59:59	code	not built yet
+SPEC-063 SPEC-025 a default length of 0 means until told otherwise: the song has no known length and the backend is told never to end it	code	not built yet
+SPEC-063 an absent tune's length is looked up by its path: the number of subtunes and the first length are known before its file is	code	not built yet
+SPEC-064 the player gives the backend the length in samples: milliseconds times the rate, divided by 1,000	code	not built yet
+SPEC-064 SPEC-073 at 44,100 Hz the length in samples is rounded down [parts: rate]	code	not built yet
+SPEC-073 a change of the sample rate takes effect when the next tune is loaded [parts: rate]	code	not built yet
+SPEC-064 SPEC-025 the elapsed time is the backend's position divided by the rate, and stands still while paused	code	not built yet
+SPEC-025 the player makes sound only through the backend: a play, a pause, a resume and a stop are each one call of its, in that order	code	not built yet
+SPEC-066 restart loads the current subtune again from its beginning: the same subtune, and position 0 [parts: restart]	code	not built yet
+SPEC-066 skipping ahead is on while its key is held: the player tells the backend when it goes down and when it comes up [parts: skip]	code	not built yet
+SPEC-061 the three-subtune fixture with default 2: play starts at 2, next gives 3, next again starts the following entry	code	not built yet
+SPEC-061 from the default subtune 2, previous gives 1, and previous again starts the preceding entry	code	not built yet
+SPEC-061 an entry with a subtune number plays that subtune, and a number the tune does not have is treated as the default	code	not built yet
+SPEC-061 SPEC-062 next from the last subtune of the last entry, and next tune there, stop playback	code	not built yet
+SPEC-062 in a three-tune folder, next from the second plays the third, and next again leaves the player Idle	code	not built yet
+SPEC-062 previous at the first entry plays it again, from its start	code	not built yet
+SPEC-062 the queue is a copy: a new search made while the results of an earlier one play leaves the queue as it was	code	not built yet
+SPEC-062 a queue played from the browser or from search results has no subtune numbers: each tune plays its default subtune	code	not built yet
+SPEC-062 started from a playlist whose order differs from the folder's, next follows the playlist, with the subtune numbers it has; deleting the playlist leaves the queue as it was [parts: playlists]	code	not built yet
+SPEC-062 SPEC-065 with repeat-all, next tune at the last entry goes to the first [parts: modes]	code	not built yet
+SPEC-065 `subtunes` on a folder queue of the three-subtune fixture and a one-subtune tune plays subtunes 2 and 3, then the second tune, and ends in Idle	code	not built yet
+SPEC-065 a subtune reached with the subtune keys is followed, at its end, by the tune's next subtune all the same	code	not built yet
+SPEC-065 `subtunes` on a playlist whose entry names subtune 1 plays that subtune and then the next entry [parts: playlists]	code	not built yet
+SPEC-065 `next_tune` plays the next entry after each song: one subtune of each tune [parts: modes]	code	not built yet
+SPEC-065 `repeat` plays the same subtune again, from its beginning, as often as it ends [parts: modes]	code	not built yet
+SPEC-065 `stop` plays nothing after the song: the player is Idle [parts: modes]	code	not built yet
+SPEC-065 with `repeat_all` the last entry is followed by the first, in `subtunes` and in `next_tune` [parts: modes]	code	not built yet
+SPEC-065 `repeat_all` does not change `stop` or `repeat`: they never reach the next entry [parts: modes]	code	not built yet
+SPEC-065 a change of `when_song_ends` while a song plays decides what follows that song [parts: modes]	code	not built yet
+SPEC-065 shuffle with seed 1: ten entries numbered 1 to 10, started at entry 3, play in the order 3, 4, 8, 1, 10, 9, 5, 6, 7, 2 [parts: shuffle]	code	not built yet
+SPEC-065 shuffle follows the keys too: next tune and previous tune move through the shuffled order [parts: shuffle]	code	not built yet
+SPEC-065 switching shuffle on while a queue plays permutes the entries after the current one, and the song goes on [parts: shuffle]	code	not built yet
+SPEC-065 switching shuffle off while a queue plays puts it back in its original order from the current entry on, and the song goes on [parts: shuffle]	code	not built yet
+SPEC-065 without --seed the seed is the clock's value at start: the order is that of a player given that value as its seed [parts: shuffle]	code	not built yet
+SPEC-065 shuffle with seed 1 and repeat-all: after 3, 4, 8, 1, 10, 9, 5, 6, 7, 2 the second round is 9, 8, 1, 2, 4, 10, 3, 7, 6, 5 [parts: shuffle modes]	code	not built yet
+SPEC-062 the queue is a copy of the entries it was set from, with the place at the chosen one	code	not built yet
+SPEC-062 next moves one place and stops at the last entry; previous moves one place back and stays at the first	code	not built yet
+SPEC-062 SPEC-065 with repeat-all, next from the last entry goes to the first	code	not built yet
+SPEC-062 the entry that next would move to can be asked for without moving	code	not built yet
+SPEC-062 an empty queue is empty, and a cleared one too	code	not built yet
+SPEC-065 the generator is xorshift64*: with seed 1 its first number is 0x47E4CE4B896CDD1D [parts: shuffle]	code	not built yet
+SPEC-065 a seed of 0 starts the generator from 0x9E3779B97F4A7C15 [parts: shuffle]	code	not built yet
+SPEC-065 a list is permuted from its last place down, each time swapping with the place the next number picks [parts: shuffle]	code	not built yet
+SPEC-065 with seed 1, ten entries started at entry 3 are played in the order 3, 4, 8, 1, 10, 9, 5, 6, 7, 2 [parts: shuffle]	code	not built yet
+SPEC-065 with repeat-all the second round is 9, 8, 1, 2, 4, 10, 3, 7, 6, 5: all the entries permuted from their original order, the generator carrying on [parts: shuffle]	code	not built yet
+SPEC-065 the next round of a shuffled queue is the same whether or not it was asked about first [parts: shuffle]	code	not built yet
+SPEC-065 switching shuffle on while a queue plays permutes the entries after the current one [parts: shuffle]	code	not built yet
+SPEC-065 switching shuffle off puts the queue back in its original order, with the place at the current entry [parts: shuffle]	code	not built yet
+SPEC-065 a shuffled queue of one entry plays that entry, and of two the chosen one and then the other [parts: shuffle]	code	not built yet
+SPEC-064 SPEC-065 a two-second subtune is 96,000 frames at the sink, and the next subtune's first frame follows the last of them	code	not built yet
+SPEC-060 SPEC-070 after pause and resume through the player the samples are complete and in order	code	not built yet
+SPEC-066 restart sets position() to 0 and the sink then receives the tune's first samples [parts: restart]	code	not built yet
+SPEC-074 a voice muted while a tune plays is still muted after next subtune, and after the next tune nothing is muted [parts: voices]	code	not built yet
+SPEC-074 each voice and the filter can be switched off and on again while a tune plays, and the player's status says which are off [parts: voices]	code	not built yet
+SPEC-074 SPEC-096 with a tune for three chips, the voice keys act on the chosen chip, and the chip key goes round the chips [parts: voices]	code	not built yet
+SPEC-074 with a one-chip tune the chip key has nowhere to go [parts: voices]	code	not built yet
+SPEC-074 SPEC-066 a mute holds across a restart of the tune [parts: voices restart]	code	not built yet
+SPEC-078 with the sink refusing to open, play ends in Failed with MSG_NO_SOUND; when it accepts, the next attempt plays	code	not built yet
+SPEC-078 with the sink dropping the device for 300 ms mid-tune, the frames received are complete and in order and the player is Playing	code	not built yet
+SPEC-078 dropping the device for good leaves the player Paused with the notice MSG_NO_SOUND, and Play/Pause after the sink accepts again carries on from the same sample	code	not built yet
+SPEC-060 SPEC-062 Enter on a present tune, in every state: the queue is set and the tune loads, after stop() where one was loaded	code	not built yet
+SPEC-060 Enter on an absent tune, in every state: it is requested at once and the player is Fetching	code	not built yet
+SPEC-060 SPEC-141 Enter on the tune that is being fetched keeps its request: none is cancelled and no second one goes out	code	not built yet
+SPEC-060 Play/Pause, in every state: plays the current entry from Idle and Failed, pauses, resumes, and is ignored while a tune is on its way	code	not built yet
+SPEC-060 a player that has played nothing has no current entry and no queue: Play/Pause, Stop and the four steps do nothing	code	not built yet
+SPEC-060 SPEC-131 a restored entry is the current entry of an Idle player, and Play/Pause plays it from its start	code	not built yet
+SPEC-060 Stop, in every state: the player is Idle, a load or a fetch on its way is given up, and the current entry stays	code	not built yet
+SPEC-060 SPEC-061 SPEC-062 a step to a present tune, in every state and by each of the four keys: it loads, after stop() where one was loaded	code	not built yet
+SPEC-060 SPEC-141 a step to an absent tune, in every state: the player is Waiting, and the tune is requested when it has been current for 700 ms	code	not built yet
+SPEC-060 SPEC-066 Restart, in every state: the same subtune is loaded again from Idle, Playing, Paused and Failed, and it is ignored while a tune is on its way [parts: restart]	code	not built yet
+SPEC-060 SPEC-141 the wait is over 700 ms after the step, and the absent tune is then requested: Waiting goes to Fetching	code	not built yet
+SPEC-060 a wait that a key has ended does nothing when its time comes, whatever state the player is in by then	code	not built yet
+SPEC-060 Fetched: the tune that was being fetched is loaded and played, with the one request	code	not built yet
+SPEC-060 SPEC-069 Could not fetch: the player is Failed with the fetch's message, and a tune chosen with Enter stays there	code	not built yet
+SPEC-060 an answer to a fetch that the player has left behind changes nothing, whether the tune came or not, in every other state	code	not built yet
+SPEC-060 Loaded: the backend is started and the player is Playing	code	not built yet
+SPEC-060 SPEC-069 SPEC-203 Could not load: the player is Failed with the reason, and a file that fails the check never reaches the backend	code	not built yet
+SPEC-060 the end of a load that the player has left behind changes nothing, whether it loaded or not: in Idle, Waiting, Fetching and Failed	code	not built yet
+SPEC-060 a load that another has replaced starts nothing: Playing and Paused are reached only by the load that is current	code	not built yet
+SPEC-060 SPEC-065 song_ended while Playing: the next entry is loaded and played	code	not built yet
+SPEC-060 song_ended in any other state is ignored	code	not built yet
+SPEC-060 SPEC-141 a fetch-ahead that is done while the song plays is remembered: at the song's end the next tune loads at once, with no second request	code	not built yet
+SPEC-060 SPEC-141 a fetch-ahead that failed while the song plays is remembered: nothing happens until the song's end, and then the entry fails with that failure, with no second request	code	not built yet
+SPEC-060 SPEC-141 song_ended while the next entry's fetch-ahead is still running: the player is Fetching and takes that request over	code	not built yet
+SPEC-060 the end of a fetch-ahead that the player has left behind changes nothing, done or failed: in Idle, Waiting, Fetching, Loading and Failed	code	not built yet
+SPEC-060 SPEC-078 device_lost and device_back, in every state: the player stays as it is, and asks nothing of the backend	code	not built yet
+SPEC-060 SPEC-078 device_gone, in every state: a playing tune is paused with the notice MSG_NO_SOUND, and elsewhere it is ignored	code	not built yet
+SPEC-060 SPEC-069 failed from the backend, in every state: Loading, Playing and Paused go to Failed with its reason, and elsewhere it is ignored	code	not built yet
+SPEC-060 SPEC-069 the unattended wait is over after 2 s: the player goes from Failed to the next entry	code	not built yet
+SPEC-060 a key that touches the player takes the place of the unattended wait: when its 2 s are over nothing happens, in every other state	code	not built yet
+SPEC-060 SPEC-069 in Failed after a key there is no unattended wait: the player stays Failed	code	not built yet
+SPEC-060 SPEC-079 too slow while Playing: the player acts by SPEC-079 [parts: too-slow]	code	not built yet
+SPEC-060 SPEC-079 underruns that go on in any other state are ignored: nothing is loaded again and no notice is raised [parts: too-slow]	code	not built yet
+SPEC-060 SPEC-079 the L key while the offer shows and the tune plays: the same subtune is loaded again with the light engine [parts: too-slow]	code	not built yet
+SPEC-060 SPEC-079 the L key in any other state does nothing, though the offer still shows [parts: too-slow]	code	not built yet
+SPEC-060 SPEC-144 while playing is switched off, every event that would load a tune raises MSG_UNPACKING and does nothing else	code	not built yet
+SPEC-060 SPEC-144 while playing is switched off, Stop still does nothing and raises no notice	code	not built yet
+SPEC-060 SPEC-144 while playing is switched off, Restart raises MSG_UNPACKING and loads nothing [parts: restart]	code	not built yet
+SPEC-097 for a fixture tune with an entry in the fixture STIL file, the text equals the entry, and its é is that letter [parts: notes]	code	not built yet
+SPEC-097 the text is the part for the file, then the part for the playing subtune, and no other subtune's [parts: notes]	code	not built yet
+SPEC-097 an entry with only a part for the file gives that part, and one with only a part for the playing subtune gives that [parts: notes]	code	not built yet
+SPEC-097 with no entry for the tune the panel says: No notes for this tune [parts: notes]	code	not built yet
+SPEC-097 with no STIL file the panel says: No notes for this tune [parts: notes]	code	not built yet
+SPEC-097 STIL is Latin-1, with HVSC's CRLF line endings: its letters come out as UTF-8, and no carriage return with them [parts: notes]	code	not built yet
+SPEC-097 SPEC-204 a STIL file longer than 16 MiB is not read: no notes, and the notice MSG_FILE_TOO_LARGE [parts: notes]	code	not built yet
+SPEC-076 from 42 %, volume up asks for 45 % and volume down for 40 %	code	not built yet
+SPEC-076 the level is set to the nearest multiple of 5 % above or below, from any level	code	not built yet
+SPEC-076 at 100 % volume up asks for nothing, and at 0 % volume down asks for nothing: never above 100 % or below 0 %	code	not built yet
+SPEC-076 mute toggles the system's mute, and the notice then says Muted, or the level again	code	not built yet
+SPEC-076 if the system's volume cannot be read or changed, the notice is MSG_VOLUME_FAILED	code	not built yet
+SPEC-076 five presses of volume up from 42 % ask for 45, 50, 55, 60 and 65 %	code	not built yet
+SPEC-025 the software backend's type is named only in its own files and in the one place that creates it	code	not built yet
+SPEC-080 the voice display: each bar is as high as its voice's frequency high byte divided by 8, lit while the gate bit is set, and it stands still while paused (tests/simulator/test_play.py compares the two dumps)	code	expect screen = browser
+SPEC-079 playing with the light engine already, underruns in three separate seconds raise the notice MSG_CANNOT_KEEP_UP, and the tune plays on as it was	code	expect screen = browser
+SPEC-075 the now-playing screen gives the number of SID chips of the one-, two- and three-SID fixtures, as their headers say and the real engine is given	code	expect screen = browser
+SPEC-078 the sound device dropped for 300 ms in the middle of a tune: the player stays Playing, no notice is raised and no underrun counted (tests/simulator/test_play.py looks at the samples)	code	expect screen = browser
+SPEC-078 the sound device dropped for good: the player is Paused with the notice MSG_NO_SOUND, and Play/Pause once the device is back plays on (tests/simulator/test_play.py checks that it is from the same sample)	code	expect screen = browser
+SPEC-004 SPEC-072 the now-playing screen names the engine: light for `auto` while nothing is measured, and accurate or light as the setting says	code	expect screen = browser
+SPEC-069 a file that fails the check, one the engine refuses and one that needs BASIC each leave the player Failed with its message on the now-playing screen, and one chosen with a key does not advance	code	expect screen = browser
+SPEC-069 each kind of failed fetch leaves the player Failed with its own message: the folder cannot be written, the card is full, the file does not match, no network, not on the site, too large	code	expect screen = browser
+SPEC-069 a good tune, five truncated ones and another good one: the first plays, each bad one shows MSG_INVALID_SID for 2 s, and after the fifth playback stops with the notice MSG_STOPPED_BAD_FILES	code	expect screen = browser
+SPEC-096 SPEC-061 SPEC-062 on the now-playing screen Left and Right step through subtunes and Up and Down through tunes, P does nothing, and Browse shows the tune in the browser while it plays on	code	expect screen = browser
+SPEC-109 the mini player on the browser, Search and Settings shows the state, the title and the elapsed time while a tune plays or is paused, and the failed mark with the file's name when it cannot be played	code	expect screen = browser
+SPEC-069 a playlist entry that is missing shows MSG_ENTRY_MISSING when a key chooses it, and is passed over at once, without the message, when playback reaches it by itself	code	expect screen = browser
+SPEC-096 SPEC-065 the Mode key steps what happens when a song ends, round its four values, and says so with the notice MSG_MODE	code	expect screen = browser
+SPEC-096 SPEC-114 More on the now-playing screen opens a panel that offers "Add to playlist", "Repeat all", "Shuffle" and "Notes", and ESC closes it	code	expect screen = browser
+SPEC-097 with no STIL file, Notes says "No notes for this tune"	code	expect screen = browser
+SPEC-078 SPEC-069 with the sound device refusing to open, play ends in Failed with MSG_NO_SOUND and the browser still answers keys; once the device opens, play works	code	expect screen = browser
+SPEC-097 Notes opens a text panel with the playing tune's entry from STIL, its é shown as that letter	code	expect screen = browser
+SPEC-069 SPEC-152 with HVSC's notice not accepted, playback that reaches absent tunes by itself passes them over at once, makes no request, and says MSG_NOTICE_NEEDED	code	expect screen = browser
+SPEC-096 with the fixture "Commando Test" playing, the now-playing screen's player and lines hold what its header and its database entry say; Enter pauses, and Stop leaves the player Idle with "Stopped"	code	expect screen = browser
+SPEC-096 SPEC-060 the now-playing screen's lines in the states a tune passes on its way: nothing playing, fetching, waiting, playing and failed	code	expect screen = browser
+SPEC-070 a fixture played with the real engine while three folders and Settings are opened, and played again with nothing pressed: the underrun counter stays 0 and the two recordings are equal	code	expect screen = browser
+SPEC-096 SPEC-066 Backspace on the now-playing screen starts the playing subtune again from its beginning	code	expect screen = browser
+SPEC-096 SPEC-066 holding Right for 400 ms or more skips ahead, and releasing it does not change the subtune; a short press of Right is next subtune	code	expect screen = browser
+SPEC-079 with `engine = accurate` and underruns in three separate seconds, the notice MSG_TOO_HEAVY offers the light engine, and L while it shows loads the subtune again with it	code	expect screen = browser
+SPEC-079 once MSG_TOO_HEAVY has gone, 10 s after it appeared, L does nothing, and a second burst of underruns on the same tune does nothing	code	expect screen = browser
+SPEC-096 SPEC-074 with voice 2 muted and the filter off, line 6 of the now-playing screen shows both; they hold across the tune's subtunes, and the next tune has everything on again	code	expect screen = browser
+SPEC-076 the volume keys set the system volume to the nearest multiple of 5 % above or below, Mute toggles the mute, and the notice MSG_VOLUME shows the new level or "Muted"	code	expect notice.id = MSG_VOLUME
+SPEC-080 while paused, two screen descriptions a second apart are equal [parts: bars]	code	play_bars.script ended with status 1 at: expect screen = browser
+SPEC-078 with the sink dropping the device for 300 ms mid-tune, the frames received are complete and in order	code	play_device_drop.script ended with status 1 at: expect screen = browser
+SPEC-078 after the device was dropped for good and came back, Play/Pause carries on from the same sample	code	play_device_gone.script ended with status 1 at: expect screen = browser
+SPEC-004 SPEC-072 for the one-, two- and three-SID fixtures alike, the now-playing screen names the engine the setting gives: light for `auto` while nothing is measured, accurate for `accurate` and light for `light`	code	expect screen = browser
+SPEC-071 a fixture rendered twice by the app gives the same samples, with each engine	code	its script ended with status 1 at: expect screen = browser
+SPEC-071 SPEC-067 with reSIDfp at 48,000 Hz, ten seconds of every fixture tune equal the sidplayfp program's, value for value	code	its script ended with status 1 at: expect screen = browser
+SPEC-071 SPEC-067 with sidlite at 48,000 Hz, ten seconds of every fixture tune equal the sidplayfp program's, value for value	code	its script ended with status 1 at: expect screen = browser
+SPEC-071 SPEC-073 with reSIDfp at 44,100 Hz, ten seconds of every fixture tune equal the sidplayfp program's [parts: rate]	code	its script ended with status 1 at: expect screen = browser
+SPEC-071 SPEC-073 with sidlite at 44,100 Hz, ten seconds of every fixture tune equal the sidplayfp program's [parts: rate]	code	its script ended with status 1 at: expect screen = browser
+SPEC-071 SPEC-061 each subtune of the three-subtune fixture equals the sidplayfp program's render of that subtune	code	its script ended with status 1 at: expect screen = browser
+SPEC-075 ten seconds of the two-SID and three-SID fixtures equal the sidplayfp program's, with each engine	code	its script ended with status 1 at: expect screen = browser
+SPEC-075 a one-chip tune sounds the same in both channels, and a two-chip tune does not	code	its script ended with status 1 at: expect screen = browser
+SPEC-074 with voice 1 muted from the first sample, ten seconds of a fixture equal the sidplayfp program's WAV made with -u1 [parts: voices]	code	its script ended with status 1 at: expect screen = browser
+SPEC-074 with the filter off, ten seconds of a fixture equal the sidplayfp program's WAV made with -nf [parts: voices]	code	its script ended with status 1 at: expect screen = browser
+SPEC-077 with sid_model = 8580, ten seconds of a fixture marked 6581 equal the sidplayfp program's WAV made with -mnf [parts: force]	code	its script ended with status 1 at: expect screen = browser
+SPEC-077 with clock = ntsc, ten seconds of a fixture marked PAL equal the sidplayfp program's WAV made with -vnf [parts: force]	code	its script ended with status 1 at: expect screen = browser
+SPEC-076 the real SystemVolume reads the level and the mute with `pactl get-sink-volume @DEFAULT_SINK@` and `pactl get-sink-mute @DEFAULT_SINK@`	code	not built yet
+SPEC-076 the real SystemVolume reads a muted sink as muted	code	not built yet
+SPEC-076 the real SystemVolume sets the level with `pactl set-sink-volume @DEFAULT_SINK@ N%`, as an argument list and without a shell	code	not built yet
+SPEC-076 the real SystemVolume toggles the mute with `pactl set-sink-mute @DEFAULT_SINK@ toggle`	code	not built yet
+SPEC-076 if pactl fails, the real SystemVolume says it could not, for reading, setting and muting	code	not built yet
+SPEC-076 if pactl is missing, the real SystemVolume says it could not, and nothing else is run in its place	code	not built yet
