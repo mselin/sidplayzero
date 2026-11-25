@@ -8,14 +8,14 @@ normally the [High Voltage SID Collection](https://hvsc.c64.org) (HVSC), and pla
 ## Where it stands
 
 **The app is not finished, and there is no release to install yet.** What can be built today is a stub: a
-program that starts, draws one screen and leaves again. It exists so that the tests can be written before
-the app is.
+program that starts, draws one screen and leaves again. The tests of the whole design are written and fail
+against it, as they should until the app is written to pass them.
 
 | Done | Not done yet |
 |---|---|
-| What the app has to do ([requirements](docs/requirements.md)) | The tests of every item of the design |
-| How it does it ([the design](docs/spec.md), reviewed independently) | The app itself |
-| The machinery its tests run on | A release |
+| What the app has to do ([requirements](docs/requirements.md)) | The app itself |
+| How it does it ([the design](docs/spec.md), reviewed independently) | A release |
+| The machinery its tests run on, and the tests of every item of the design | |
 
 Everything below under "Using it" describes the app as its design has it. It is there so that the plan can
 be read in one place, and it will be corrected to what the app really does when the app exists.

@@ -13,7 +13,7 @@ has passed.
 | 1 | Requirements | [`docs/requirements.md`](docs/requirements.md) | The owner approves | Approved 25 November 2026 |
 | 2 | Specification | [`docs/spec.md`](docs/spec.md), and an independent review of it, [`docs/spec-review.md`](docs/spec-review.md) | Every review item closed; then the owner approves | Approved 25 November 2026 |
 | 3 | Test framework | [`docs/test-framework-tasks.md`](docs/test-framework-tasks.md), then the framework | Every level runs one passing and one deliberately failing test with one command | Built and merged 25 November 2026; the device level's proof is still owed |
-| 4 | Tests | `tests/`, each test tracing to the specification | Every item has a test; the tests fail for the right reasons against stubs | In progress |
+| 4 | Tests | `tests/`, each test tracing to the specification | Every item has a test; the tests fail for the right reasons against stubs | Written 25 November 2026; at its gate, with findings FIND-017 to FIND-024 for the owner |
 | 5 | Implementation | `src/` | All tests pass on the host and in the simulator; the device checklist passes | Not started |
 
 ## Rules that hold throughout
