@@ -1,0 +1,8 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-or-later
+# A stand-in for sudo (TF-080): records what it was asked to run, and runs nothing.
+{
+    echo "sudo"
+    for argument in "$@"; do echo "  $argument"; done
+} >> "${SPZ_STANDIN_LOG:-/dev/null}"
+exit "${SPZ_STANDIN_STATUS:-0}"
