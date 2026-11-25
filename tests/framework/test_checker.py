@@ -183,6 +183,40 @@ class Music(CheckerCase):
         self.assertEqual(status, 0, output)
 
 
+class Private(CheckerCase):
+    def test_private_address(self):
+        """TF-023 SPEC-225 a file with a private network address is reported"""
+        self.add("docs/notes.md", "the device is at 192." + "168.1.20\n")
+        self.refused("private network address")
+
+    def test_home_path(self):
+        """TF-023 SPEC-225 a path into one person's home folder is reported, and /home/u/ is allowed"""
+        self.add("docs/ok.md", "an example: /home/u/C64Music/a.sid\n")
+        self.assertEqual(self.check()[0], 0)
+        self.add("docs/notes.md", "copied from /home/" + "somebody/C64Music\n")
+        self.refused("a path into one person's home folder")
+
+    def test_private_term(self):
+        """TF-023 SPEC-225 a private term is reported as a whole word, by file and line and never by the term"""
+        self.add("docs/notes.md", "the falconry club\nmy host is Falcon\n")
+        process = run(["python3", ROOT / "tools" / "check_repo.py"],
+                      env={"SIDPLAYZERO_CHECK_ROOT": str(self.folder), "PRIVATE_TERMS": "falcon"})
+        self.assertNotEqual(process.returncode, 0)
+        self.assertIn("docs/notes.md:2: private term", process.stdout)
+        self.assertNotIn("notes.md:1", process.stdout)
+        self.assertNotIn("alcon", process.stdout.replace("falconry", ""))
+
+    def test_nothing_publishes(self):
+        """TF-023 SPEC-226 a workflow or script that names the store's login or publish command is reported"""
+        self.add(".github/workflows/release.yml", "jobs:\n  ship:\n    steps:\n      - run: czdev " + "publish\n")
+        self.refused("names the store's login or publish command")
+
+    def test_documents_may_state_the_rule(self):
+        """TF-023 SPEC-226 a document may say that nothing runs the publish command"""
+        self.add("docs/rule.md", "Nothing here runs czdev " + "publish.\n")
+        self.assertEqual(self.check()[0], 0)
+
+
 class Workflow(CheckerCase):
     def test_job_outside_the_gate(self):
         """TF-090 SPEC-257 a job that "All checks passed" does not wait for is reported"""

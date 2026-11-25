@@ -15,7 +15,7 @@ TEST_CASE("TF-014 canary: the unit level runs a test, and it passes") {
     CHECK(1 + 1 == 2);
 }
 
-TEST_CASE("TF-014 canary: a test built to fail [canary-fails]") {
+TEST_CASE("TF-014 SPEC-250 canary: a test built to fail [canary-fails]") {
     CHECK(1 + 1 == 3);
 }
 

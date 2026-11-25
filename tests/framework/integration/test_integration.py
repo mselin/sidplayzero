@@ -31,7 +31,7 @@ class Reference(unittest.TestCase):
         self.assertGreater(len(set(first)), 16, "the render is silence")
 
     def test_subtunes_differ(self):
-        """TF-051 canary: two different subtunes are expected to sound the same [canary-fails]"""
+        """TF-051 SPEC-250 canary: two different subtunes are expected to sound the same [canary-fails]"""
         tune = FIXTURES / "tunes" / "three_subtunes.sid"
         self.assertIsNone(reference.first_difference(reference.render(tune, seconds=1, subtune=1),
                                                      reference.render(tune, seconds=1, subtune=3)))
