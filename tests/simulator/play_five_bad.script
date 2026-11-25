@@ -1,0 +1,40 @@
+# SPEC-069 a good tune, five truncated ones and another good one: the first plays, each bad one shows MSG_INVALID_SID for 2 s, and after the fifth playback stops with the notice MSG_STOPPED_BAD_FILES
+# fixture: play/C64Music/BAD C64Music
+# args: --backend fake
+expect screen = browser
+expect rows[0].text = A_Good.sid
+key Enter
+expect player.state = playing
+expect player.path = /A_Good.sid
+# The song ends: the fake backend says so when told.
+fake backend song_ended
+expect player.state = failed
+expect player.message = MSG_INVALID_SID
+expect player.path = /B_Bad_1.sid
+expect lines[0] = B_Bad_1.sid
+expect lines[3] = ""
+expect lines[4] = ""
+expect lines[5] contains "Not a valid SID file"
+advance 1990
+expect player.path = /B_Bad_1.sid
+expect player.state = failed
+advance 10
+expect player.path = /C_Bad_2.sid
+expect player.state = failed
+expect player.message = MSG_INVALID_SID
+advance 2000
+expect player.path = /D_Bad_3.sid
+expect player.state = failed
+advance 2000
+expect player.path = /E_Bad_4.sid
+expect player.state = failed
+advance 2000
+expect player.path = /F_Bad_5.sid
+expect player.state = failed
+expect notice = null
+advance 2000
+expect player.state = idle
+expect notice.id = MSG_STOPPED_BAD_FILES
+expect player.path = /F_Bad_5.sid
+advance 5000
+expect player.state = idle

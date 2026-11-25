@@ -1,0 +1,23 @@
+# SPEC-096 SPEC-114 More on the now-playing screen opens a panel that offers "Add to playlist", "Repeat all", "Shuffle" and "Notes", and ESC closes it
+# parts: playlists modes shuffle notes
+# fixture: play/C64Music/QUEUE C64Music
+# args: --backend fake
+expect screen = browser
+key Enter
+expect screen = playing
+expect actions[4] = More
+key 8
+expect panel.id = more-playing
+expect place = more-playing
+expect panel.rows[0].text = "Add to playlist"
+expect panel.rows[1].text = "Repeat all"
+expect panel.rows[2].text = Shuffle
+expect panel.rows[3].text = Notes
+# A panel takes the keys: the action keys do nothing while it is open.
+key 5
+expect player.state = playing
+expect panel.id = more-playing
+key Esc
+expect panel = null
+expect screen = playing
+expect player.state = playing

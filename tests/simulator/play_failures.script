@@ -1,0 +1,35 @@
+# SPEC-069 a file that fails the check, one the engine refuses and one that needs BASIC each leave the player Failed with its message on the now-playing screen, and one chosen with a key does not advance
+# fixture: play/C64Music/FAIL C64Music
+expect screen = browser
+expect rows[0].text = A_Invalid.sid
+key Enter
+expect screen = playing
+expect player.state = failed
+expect player.message = MSG_INVALID_SID
+expect player.path = /A_Invalid.sid
+expect lines[0] = A_Invalid.sid
+expect lines[5] contains "Not a valid SID file"
+# Chosen with Enter: it stays Failed and does not move on.
+advance 5000
+expect player.state = failed
+expect player.path = /A_Invalid.sid
+# The real engine refuses the next one, though it passes the app's own check.
+key Down
+expect player.path = /B_Refused.sid
+expect player.state = failed
+expect player.message = MSG_ENGINE_REFUSED
+expect lines[0] = B_Refused.sid
+expect lines[5] contains "This tune cannot be played"
+key Down
+expect player.path = /C_Needs_BASIC.sid
+expect player.state = failed
+expect player.message = MSG_NEEDS_BASIC
+expect lines[5] contains "This tune needs the C64 BASIC ROM"
+advance 5000
+expect player.state = failed
+# And a good tune after them plays.
+key Down
+expect player.path = /D_Good.sid
+expect player.state = playing
+expect player.message = null
+expect lines[0] = "Fail Folder, Good"

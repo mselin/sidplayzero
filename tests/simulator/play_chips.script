@@ -1,0 +1,24 @@
+# SPEC-075 the now-playing screen gives the number of SID chips of the one-, two- and three-SID fixtures, as their headers say and the real engine is given
+# fixture: play/C64Music/CHIPS C64Music
+expect screen = browser
+expect rows[0].text = One_Chip.sid
+expect rows[1].text = Three_Chips_3SID.sid
+expect rows[2].text = Two_Chips_2SID.sid
+key Enter
+expect player.state = playing
+expect player.chips = 1
+expect lines[4] contains "1 SID"
+key Down
+expect player.path = /Three_Chips_3SID.sid
+expect player.state = playing
+expect player.chips = 3
+expect lines[4] contains "3 SID"
+advance 200
+expect player.state = playing
+key Down
+expect player.path = /Two_Chips_2SID.sid
+expect player.state = playing
+expect player.chips = 2
+expect lines[4] contains "2 SID"
+advance 200
+expect player.underrun_frames = 0

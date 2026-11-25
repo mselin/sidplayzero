@@ -1,0 +1,31 @@
+# SPEC-079 with `engine = accurate` and underruns in three separate seconds, the notice MSG_TOO_HEAVY offers the light engine, and L while it shows loads the subtune again with it
+# parts: too-slow
+# fixture: play/C64Music/QUEUE C64Music
+# fakes: fakes/play_accurate
+# args: --backend fake
+expect screen = browser
+key Enter
+expect screen = playing
+expect player.state = playing
+expect player.engine = accurate
+fake backend underrun 1
+advance 1000
+fake backend underrun 1
+advance 1000
+# Two seconds are not three.
+expect notice = null
+fake backend underrun 1
+# The player has 10 s to notice, and the notice then shows for 10 s: five seconds on it is there.
+advance 5000
+expect notice.id = MSG_TOO_HEAVY
+expect notice.text contains "Press L for the light engine"
+expect player.engine = accurate
+expect player.state = playing
+# L while it shows switches.
+key L
+expect player.engine = light
+expect lines[4] contains light
+expect player.state = playing
+expect player.path = /A_One.sid
+# From its beginning.
+expect player.elapsed_ms < 500

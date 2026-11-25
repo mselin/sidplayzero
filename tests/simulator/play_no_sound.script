@@ -1,0 +1,29 @@
+# SPEC-078 SPEC-069 with the sound device refusing to open, play ends in Failed with MSG_NO_SOUND and the browser still answers keys; once the device opens, play works
+# fixture: play/C64Music/QUEUE C64Music
+# args: --engine fake
+expect screen = browser
+# The fake device is away for the next five seconds: it cannot be opened.
+fake sink drop 5000
+key Enter
+expect screen = playing
+expect player.state = failed
+expect player.message = MSG_NO_SOUND
+expect lines[0] = A_One.sid
+expect lines[5] contains "No sound device"
+# The rest of the app keeps working.
+key 4
+expect screen = browser
+key Down
+expect rows[1].highlighted = true
+key Up
+expect rows[0].highlighted = true
+expect player.state = failed
+# The device is there again, and the next attempt to play tries again.
+advance 5000
+key Enter
+expect player.state = playing
+expect player.message = null
+advance 500
+expect player.elapsed_ms > 400
+expect-samples frames > 20000
+expect player.underrun_frames = 0

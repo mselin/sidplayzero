@@ -1,0 +1,76 @@
+# SPEC-069 each kind of failed fetch leaves the player Failed with its own message: the folder cannot be written, the card is full, the file does not match, no network, not on the site, too large
+# fixture: play/C64Music C64Music
+# fakes: fakes/play_fetch
+# args: --backend fake
+expect screen = browser
+key Down
+key Down
+key Down
+key Enter
+expect title = /FETCH
+expect rows[1].text = B_Absent.sid
+key Down
+# The folder the tune belongs in cannot be written.
+readonly C64Music/FETCH
+key Enter
+expect screen = playing
+expect player.path = /FETCH/B_Absent.sid
+expect player.state = failed
+expect player.message = MSG_CANNOT_WRITE
+expect lines[5] contains "The collection folder cannot be written"
+expect-file C64Music/FETCH/B_Absent.sid absent
+writable C64Music/FETCH
+# Less than 8 MiB free on the card: no request is made at all.
+fake files.free_mib 7
+key Enter
+expect player.state = failed
+expect player.message = MSG_CARD_FULL
+expect lines[5] contains "The card is full"
+fake files.free_mib 4000
+# The site answers with other bytes than HVSC's record has for this path.
+key Down
+expect player.path = /FETCH/C_Absent.sid
+advance 700
+expect player.state = failed
+expect player.message = MSG_FETCH_MISMATCH
+expect lines[5] contains "The download does not match HVSC's record"
+expect-file C64Music/FETCH/C_Absent.sid absent
+# No connection.
+key Down
+expect player.path = /FETCH/D_Absent.sid
+advance 700
+expect player.state = failed
+expect player.message = MSG_FETCH_NETWORK
+expect lines[5] contains "Cannot fetch: no network"
+# Past a tune that is on the device, to one the site does not have.
+key Down
+expect player.path = /FETCH/E_Present.sid
+expect player.state = playing
+key Down
+expect player.path = /FETCH/F_Absent.sid
+advance 700
+expect player.state = failed
+expect player.message = MSG_FETCH_NOT_FOUND
+expect lines[5] contains "Not on HVSC's site"
+# And one that is larger than a tune may be.
+key Down
+expect player.path = /FETCH/G_Absent.sid
+advance 700
+expect player.state = failed
+expect player.message = MSG_FETCH_TOO_LARGE
+expect lines[5] contains "Cannot fetch: the file is too large"
+expect-file C64Music/FETCH/G_Absent.sid absent
+# Each was chosen with a key, so the player has stayed where it failed; and the first tune can now be had.
+advance 5000
+expect player.state = failed
+expect player.path = /FETCH/G_Absent.sid
+key 4
+expect screen = browser
+key Home
+key Down
+expect rows[1].highlighted = true
+key Enter
+expect player.path = /FETCH/B_Absent.sid
+expect player.state = playing
+expect-file C64Music/FETCH/B_Absent.sid exists
+expect lines[0] = "Fetch Folder, Absent B"
