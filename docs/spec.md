@@ -1648,8 +1648,8 @@ the entry has one, and a mark for absent or missing (SPEC-173). Enter plays from
 keys are "Back", "Up", "Down", "Remove" and "More", whose panel offers "Fetch missing" (SPEC-174) and
 "Export" (SPEC-179). "Add", in the browser, Search and the now-playing "More" panel, opens `pick-playlist`,
 which lists the playlists and "New playlist…"; Enter adds the entry: the playing subtune from the
-now-playing screen, no subtune number from the browser or Search. Adding an entry that is already there adds
-nothing and gives `MSG_ALREADY_THERE`. Every change is saved at once through SPEC-132. An empty playlist
+now-playing screen, no subtune number from the browser or Search, and the notice `MSG_ADDED` confirms it.
+Adding an entry that is already there adds nothing and gives `MSG_ALREADY_THERE`. Every change is saved at once through SPEC-132. An empty playlist
 shows "(empty)".
 - Covers: REQ-101, REQ-064
 - Priority: Should
