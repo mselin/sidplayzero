@@ -10,9 +10,9 @@ Checks every file tracked by git:
   * docs/spec.md: SPEC ids are used once and in order; every item has Covers, Priority, Oracle and
     Level lines; every requirement it names exists, and every requirement is covered by at least one
     item; every SPEC-, REQ-, CON-, FIND- and R reference points at something that is defined.
-  * docs/keymap.tsv, which is part of the specification: six columns; one row for a place and key; a
-    label only on the keys 4 to 8 and at most seven characters long; key names, places and priorities
-    that the specification has.
+  * docs/keymap.tsv, which is part of the specification (SPEC-094): six columns; one row for a place
+    and key; a label on the keys 4 to 8 and on no other, at most seven characters long; key names,
+    places and priorities that the specification has; no place changing a key that works everywhere.
   * Shell scripts parse (bash -n).
   * No private network addresses (10.x, 172.16-31.x, 192.168.x, and IPv6's unique-local and link-local
     ranges).
@@ -45,19 +45,28 @@ HOME_PATH = re.compile(r"(?<![\w.$}])/(?:(?:home|Users)/(?!u/)[A-Za-z0-9._-]+/|r
 PUBLISHES = re.compile(r"czdev\s+(?:login|publish)")
 
 # The key map (docs/keymap.tsv, SPEC-094). Key names are those of SPEC-111; places those of SPEC-090 and SPEC-114.
-KEYMAP_COLUMNS = ["where", "key", "action", "label", "priority", "help"]
+KEYMAP_COLUMNS = ["where", "key", "action", "label", "part", "help"]
+PARTS = set(  # the parts that may be left out (SPEC-115)
+    "detail mini modes shuffle restart skip voices bars notes rate force roms too-slow brightness screenshot "
+    "playlists import-more export filters resume screen-off releases download-all usbsid".split()
+)
 KEY_NAMES = set(
     "Esc Tab Enter Backspace Space Shift Up Down Left Right Home End PageUp PageDown Delete PlayPause Previous Next "
-    "Mute VolumeDown VolumeUp BrightnessDown BrightnessUp Help PrintScreen EscHold RightHold Char".split()
+    "Mute VolumeDown VolumeUp BrightnessDown BrightnessUp Help PrintScreen EscHold RightHold Char Any".split()
 ) | set("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
-KEYMAP_PLACES = set(
-    "always moving browser empty playing search-field search-results playlists playlist settings hvsc about "
-    "confirm prompt pick-playlist more-playing more-playlist import filter text notice-panel help".split()
+KEYMAP_GROUPS = ("always", "lists", "screens")
+KEYMAP_SCREENS = set(  # screens and parts of screens: the "screens" keys work here
+    "browser empty playing search-results playlists playlist settings hvsc about selftest".split()
 )
+KEYMAP_PANELS = set(  # panels and help: the "lists" keys work here, the "screens" keys do not
+    "confirm pick-playlist more-playing more-playlist import filter text notice-panel help".split()
+)
+TYPING_PLACES = {"search-field", "prompt"}  # only the "always" keys work while text is typed
+ALONE_PLACES = {"key-step"}  # takes every key itself: no group applies (SPEC-260)
+KEYMAP_PLACES = set(KEYMAP_GROUPS) | KEYMAP_SCREENS | KEYMAP_PANELS | TYPING_PLACES | ALONE_PLACES
 LABEL_KEYS = set("45678")
 LABEL_MAX = 7
-TYPING_PLACES = {"search-field", "prompt"}  # "moving" keys do not apply while text is typed
-MAY_REPLACE_MOVING = {("playing", "Up"), ("playing", "Down")}  # SPEC-094
+MAY_REPLACE_LISTS = {("playing", "Up"), ("playing", "Down")}  # SPEC-094: they step through tunes there
 
 errors = []
 
@@ -227,7 +236,7 @@ def check_keymap(rel="docs/keymap.tsv"):
         if len(cells) != len(KEYMAP_COLUMNS) or any(not c.strip() or c != c.strip() for c in cells):
             fail(rel, n, f"a row has {len(KEYMAP_COLUMNS)} cells, none empty, separated by single tabs")
             continue
-        where, key, action, label, priority, _help = cells
+        where, key, action, label, part, _help = cells
         rows += 1
         if where not in KEYMAP_PLACES:
             fail(rel, n, f"'{where}' is not a screen or panel of the specification")
@@ -235,26 +244,40 @@ def check_keymap(rel="docs/keymap.tsv"):
             fail(rel, n, f"'{key}' is not a key name of SPEC-111")
         if not re.fullmatch(r"[a-z][a-z0-9_]*", action):
             fail(rel, n, "an action is lower-case words joined by underscores")
-        if priority not in SPEC_PRIORITIES:
-            fail(rel, n, f"priority must be one of {', '.join(SPEC_PRIORITIES)}")
+        if part != "-" and any(name not in PARTS for name in part.split("|")):
+            fail(rel, n, "part must be '-' or parts of SPEC-115, joined by '|'")
         if label != "-" and key not in LABEL_KEYS:
             fail(rel, n, "only the keys 4 to 8 have a label")
-        if label == "-" and key in LABEL_KEYS and where not in ("always", "moving"):
+        if label == "-" and key in LABEL_KEYS and where not in KEYMAP_GROUPS:
             fail(rel, n, "the keys 4 to 8 need a label where they do something")
         if label != "-" and len(label) > LABEL_MAX:
             fail(rel, n, f"a label is at most {LABEL_MAX} characters")
         if (where, key) in seen:
             fail(rel, n, f"{where} already has {key}, on line {seen[(where, key)]}")
         seen[(where, key)] = n
+    actions = {}
+    for n, line in enumerate(text.split("\n"), 1):
+        cells = line.split("\t")
+        if len(cells) == len(KEYMAP_COLUMNS) and cells != KEYMAP_COLUMNS and not line.startswith("#"):
+            actions[(cells[0], cells[1])] = cells[2]
     for (where, key), n in seen.items():
-        if where in ("always", "moving"):
+        action = actions.get((where, key))
+        if where in KEYMAP_GROUPS:
+            if any((g, key) in seen for g in KEYMAP_GROUPS if g != where):
+                fail(rel, n, f"{key} is in more than one of the groups {', '.join(KEYMAP_GROUPS)}")
+            if action == "nothing":
+                fail(rel, n, "'nothing' is for switching a 'screens' key off in one place")
+            continue
+        if where in ALONE_PLACES:
             continue
         if ("always", key) in seen:
             fail(rel, n, f"{key} works the same everywhere (line {seen[('always', key)]}); {where} cannot change it")
-        if ("moving", key) in seen and where not in TYPING_PLACES and (where, key) not in MAY_REPLACE_MOVING:
-            fail(rel, n, f"{key} is a 'moving' key (line {seen[('moving', key)]}); {where} cannot change it")
-    if ("always", "Esc") in seen and ("moving", "Esc") in seen:
-        fail(rel, seen[("moving", "Esc")], "Esc is in 'always' already")
+        if ("lists", key) in seen and where not in TYPING_PLACES and (where, key) not in MAY_REPLACE_LISTS:
+            fail(rel, n, f"{key} is a 'lists' key (line {seen[('lists', key)]}); {where} cannot change it")
+        if ("screens", key) in seen and where in KEYMAP_SCREENS and action != "nothing":
+            fail(rel, n, f"{key} is a 'screens' key (line {seen[('screens', key)]}); {where} can only switch it off")
+        if action == "nothing" and not (("screens", key) in seen and where in KEYMAP_SCREENS):
+            fail(rel, n, "'nothing' is for switching a 'screens' key off on one screen")
     if not header:
         fail(rel, 0, "no rows")
     return rows

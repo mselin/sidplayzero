@@ -2,11 +2,11 @@
 
 | | |
 |---|---|
-| Status | **Draft 2, revised after independent review; awaiting the owner's approval.** This is the Phase 2 artifact |
+| Status | **Draft 3, revised after two passes of independent review; a third pass is checking the last changes.** This is the Phase 2 artifact |
 | Date | 25 November 2026 |
 | Derives from | [`requirements.md`](requirements.md), approved 25 November 2026, with the changes made for FIND-006 and FIND-010 to FIND-013 |
 | Part of it | [`keymap.tsv`](keymap.tsv), the key map (SPEC-094) |
-| Review | [`spec-review.md`](spec-review.md): 44 items, all closed |
+| Review | [`spec-review.md`](spec-review.md) |
 | Next artifact | `docs/test-framework-tasks.md` (Phase 3) |
 
 ## 1. How to read this document
@@ -17,8 +17,8 @@ tests can be written from it before any of it is built.
 - **SPEC-nnn** is one item of the specification. Each has four lines under it:
   - **Covers** names the requirements it implements. Every requirement is covered by at least one item, and
     `tools/check_repo.py` checks that.
-  - **Priority** is Must, Should or Could, as in the requirements. A Should or Could item, or a part of a
-    screen marked so, can be left out of version 1.0 without touching a Must item's tests (SPEC-115).
+  - **Priority** is Must, Should or Could, as in the requirements. The Should and Could features that can be
+    left out of version 1.0 are named parts, and leaving one out touches no Must item's tests (SPEC-115).
   - **Oracle** says how a test knows the item is met: what is observed, and what it is compared with.
   - **Level** says where that test runs (SPEC-250): **host-unit**, the `core` code against fakes;
     **host-integration**, real parts on the host (the real engine, the real program, a local server, a real
@@ -52,8 +52,9 @@ CPack. Both builds pass `-ffile-prefix-map` so that no path of the build machine
 - Covers: REQ-149, REQ-140
 - Priority: Must
 - Oracle: on a clean checkout, `cmake --workflow --preset linux-x86-64` ends with status 0 and produces the
-  program; `cmake --workflow --preset cp0-cross-package -DSIDPLAYZERO_MAINTAINER="Test <test@example.org>"`
-  ends with status 0 and produces the `.deb`.
+  program; with the environment variable `SIDPLAYZERO_MAINTAINER` set to
+  `SidPlayZero test build <test@example.invalid>`, `cmake --workflow --preset cp0-cross-package` ends with
+  status 0 and produces the `.deb`.
 - Level: host-integration, host-package
 
 **SPEC-002 The engine library is built in.** Tunes are played by libsidplayfp 3.1.2 with libresidfp 1.3.0.
@@ -162,9 +163,10 @@ symbols the screens use. The generated font sources are in the repository. The p
 when it runs.
 - Covers: REQ-031, REQ-160
 - Priority: Must
-- Oracle: a generated test tune whose fields hold every printable Windows-1252 character shows each as a
-  glyph and none as the "missing glyph" box, checked by asking LVGL for each character's glyph; a screenshot
-  is identical, pixel for pixel, on any machine that builds the simulator.
+- Oracle: a C++ test program of the simulator level (SPEC-253) asks LVGL for the glyph of each of the 218
+  printable Windows-1252 characters, in both fonts, and finds one for each; the fixture tunes whose fields
+  between them hold all of those characters (SPEC-252) give screen descriptions with the same characters as
+  Unicode; two runs of a script on different machines give the same pixels.
 - Level: simulator
 - Evidence: DejaVu Sans is the font the platform recommends for western text, at 12 pixels or more (CON-18).
   Drawing it from built-in bitmaps removes the font library and its version from the picture.
@@ -219,7 +221,7 @@ implementation in `platform` and a fake for the tests.
   went through the interface.
 - Level: host-unit
 
-**SPEC-022 Threads.** The app's own code runs on five threads, and each kind of work has one home. Libraries
+**SPEC-022 Threads.** The app's own code runs on six threads, and each kind of work has one home. Libraries
 may start threads of their own; none of the app's code runs on them except the audio callback.
 
 | Thread | Does | Must never |
@@ -228,16 +230,20 @@ may start threads of their own; none of the app's code runs on them except the a
 | Render | Runs the engine and fills the ring buffer (SPEC-070) | Touch LVGL or files |
 | Audio | miniaudio's callback: copies from the ring buffer to the device | Lock, allocate or wait |
 | Quick worker | Folder listing, reading a tune, reading headers for the detail line, saving state and settings, volume, backlight | Run a job that can take more than 2 s‡ |
-| Long worker | Downloads, unpacking, building the index and the listing, the speed measurement | Touch LVGL |
+| Fetch worker | Downloads single tunes: the tune to be played, the one fetched ahead, and a playlist's (SPEC-141, SPEC-174) | Do anything else |
+| Long worker | Setting HVSC up, the complete download and unpacking, building the index and the listing, the speed measurement | Touch LVGL |
 
 Threads talk through queues of messages; a result reaches the screens as a message handled on the UI thread.
 Each worker runs one job at a time, in the order asked, except that a job can be cancelled while it waits or
-runs. The audio callback uses only a lock-free ring buffer and atomic counters.
+runs, and that on the fetch worker a tune that is to be played goes ahead of everything waiting there. So a
+tune is fetched at once whatever the long worker is busy with. The audio callback uses only a lock-free ring
+buffer and atomic counters.
 - Covers: REQ-017, REQ-054
 - Priority: Must
 - Oracle: with a fake `HttpClient` that stalls a download for 30 s, the simulator opens a folder within
-  300 ms‡ and a volume key reaches the fake `SystemVolume` within 100 ms‡ of the fake clock; with a `Files`
-  fake that takes 2 s to list a folder, a key is still answered within 100 ms‡; the integration level's
+  300 ms‡ and a volume key reaches the fake `SystemVolume` within 100 ms‡ of the fake clock; with the index
+  build held by a slow `Files` fake and a set-up download stalled, Enter on an absent tune makes its request
+  at once; with a `Files` fake that takes 2 s to list a folder, a key is still answered within 100 ms‡; the integration level's
   ThreadSanitizer run of the simulator tests gives no report; a test build makes the audio callback abort
   if it allocates or takes a lock, and the integration tests run without that abort.
 - Level: simulator, host-integration
@@ -264,11 +270,13 @@ string names the folders under the XDG directories (SPEC-134).
 | `can()` | Which of mute, filter, skip and registers this backend supports |
 | `underruns()` | Frames the backend could not deliver in time (SPEC-070) |
 
-And its events, delivered on the UI thread: `song_ended`, `device_lost`, `device_back`, `failed(reason)`.
+And its events, delivered on the UI thread: `song_ended`; `device_lost`, `device_back` and `device_gone`
+(SPEC-078); `failed(reason)`. The fake `SoundBackend` records the operations, reports whatever events the
+test tells it to, and returns the registers the test gives it.
 The **software backend**, in `core`, is made of an `Engine`, the ring buffer and an `AudioSink`. No file of
 the collection, the queue, playlists, search or the screens names the software backend.
-- Covers: REQ-110
-- Priority: Should
+- Covers: REQ-110, REQ-010
+- Priority: Must
 - Oracle: every host-unit test of the player (SPEC-060 to SPEC-069) runs against the fake `SoundBackend`;
   the software backend's own tests (SPEC-064, SPEC-070, SPEC-078) run it against the fake `Engine` and
   `AudioSink`; a check finds no reference to the software backend's type outside its own files and the one
@@ -292,7 +300,8 @@ Settings row for the collection shows its value with "(from HVSC_BASE)" and cann
 device, and, when the root has a listing (SPEC-142), the tunes and folders HVSC lists there. A tune that both
 name appears once. Only folders, and files whose names end in `.sid` in any case, are entries. Names starting
 with a dot are left out, and so is the root's `DOCUMENTS` folder. A name that is not valid UTF-8 is shown with
-"?" for each bad byte and still opens. Each tune is **present** or **absent**. A folder that cannot be read
+"?" for each bad byte and still opens and plays; its path is not a collection path (SPEC-154), so "Fav" and
+"Add" have no label on it and it is not remembered between runs. Each tune is **present** or **absent**. A folder that cannot be read
 shows no entries and the notice `MSG_FOLDER_UNREADABLE`.
 - Covers: REQ-002, REQ-006, REQ-088
 - Priority: Must
@@ -334,19 +343,21 @@ and a short ESC do nothing.
 
 **SPEC-045 Moving in a list.** Up and Down move one row and stop at the ends. Page Up and Page Down move by the
 number of rows on the screen. Home and End go to the first and last entry. The app makes its own key repeat
-and ignores the keyboard's: Up, Down, Page Up, Page Down and, in a text field, Left, Right and Backspace
-repeat after 400 ms, then 25 times a second, while held; no other key repeats. The top line shows the
+and ignores the keyboard's. Repeating belongs to the action, not the key: moving in a list (`up`, `down`,
+`page_up`, `page_down`), moving the cursor and deleting in a text field, and stepping a value with Left or
+Right repeat after 400 ms, then 25 times a second, while the key is held. No other action repeats, so Up and
+Down on the now-playing screen, where they step through tunes, act once for each press. The top line shows the
 highlight's position as "n/total".
 - Covers: REQ-005, REQ-003
 - Priority: Must
 - Oracle: in a 1,298-entry test folder each key lands on the expected row and the screen description's
   `position` reads the expected text; holding Down for one second of the fake clock moves 16 rows; holding
-  Enter for one second acts once.
+  Enter for one second acts once, and so does holding Down on the now-playing screen.
 - Level: simulator
 
 **SPEC-046 The detail line.** Below the list, one line describes the highlighted entry once the highlight has
-rested on it for 150 ms‡. For a present tune: title, author and the length of its default subtune, read from
-the file's header by the quick worker. For an absent tune, whose header is not known: "not on device", the
+rested on it for 150 ms‡. For a present tune: title, author and the length of its default subtune, which the
+quick worker reads from the file: the header, and the file's MD5 for the length (SPEC-063). For an absent tune, whose header is not known: "not on device", the
 number of subtunes and the length of the first, from the listing. For a folder: nothing.
 - Covers: REQ-004
 - Priority: Should
@@ -368,12 +379,13 @@ it is on the device, every tune is present, and every length is the default of S
 by the **empty screen**: it says no collection was found, names the root, and offers "Get HVSC" on Enter,
 which starts SPEC-140, and a line telling the user to copy a collection into that folder. While this screen
 shows, the quick worker looks at the root every 5 s‡, and the browser replaces the screen as soon as the root
-has an entry.
+has an entry and no panel or help is open.
 - Covers: REQ-007
 - Priority: Must
 - Oracle: started with an empty home folder, the screen description says `screen = empty`, holds the root's
-  path, and has the one action "Get HVSC"; Enter opens the notice panel; a tune copied into the root by the
-  test makes the browser appear within 5 s‡ of the fake clock.
+  path in `text`, and has the one row "Get HVSC"; Enter opens the notice panel; a tune that the script puts
+  into the root makes the browser appear within 5 s‡ of the fake clock, and with help open, when help is
+  closed.
 - Level: simulator
 
 **SPEC-049 How absent tunes look.** An absent tune's row is drawn in the dimmed text colour with a small cloud
@@ -407,23 +419,30 @@ What each event does in each state. "—" means the event is ignored there. "→
 | Play/Pause key | play the current entry from its start, if there is one | — | — | — | `pause()`; → Paused | `resume()`; → Playing | play the current entry again |
 | Stop | — | → Idle | cancel the fetch; → Idle | → Idle | `stop()`; → Idle | `stop()`; → Idle | → Idle |
 | Next or previous tune, next or previous subtune | by SPEC-061 and SPEC-062, if there is a queue | same, restarting the wait | same, cancelling the fetch | same | same, after `stop()` | same, after `stop()` | same |
-| Restart | play the current entry | — | — | — | load the same subtune again | load the same subtune again; → Playing | play the current entry again |
+| Restart (part `restart`) | play the current entry | — | — | — | load the same subtune again | load the same subtune again; → Playing | play the current entry again |
 | Wait is over | — | → Fetching | — | — | — | — | — |
 | Fetched | — | — | → Loading | — | — | — | — |
 | Could not fetch | — | — | → Failed (SPEC-069) | — | — | — | — |
 | Loaded | — | — | — | `start()`; → Playing | — | — | — |
 | Could not load | — | — | — | → Failed (SPEC-069) | — | — | — |
-| `song_ended` | — | — | — | — | by SPEC-065 | — | — |
-| `device_lost` | — | — | — | — | by SPEC-078 | — | — |
+| `song_ended` | — | — | — | — | the next entry by SPEC-065; if its fetch-ahead is still running, → Fetching, taking that request over; if its fetch-ahead failed, → Failed with that failure | — | — |
+| Fetch-ahead done, or failed (SPEC-141) | — | — | — | — | remembered for the next entry | remembered | — |
+| `device_lost`, `device_back` | — | — | — | — | stays Playing (SPEC-078) | — | — |
+| `device_gone` | — | — | — | — | `pause()`; → Paused, with the notice `MSG_NO_SOUND` | — | — |
 | `failed` from the backend | — | — | — | → Failed | → Failed | → Failed | — |
-| Too slow (SPEC-079) | — | — | — | — | by SPEC-079 | — | — |
+| The unattended wait of SPEC-069 is over | — | — | — | — | — | — | the next entry; or → Idle with `MSG_STOPPED_BAD_FILES` after five bad files in a row |
+| Too slow (part `too-slow`) | — | — | — | — | by SPEC-079 | — | — |
+| The L key, while SPEC-079's offer shows | — | — | — | — | load the same subtune again with the light engine | — | — |
 
-A step to an entry that is present goes to Loading; to one that is absent, to Waiting.
+A step to an entry that is present goes to Loading; to one that is absent, to Waiting. A key press in Failed
+ends the unattended wait. While the complete download has playing switched off (SPEC-144), every event that
+would load a tune is answered with the notice `MSG_UNPACKING` and does nothing else.
 - Covers: REQ-010, REQ-019
 - Priority: Must
 - Oracle: a host-unit test sends every event in every state against the fake `SoundBackend`, `HttpClient`
-  and `Clock`, and checks the state and the calls made after each, cell by cell of this table; after pause
-  and resume the software backend's test (SPEC-070) shows the samples complete and in order.
+  and `Clock`, and checks the state and the calls made after each, cell by cell of this table (the rows of
+  a part that is not built being left out); after pause and resume the software backend's test (SPEC-070)
+  shows the samples complete and in order.
 - Level: host-unit
 
 **SPEC-061 Subtunes.** An entry without a subtune number plays the tune's default subtune, as the header gives
@@ -455,15 +474,17 @@ Browsing, searching or editing a playlist does not change the queue.
   that playlist while it plays leaves the queue as it was.
 - Level: host-unit
 
-**SPEC-063 Song lengths.** A subtune's length comes from the listing (SPEC-142): by the tune's HVSC path when
-it has one there, and otherwise by the MD5 of its file, which the app computes when it loads the file. When
-neither finds it, or there is no listing, the length is the setting `default_length`, which starts as 3:30,
-can be 0:05 to 59:59, and where 0 means "until told otherwise". Lengths are held in milliseconds.
+**SPEC-063 Song lengths.** A subtune's length comes from the listing (SPEC-142). For a present tune it is
+looked up by the MD5 of the file, which the app computes whenever it reads the file; the path plays no part,
+so a file with other contents at an HVSC path does not get that path's lengths. For an absent tune, which
+has no file yet, it is looked up by the path. When the listing does not have it, or there is no listing, the
+length is the setting `default_length`, which starts as 3:30, can be 0:05 to 59:59, and where 0 means "until
+told otherwise". Lengths are held in milliseconds.
 - Covers: REQ-013
 - Priority: Must
 - Oracle: with a database written for the fixtures, each fixture subtune reports the length the database
-  gives, to the millisecond; a tune copied to another path is still found by its MD5; a tune left out reports
-  the default. On the device, with HVSC #85 set up, `/MUSICIANS/H/Hubbard_Rob/Commando.sid` reports 3:55.594
+  gives, to the millisecond; a tune copied to another path is still found by its MD5; a different tune put
+  at a listed path reports the default, not that path's lengths; a tune left out reports the default. On the device, with HVSC #85 set up, `/MUSICIANS/H/Hubbard_Rob/Commando.sid` reports 3:55.594
   for subtune 1 and 1:01.288 for subtune 2.
 - Level: host-unit, device
 
@@ -487,28 +508,44 @@ renders exactly that many samples for the subtune, lets the sink play all of the
 | `stop` | Nothing: → Idle |
 
 "The next entry" at the end of the queue is → Idle, unless the setting `repeat_all` is on, when it is the
-first entry. The setting `shuffle` (Could) plays the queue in a random order: when the queue is set, and each
-time repeat-all wraps round, the entries are permuted by the Fisher–Yates method using the xorshift64* number
-generator, started from the seed, with the entry that was chosen put first. The seed is the clock's value
-unless `--seed N` is given. Switching `shuffle` while a queue plays permutes the entries after the current
-one, or puts them back in order.
+first entry. The values other than `subtunes`, and `repeat_all`, are the part `modes`; `shuffle` is the part
+`shuffle` (SPEC-115).
+
+With `shuffle` on, the queue is played in a random order, made in exactly this way so that a test can know
+it:
+
+- The generator is xorshift64*. Its state *x* is a 64-bit number, started from the seed, or from
+  0x9E3779B97F4A7C15 when the seed is 0. Each number is made by `x ^= x >> 12; x ^= x << 25; x ^= x >> 27`,
+  keeping 64 bits, and is *x* times 0x2545F4914F6CDD1D, again keeping 64 bits. With seed 1 the first number
+  is 0x47E4CE4B896CDD1D.
+- A list *a* of *m* entries is permuted by going from *i* = *m* − 1 down to 1, taking the next number modulo
+  *i* + 1 as *j*, and swapping *a[i]* with *a[j]*.
+- When a queue is set, the chosen entry is taken out, the others are permuted in their queue order, and the
+  chosen entry is put first. Each time repeat-all goes round, all the entries are permuted from their
+  original order; the generator carries on from where it was.
+- Switching `shuffle` on while a queue plays permutes the entries after the current one. Switching it off
+  puts the queue back in its original order, with the place at the current entry.
+- The seed is the clock's value at start, unless the test option `--seed N` gives it (SPEC-253).
 - Covers: REQ-014, REQ-016
 - Priority: Must
-- Oracle: with 2-second test lengths and the fake clock, each value of `when_song_ends` gives the sequence
-  written in the test for a folder queue and for a playlist queue with subtune numbers; the last entry ends
-  in Idle unless `repeat_all` is on; with `shuffle` on and seed 1, ten tunes play once each before any
-  repeats, in the order a second implementation of the stated method gives in the test.
+- Oracle: with 2-second test lengths and the fake clock: `subtunes` on a folder queue of the three-subtune
+  fixture (default 2) and a one-subtune tune plays subtunes 2 and 3 and then the second tune, and ends in
+  Idle; on a playlist whose entry names subtune 1 it plays that subtune and then the next entry. Part
+  `modes`: `next_tune`, `repeat` and `stop` each give the sequence the table says, and with `repeat_all` the
+  last entry is followed by the first. Part `shuffle`: with seed 1 and a queue of ten entries numbered 1 to
+  10 in order, started at entry 3, the order played is 3, 4, 8, 1, 10, 9, 5, 6, 7, 2, and with repeat-all
+  the second round is 9, 8, 1, 2, 4, 10, 3, 7, 6, 5.
 - Level: host-unit
 
 **SPEC-066 Starting again and skipping ahead.** "Restart" loads the current subtune again from its beginning.
-"Skip ahead" (Could) is on while its key is held: the software backend then renders as fast as the engine
+"Skip ahead" (the part `skip`) is on while its key is held: the software backend then renders as fast as the engine
 allows, up to eight‡ times real time, and plays every eighth chunk, so `position()` and the elapsed time run
 ahead. Underruns are not counted while skipping, nor for one second after.
 - Covers: REQ-015
 - Priority: Should
-- Oracle: restart sets `position()` to 0 and the sink then receives the tune's first samples; with the fake
-  engine, holding skip for one second of the fake clock advances `position()` by at least four seconds‡ of
-  samples and adds nothing to `underruns()`.
+- Oracle: restart sets `position()` to 0 and the sink then receives the tune's first samples. Part `skip`:
+  with the fake engine, holding skip for one second of the fake clock advances `position()` by at least
+  four seconds‡ of samples and adds nothing to `underruns()`.
 - Level: host-unit
 
 **SPEC-067 How the engine is set for a tune.** For each tune the engine is configured with: the sample rate of
@@ -526,8 +563,9 @@ exists and has the right size (8,192, 8,192 and 4,096 bytes), and is otherwise i
 load fails with `MSG_NEEDS_BASIC`.
 - Covers: REQ-018
 - Priority: Must
-- Oracle: the fixture tune marked as BASIC fails with that message when no ROM is set, and is handed to the
-  backend when a ROM file of the right size is set; a ROM file of the wrong size gives the notice.
+- Oracle: the fixture tune marked as BASIC fails with that message when no ROM is set. Part `roms`: it is
+  handed to the backend when a ROM file of the right size is set, and a ROM file of the wrong size gives the
+  notice.
 - Level: host-unit
 
 **SPEC-069 When an entry cannot be played.** Each kind of failure has a message and a rule. "Unattended" means
@@ -542,11 +580,12 @@ the entry was reached by a song ending, not by a key.
 | Fetch: the file does not match HVSC's record | `MSG_FETCH_MISMATCH` | Yes | Next entry after 2 s‡ |
 | Fetch: no connection, timeout, certificate refused, or a server error | `MSG_FETCH_NETWORK` | No | SPEC-143 |
 | Fetch: too large, the card is full, or the file cannot be written | `MSG_FETCH_TOO_LARGE`, `MSG_CARD_FULL`, `MSG_CANNOT_WRITE` | No | SPEC-143 |
-| A playlist entry is missing | none | No | Next entry at once |
+| Fetch: HVSC's notice has not been accepted (SPEC-152) | `MSG_NOTICE_NEEDED` | No | SPEC-143 |
+| A playlist entry is missing | `MSG_ENTRY_MISSING` | No | Next entry at once, and the message is not shown |
 | Sound cannot be opened | `MSG_NO_SOUND` | No | Stays Failed |
 
-In every case the player is in Failed, within 1 s‡ of the failure being known, and the now-playing screen and
-the mini player show the message. Attended, it stays there. After five‡ bad files in a row, unattended
+In every case but the unattended missing entry the player is in Failed, within 1 s‡ of the failure being
+known, and the now-playing screen and the mini player show the message. Attended, it stays there. After five‡ bad files in a row, unattended
 playback stops: → Idle with the notice `MSG_STOPPED_BAD_FILES`. An entry that plays resets the count.
 - Covers: REQ-019
 - Priority: Must
@@ -572,7 +611,8 @@ test calls; on the device it runs on the render thread.
   pause and resume; with the engine made slower than real time the counter rises by exactly the frames not
   delivered, and does not rise during the start of a subtune, a pause, a stop or the end of a song; a
   simulator script plays a fixture with the real engine and a recording sink while it opens three folders
-  and the settings screen, and the counter stays 0 and the recorded samples equal the fixture's reference.
+  and the settings screen: the counter stays 0, and the recorded samples equal those of a second script
+  that plays the same fixture for the same time and presses nothing else.
   On the device `key_to_sound_ms_max` is at most 500 ms‡ for present tunes.
 - Level: host-unit, simulator, device
 
@@ -674,13 +714,15 @@ the load fails with `MSG_NO_SOUND`; the rest of the app keeps working, and the n
 again. If the sink reports that the device was lost or changed while playing, the software backend reports
 `device_lost`, closes the stream and opens it again, up to five times at intervals of 200 ms‡; rendering
 waits meanwhile, so no part of the tune is skipped, and no underruns are counted. When it succeeds it reports
-`device_back` and the player stays Playing. If it does not, the player goes to Paused with `MSG_NO_SOUND`.
+`device_back` and the player stays Playing. If it does not, it reports `device_gone`, and the player pauses
+and raises the notice `MSG_NO_SOUND`; Play/Pause then tries to open the sink again.
 - Covers: REQ-044, REQ-043
 - Priority: Must
 - Oracle: with the fake sink refusing to open, play ends in Failed with that message and the browser still
   answers keys; when it accepts, play works; with the fake sink dropping the device for 300 ms mid-tune, the
   frames received are complete and in order and the player is Playing; dropping it for good leaves the
-  player Paused. On the device, plugging and unplugging headphones twice leaves the tune playing with a gap
+  player Paused with that notice, and Play/Pause after the fake accepts again carries on from the same
+  sample. On the device, plugging and unplugging headphones twice leaves the tune playing with a gap
   under 1 s‡.
 - Level: host-unit, simulator, device
 
@@ -690,14 +732,15 @@ seconds, the player acts, once for each tune loaded:
 | `engine` | What happens |
 |---|---|
 | `auto`, playing with reSIDfp | The subtune is loaded again from its beginning with sidlite, and the notice `MSG_SWITCHED_LIGHT` says so. For the rest of this run, `auto` uses sidlite for tunes with that many chips or more |
-| `accurate` | The notice `MSG_TOO_HEAVY` offers the light engine: pressing L within 10 s loads the subtune again from its beginning with sidlite, for this tune only |
+| `accurate` | The notice `MSG_TOO_HEAVY` offers the light engine: pressing L while it shows, which is 10 s‡ from when it appears, loads the subtune again from its beginning with sidlite, for this tune only |
 | Playing with sidlite already | The notice `MSG_CANNOT_KEEP_UP` |
 
 - Covers: REQ-053
 - Priority: Should
 - Oracle: with the fake backend reporting underruns in three separate seconds: `auto` loads the subtune
   again with the light engine and shows the first notice within 10 s‡ of the fake clock; `accurate` shows
-  the second, and L switches; after 10 s L does nothing; a second burst on the same tune does nothing.
+  the second, and L switches while it shows; once it has gone L does nothing; a second burst on the same
+  tune does nothing.
 - Level: host-unit, simulator
 
 **SPEC-080 The voice display.** Thirty times a second at most, the app reads the chosen chip's registers from
@@ -714,7 +757,8 @@ dim when it is not.
 ## 6. Screens and keys
 
 **SPEC-090 The screens, and how one leads to another.** The screens are: the browser (or the empty screen of
-SPEC-048), now playing, Search, Playlists, Playlist, Settings, HVSC and About. The open screens form a
+SPEC-048), now playing, Search, Playlists, Playlist, Settings, HVSC and About; and, only while a device test
+asks for it, the self-test screen (SPEC-260), which takes the browser's place. The open screens form a
 **stack** with the browser at the bottom. A key that opens a screen puts it on top; if that screen is already
 in the stack, the app returns to it and closes those above it. A short ESC closes the top screen; on the
 browser it is the "parent folder" key. So no screen is ever in the stack twice, and the stack is never
@@ -722,11 +766,11 @@ deeper than six.
 
 | Screen | Opened by |
 |---|---|
-| Now playing | P on any screen where no text is being typed; key 4 in the browser; playing a tune from the browser, Search or a playlist |
+| Now playing | P on any screen, while no text is being typed and no panel or help is open; key 4 in the browser; playing a tune from the browser, Search or a playlist |
 | Search | Key 5 in the browser |
 | Playlists | Key 6 in the browser |
 | Playlist | Enter in Playlists |
-| Settings | TAB on any screen where no text is being typed, except Settings, HVSC and About, where TAB does nothing |
+| Settings | TAB on any screen, while no text is being typed and no panel or help is open. From HVSC and About that returns to Settings, by the rule above; in Settings itself TAB does nothing |
 | HVSC | Key 5 in Settings; "Get HVSC" on the empty screen |
 | About | Key 8 in Settings |
 
@@ -734,9 +778,11 @@ Help (SPEC-107) and panels (SPEC-114) open over a screen and are not part of the
 - Covers: REQ-060, REQ-062
 - Priority: Must
 - Oracle: a simulator script opens every screen by every way in this table and checks the screen
-  description's `screen` and `stack` after each step; from the deepest stack (browser, Playlists, Playlist,
-  now playing, Settings, HVSC) five short presses of ESC reach the browser, and from any state with a panel
-  and help open, seven do; TAB in Settings, HVSC and About changes nothing.
+  description's `screen` and `stack` after each step; from the stack browser, Search, now playing, Settings,
+  HVSC, four short presses of ESC reach the browser, and with a panel and help open as well, six do; TAB in
+  HVSC and in About gives the stack that Settings had, and TAB in Settings changes nothing. With the
+  `playlists` part (SPEC-115): from the deepest stack (browser, Playlists, Playlist, now playing, Settings,
+  HVSC) five presses reach the browser.
 - Level: simulator
 
 **SPEC-091 The layout.** Every screen is 320×170 and has three bands:
@@ -755,15 +801,22 @@ theme is dark: light text on a near-black background, the highlight a filled bar
   (within one pixel), no two boxes of one band overlap, and every box lies inside its band.
 - Level: simulator
 
-**SPEC-092 Keys that work everywhere.** The rows of the key map marked `always` work on every screen and in
-every panel, also while text is being typed: play or pause, previous and next tune, the volume and brightness
-keys, help, the screenshot key, ESC and held ESC. The rows marked `moving` work wherever no text is being
-typed: TAB, Space, P, L, and the keys that move in lists.
+**SPEC-092 Keys that work everywhere.** The key map has three groups of keys that are not tied to one place:
+
+| Group | Works | Keys |
+|---|---|---|
+| `always` | In every place, also while text is being typed | Play or pause, previous and next tune, the volume and brightness keys, help, the screenshot key, ESC and held ESC |
+| `lists` | Wherever no text is being typed, panels and help included | Up, Down, Page Up, Page Down, Home, End |
+| `screens` | On a screen, while no text is being typed and no panel or help is open | TAB, Space, P, L |
+
+A panel takes the keys (SPEC-114), so a `screens` key pressed while a panel or help is open does nothing. A
+place can switch a `screens` key off with the action `nothing`, as Settings does for TAB.
 - Covers: REQ-061, REQ-060
 - Priority: Must
-- Oracle: a simulator script sends each `always` key on every screen and in the text prompt, and each
-  `moving` key on every screen, and checks its effect in the screen description; in the text prompt, P, L and
-  Space are typed and do nothing else.
+- Oracle: a simulator script sends each `always` key that is built on every screen, in a panel and in the
+  text prompt, each `lists` key on every screen and in a list panel, and each `screens` key on every screen,
+  and checks its effect in the screen description; with a `confirm` panel open, TAB, Space, P and L leave
+  the description unchanged; in the text prompt, P, L and Space are typed and do nothing else.
 - Level: simulator
 
 **SPEC-093 Arrows, lists and the action bar.** Where no text is being typed, the letters F, X, Z and C do
@@ -777,13 +830,15 @@ name for the screen does nothing.
 - Level: simulator
 
 **SPEC-094 The key map is one file.** [`keymap.tsv`](keymap.tsv) is part of this specification. It has a row
-for every key in every screen and panel: where, key, action, the label shown in the action bar, priority, and
-the words shown in help. The app's key handling, action bar and help are built from this file at build time,
+for every key in every screen and panel: where, key, action, the label shown in the action bar, the part it
+belongs to if it is not always built (SPEC-115), and the words shown in help. The app's key handling, action bar and help are built from this file at build time,
 and nothing else in the source maps keys to actions. The repository's check reads the file and fails if: a
 place has two rows for one key; a key 4 to 8 has no label, or another key has one; a label is longer than
-seven characters; a key name is not one of SPEC-111's; a row gives a key that `always` has to one place; or
-a row gives a key that `moving` has to a place where no text is typed, other than Up and Down on the
-now-playing screen, which step through tunes there.
+seven characters; a key name, a place or a part is not one this document has; a key is in two of the
+groups of SPEC-092; a place has a row for a key of `always`; a place where no text is typed has a row for a
+key of `lists`, other than Up and Down on the now-playing screen, which step through tunes there; or a
+screen has a row for a key of `screens` with any action but `nothing`. The key step of SPEC-260 is the one
+place where no group applies.
 - Covers: REQ-063, REQ-061
 - Priority: Must
 - Oracle: the check passes on the file and fails on a copy with each of those faults; a host-unit test reads
@@ -835,7 +890,7 @@ releasing it does not change the subtune.
 - Oracle: with the fixture "Commando Test" playing, the screen description's `player` and `lines` equal the
   values in the fixture's header and database entry, with the subtune as "1 of 1"; for each row of the state
   table, a script brings the player to that state and compares the lines; "Stop" leaves the player Idle with
-  "Stopped"; with voice 2 muted and the filter off, line 6 shows both.
+  "Stopped". Part `voices`: with voice 2 muted and the filter off, line 6 shows both.
 - Level: simulator
 
 **SPEC-097 Notes from STIL.** "Notes" opens a text panel with the entry for the playing tune from
@@ -854,8 +909,9 @@ long for its box ends in "…". On the now-playing screen, lines 1 to 3 scroll s
 - Covers: REQ-031
 - Priority: Must
 - Oracle: the fixture tune titled "Hülsbeck Tëst" with a 32-character author gives a screen description
-  whose lines hold those strings exactly; for every text box of every screen, the description's drawn width
-  is at most the box's width.
+  whose lines hold those strings exactly; for every box of every screen in the description, either `text_w`
+  is at most `w` or `clipped` is true, and a box of the now-playing screen's lines 1 to 3 whose text is too
+  long scrolls: its text's position differs between two dumps a second apart.
 - Level: simulator
 
 **SPEC-099 Typing.** A text field is in use in the Search field and in a text prompt. While it is:
@@ -879,7 +935,9 @@ long for its box ends in "…". On the now-playing screen, lines 1 to 3 scroll s
 - Level: simulator, host-unit
 
 **SPEC-100 Search.** The Search screen has a text field above a result list, and opens with the field in use.
-Enter runs the search (SPEC-162) and moves to the list; with an empty field Enter does nothing. Up from the
+In the key map the screen is two places: `search-field` while the field is in use, and `search-results`
+while the list is. Enter runs the search (SPEC-162) and moves to the list; with an empty field Enter does
+nothing. Up from the
 first result returns to the field, as does "Edit". ESC, in the field or the list, closes the screen. In the
 list, Enter plays the result, and the queue becomes the results. Keys 4 to 8 are "Edit", "Folder", "Filter",
 "Fav" and "Add". The top line shows the number of results, or "No results". While the index is being built it
@@ -895,24 +953,25 @@ shows "Indexing n %" and searches what has been indexed so far.
 setting with a fixed set of values, Left and Right step through them and Enter steps forward. For one that is
 a path, an address or a time, Enter opens a text prompt holding the current value; a value that is not
 allowed gives the notice `MSG_INVALID_VALUE` and leaves the prompt open. A change is saved at once (SPEC-130).
-Keys 4, 5 and 8 are "Back", "HVSC" and "About". The rows, in order, with the priority of each:
+Keys 4, 5 and 8 are "Back", "HVSC" and "About". The rows, in order, each always built or belonging to a part
+(SPEC-115):
 
-| Row | Setting | Priority |
+| Row | Setting | Part |
 |---|---|---|
-| Collection folder | `collection` | Must |
-| Engine | `engine` | Must |
-| When a song ends | `when_song_ends` | Should |
-| Default length | `default_length` | Must |
-| Repeat all | `repeat_all` | Should |
-| Shuffle | `shuffle` | Could |
-| Sample rate | `sample_rate` | Should |
-| SID model | `sid_model` | Could |
-| Clock | `clock` | Could |
-| KERNAL ROM, BASIC ROM, Character ROM | `rom_kernal`, `rom_basic`, `rom_chargen` | Should |
-| Resume on start | `resume_on_start` | Could |
-| Screen off while playing | `screen_off_after` | Could |
-| Address for single files | `url_files` | Must |
-| Address for the complete archive | `url_archive` | Should |
+| Collection folder | `collection` | Always |
+| Engine | `engine` | Always |
+| When a song ends | `when_song_ends` | `modes` |
+| Default length | `default_length` | Always |
+| Repeat all | `repeat_all` | `modes` |
+| Shuffle | `shuffle` | `shuffle` |
+| Sample rate | `sample_rate` | `rate` |
+| SID model | `sid_model` | `force` |
+| Clock | `clock` | `force` |
+| KERNAL ROM, BASIC ROM, Character ROM | `rom_kernal`, `rom_basic`, `rom_chargen` | `roms` |
+| Resume on start | `resume_on_start` | `resume` |
+| Screen off while playing | `screen_off_after` | `screen-off` |
+| Address for single files | `url_files` | Always |
+| Address for the complete archive | `url_archive` | `download-all` |
 
 - Covers: REQ-070, REQ-051, REQ-052, REQ-083, REQ-018, REQ-060
 - Priority: Must
@@ -922,16 +981,16 @@ Keys 4, 5 and 8 are "Back", "HVSC" and "About". The rows, in order, with the pri
 - Level: simulator
 
 **SPEC-102 The HVSC screen.** The HVSC screen shows a status block and, under it, a list of things to do,
-chosen with Up, Down and Enter. The status block has: "HVSC #n", or "HVSC is not set up"; how many tunes HVSC
+chosen with Up, Down and Enter. The status block has: "HVSC #n", "HVSC, release not known" or "HVSC is not set up"; how many tunes HVSC
 lists and how many are on the device; the index's state; and while a job runs, its step, a bar, and its
 figures (SPEC-147). The list has, in this order, the rows that apply:
 
 | Row | Shown when | Does |
 |---|---|---|
 | Get HVSC | HVSC is not set up | SPEC-140 |
-| Check for a newer release | HVSC is set up | SPEC-148 |
+| Check for a newer release | HVSC is set up (SPEC-140) | SPEC-148 |
 | Update to #m | A check has found a newer release | SPEC-148 |
-| Download everything | HVSC is set up and SPEC-145 allows it | SPEC-144 |
+| Download everything, or "Finish the download" after one that was cut short while moving files | HVSC is set up, its release is known, and SPEC-145 allows it | SPEC-144 |
 | Rebuild the index | Always | SPEC-161 |
 
 When SPEC-145 does not allow the complete download, its explanation is shown as text under the list. While a
@@ -978,15 +1037,16 @@ exit. Releasing between the two removes the notice and does nothing else.
   device, holding ESC returns to the launcher before the launcher's own 3-second limit.
 - Level: simulator, device
 
-**SPEC-107 Help.** `fn`+H opens a panel listing the keys of the screen or panel under it: first that place's
-rows of the key map, then the `moving` rows if no text is being typed there, then the `always` rows, each as
-the key's name on the device (SPEC-111) and the row's help words. Up and Down scroll it; `fn`+H, Enter or ESC
-closes it.
+**SPEC-107 Help.** `fn`+H opens a panel listing the keys of the place under it: first that place's rows of
+the key map; then the `screens` rows, if the place is a screen and has not switched the key off; then the
+`lists` rows, if no text is being typed there; then the `always` rows. Each line is the key's name on the
+device (SPEC-111) and the row's help words. A row whose action is `nothing`, and a row whose part is not
+built (SPEC-115), is left out. Up and Down scroll it; `fn`+H, Enter or ESC closes it.
 - Covers: REQ-063
 - Priority: Must
-- Oracle: for every screen and panel, the help text in the screen description has one line for each row
-  that `keymap.tsv` gives for that place, for `moving` where it applies and for `always`, with the same
-  words, and no other line.
+- Oracle: for every place, the help lines in the screen description are exactly those this rule gives from
+  `keymap.tsv`, read by the test itself, with the same words: so help in Settings has no line for TAB, and
+  help over a `confirm` panel has none for TAB, Space, P or L.
 - Level: simulator
 
 **SPEC-108 Screenshots.** Print Screen writes what LVGL has drawn, 320×170, as a PNG named
@@ -1014,10 +1074,10 @@ playing or paused.
 keys from the key map, so nothing needs anything but the keyboard.
 - Covers: REQ-060
 - Priority: Must
-- Oracle: the simulator tests reach every screen and change every setting by key codes alone; a host-unit
-  test of the device input set-up, run against a fake list of input devices, creates one keypad and nothing
-  else.
-- Level: simulator, host-unit
+- Oracle: the simulator tests reach every screen and change every setting by key codes alone; an
+  integration test of the device's input set-up, which is `platform` code, run against a made-up list of
+  input devices, creates one keypad and nothing else.
+- Level: simulator, host-integration
 
 **SPEC-111 Key names and key codes.** Keys have these names, used in the key map and the test scripts, and on
 the device they are these Linux key codes:
@@ -1036,11 +1096,13 @@ the device they are these Linux key codes:
 | Help, PrintScreen | 138, 99 | `fn`+H, `fn`+J |
 
 `EscHold` and `RightHold` are the Esc and Right keys held as SPEC-106 and SPEC-096 say; `Char` is any key
-that SPEC-099 turns into a character. On the device, keys are read from the evdev keyboard without grabbing
+that SPEC-099 turns into a character; `Any` is any key at all. A key code that this table and SPEC-099 do
+not name is ignored: the keyboard also sends Ctrl (29), Alt (56), the `sym` and `fn` keys themselves (383
+and 389), Insert, and F1 to F12. On the device, keys are read from the evdev keyboard without grabbing
 it: the path in `SIDPLAYZERO_KEYBOARD`, else `/dev/input/by-path/platform-3f804000.i2c-event`, else the first
 device under `/dev/input` that reports the keys A to Z. Only press and release events are used; the
 keyboard's own repeat events are ignored. In the simulator, the desktop's keys are mapped to the same names,
-with F1 to F12 standing for PlayPause, Previous, Next, Mute, VolumeDown, VolumeUp, BrightnessDown,
+with F1 to F10 standing for PlayPause, Previous, Next, Mute, VolumeDown, VolumeUp, BrightnessDown,
 BrightnessUp, Help and PrintScreen in that order. Both feed one function in `core`, the only place where a
 key becomes an action.
 - Covers: REQ-061, REQ-127, REQ-143
@@ -1059,53 +1121,87 @@ screen update after it has been flushed. The differences are kept as a histogram
   at most 100 ms‡.
 - Level: device
 
-**SPEC-113 Notices.** A notice is one line of text over the last row of the content band, shown for 3 s‡, or
-until the next key for notices that name a key to press. It takes no keys: every key does what it would do
+**SPEC-113 Notices.** A notice is one line of text over the last row of the content band, shown for 3 s‡;
+`MSG_TOO_HEAVY`, which offers a key, shows for 10 s‡. It takes no keys: every key does what it would do
 without it. Notices wait their turn: one at a time, in the order raised, at most five waiting (the oldest is
-dropped), and a notice equal to the one showing or the last one waiting is not added. Everything that happens
-by itself (a download finishing or failing, the index being ready, a file that could not be read at start)
-is told by a notice, and never changes the screen or opens a panel.
+dropped). A notice with the same identifier as the one showing replaces it at once and starts its time
+again, and one with the same identifier as a waiting one replaces that, so five quick presses of a volume
+key end with the last level showing. Everything that happens by itself (a download finishing or failing,
+the index being ready, a file that could not be read at start) is told by a notice, and never opens a panel
+or changes the screen, with two exceptions: the browser taking the empty screen's place (SPEC-048), and the
+browser opening when HVSC has been set up (SPEC-140). Both wait until no panel and no help is open.
 - Covers: REQ-019, REQ-044, REQ-081
 - Priority: Must
-- Oracle: with three notices raised at once, the screen description shows them one after another, 3 s‡ of
-  the fake clock each; a key pressed while one shows has its usual effect; a fake download that finishes
-  while a text prompt is open leaves the prompt and its text as they were and raises the notice.
+- Oracle: with three different notices raised at once, the screen description shows them one after another,
+  3 s‡ of the fake clock each; five volume presses within a second leave one notice, with the last level; a
+  key pressed while one shows has its usual effect; a fake download that finishes while a text prompt is
+  open leaves the prompt and its text as they were and raises the notice.
 - Level: simulator
 
 **SPEC-114 Panels.** A panel takes the keys until it is closed. Only a key press opens one; nothing that
 happens by itself does. One panel can be open at a time, and help can be open over it. The kinds:
 
-| Panel | Opened by | Keys |
-|---|---|---|
-| `confirm` | "Delete", "Stop" a download | Enter is yes, ESC is no |
-| `prompt` | "New", "Rename", a text setting | SPEC-099 |
-| `pick-playlist` | "Add" | Up, Down, Enter, ESC |
-| `more-playing`, `more-playlist` | "More" | Up, Down, Enter, ESC |
-| `import` | "Import" | Up, Down, Enter, ESC |
-| `filter` | "Filter" | Up, Down choose a line; Left, Right change it; Enter applies; ESC cancels |
-| `text` | "Notes", "Notice", the report after an import | Up, Down scroll; Enter or ESC closes |
-| `notice-panel` | The first thing that would use the network (SPEC-152) | Up, Down scroll; Enter accepts; ESC cancels |
+| Panel | Opened by | Keys | Always built |
+|---|---|---|---|
+| `confirm` | "Stop" a download; "Delete" | Enter is yes, ESC is no | Yes |
+| `prompt` | A text setting; "New", "Rename" | SPEC-099 | Yes |
+| `text` | "Notice"; "Notes", the report after an import | Up, Down scroll; Enter or ESC closes | Yes |
+| `notice-panel` | The first thing that would use the network (SPEC-152) | Up, Down scroll; Enter accepts; ESC cancels | Yes |
+| `more-playing` | "More" on the now-playing screen | Up, Down, Enter, ESC | With any of `playlists`, `modes`, `shuffle`, `notes` |
+| `pick-playlist`, `more-playlist`, `import` | "Add"; "More" in a playlist; "Import" | Up, Down, Enter, ESC | Part `playlists` |
+| `filter` | "Filter" | Up, Down choose a line; Left, Right change it; Enter applies; ESC cancels | Part `filters` |
 
 - Covers: REQ-060, REQ-062
 - Priority: Must
-- Oracle: for each kind, a simulator script opens it, checks `panel.id` in the screen description, and
-  closes it with each of its closing keys; while a panel is open, the keys 4 to 8 do nothing.
+- Oracle: for each kind that is always built, a simulator script opens it, checks `panel.id` in the screen
+  description, and closes it with each of its closing keys; while a panel is open, the keys 4 to 8 do
+  nothing. The other kinds are checked the same way by tests of their parts.
 - Level: simulator
 
-**SPEC-115 Parts that may be left out.** A Should or Could item of this document, a key map row or a Settings
-row with that priority is behind a build switch, named in the source after its item. When it is off: its key
-does nothing and has no label, its row is absent from Settings and from "More", and its part of a screen is
-not drawn. A Must item's oracle never depends on such a part: the tests for a part carry its item's number
-and are skipped when it is off.
+**SPEC-115 Parts that may be left out.** Version 1.0 may be released without some of its Should and Could
+features. Those that can be left out are the **parts** of this table, each behind a build switch of its
+name. A Should or Could item that the table does not name has no switch and is built with the rest.
+
+| Part | Priority | What belongs to it |
+|---|---|---|
+| `detail` | Should | The detail line (SPEC-046) |
+| `mini` | Should | The mini player (SPEC-109) |
+| `modes` | Should | The values of `when_song_ends` other than `subtunes`, `repeat_all`, the "Mode" key and their Settings rows (SPEC-065) |
+| `shuffle` | Could | `shuffle` and its rows (SPEC-065) |
+| `restart` | Should | Backspace on the now-playing screen (SPEC-066) |
+| `skip` | Could | Holding Right to skip ahead (SPEC-066) |
+| `voices` | Should | The keys 1, 2, 3, 9 and 0 on the now-playing screen and their part of line 6 (SPEC-074) |
+| `bars` | Could | The voice display (SPEC-080) |
+| `notes` | Could | STIL notes (SPEC-097) |
+| `rate`, `force`, `roms` | Should, Could, Should | The setting and Settings row for the sample rate (SPEC-073); for the chip model and clock (SPEC-077); and for the three ROM files (SPEC-068), without which a tune that needs a ROM still says so and is skipped |
+| `too-slow` | Should | SPEC-079 and the L key |
+| `brightness`, `screenshot` | Should | SPEC-104 and SPEC-108 |
+| `playlists` | Should | SPEC-170 to SPEC-175 and SPEC-178: the Playlists and Playlist screens, the "Lists", "Fav" and "Add" keys, the `pick-playlist`, `more-playlist` and `import` panels |
+| `import-more`, `export` | Could | SPEC-176 and SPEC-177; SPEC-179 |
+| `filters` | Could | SPEC-164, the "Filter" key and the `filter` panel |
+| `resume`, `screen-off` | Could | SPEC-135; SPEC-207 |
+| `releases` | Should | SPEC-148 and its two rows of the HVSC screen |
+| `download-all` | Should | SPEC-007, SPEC-144, SPEC-145, SPEC-149, the "Download everything" row and the Settings row for `url_archive` |
+| `usbsid` | Could | SPEC-191 and SPEC-192; off unless asked for |
+
+The key map names the part of each key that is not always built, and SPEC-101 the part of each Settings
+row. When a part is off: its keys do nothing and have no label, and help leaves them out; its rows are
+absent from Settings, the HVSC screen and "More"; its setting keeps its default; its part of a screen is not drawn; and a "More" panel with no rows
+left has no key. Every test names the parts it needs, in a comment line `parts: NAME …`, and is skipped when
+one of them is off. A Must item's oracle rests only on what is always built: where an oracle in this
+document reaches into a part, it says "part" and the name, and that clause is a test of its own. The build
+option `SIDPLAYZERO_PARTS` is `all`, the default, which is every part but `usbsid`; `must`, for none of them;
+or a list of names.
 - Covers: REQ-160
 - Priority: Must
-- Oracle: the simulator tests pass with every Should and Could switch off (the tests of those parts being
-  skipped), and with all of them on.
-- Level: simulator
+- Oracle: the unit and simulator levels pass with `SIDPLAYZERO_PARTS=must`, running only tests that name no
+  part, and with `all`, running every test; a check fails if a test without a `parts:` line uses a key,
+  row or panel that the key map or this table gives to a part.
+- Level: host-unit, simulator
 
 **SPEC-116 Messages.** Every message is in this table, which is also a table in `core`. Tests name a message
 by its identifier. "State" messages are shown on the now-playing screen and in the mini player while the
-player is Failed; "notice" messages by SPEC-113; "text" on the screen that asks.
+player is Failed; "notice" messages by SPEC-113; "text" on the screen or in the panel that asks.
 
 | Identifier | Kind | Words |
 |---|---|---|
@@ -1118,7 +1214,10 @@ player is Failed; "notice" messages by SPEC-113; "text" on the screen that asks.
 | `MSG_FETCH_TOO_LARGE` | state | Cannot fetch: the file is too large |
 | `MSG_CARD_FULL` | state | The card is full |
 | `MSG_CANNOT_WRITE` | state | The collection folder cannot be written |
-| `MSG_NO_SOUND` | state | No sound device |
+| `MSG_NO_SOUND` | state; a notice in SPEC-078 | No sound device |
+| `MSG_USBSID_MISSING` | state; a notice in SPEC-191 | USBSID-Pico is not connected |
+| `MSG_ENTRY_MISSING` | state | This tune is not on the device and not in HVSC |
+| `MSG_NOTICE_NEEDED` | notice | Not fetched: play a tune that is not on the device to read HVSC's notice first |
 | `MSG_STOPPED_BAD_FILES` | notice | Stopped: several files in a row could not be played |
 | `MSG_REST_ABSENT` | notice | The rest of this list is not on the device |
 | `MSG_FOLDER_UNREADABLE` | notice | This folder cannot be read |
@@ -1145,8 +1244,10 @@ player is Failed; "notice" messages by SPEC-113; "text" on the screen that asks.
 | `MSG_HVSC_NEWEST`, `MSG_HVSC_NEWER` | notice | HVSC #n is the newest release; HVSC #m is available |
 | `MSG_DOWNLOAD_DONE`, `MSG_DOWNLOAD_FAILED` | notice | All of HVSC is on the device; "The download failed:" and the step |
 | `MSG_UNPACKING` | notice | HVSC is being unpacked. Playing is off until it is done |
-| `MSG_NEED_ROOM` | notice | Not enough room: n MiB needed, m MiB free |
-| `MSG_NEED_7ZIP`, `MSG_NEED_MEMORY`, `MSG_NEED_WRITE` | text | SPEC-145's three explanations |
+| `MSG_NEED_ROOM` | notice; text in SPEC-145 | Not enough room: n MiB needed, m MiB free |
+| `MSG_NEED_7ZIP`, `MSG_NEED_MEMORY`, `MSG_NEED_WRITE` | text | SPEC-145's other three explanations |
+| `MSG_CHECK_FAILED` | notice | Could not check for a newer release |
+| `MSG_IMPORT_NOTHING` | text | Nothing in that file could be read as a playlist |
 | `MSG_INDEX_READY` | notice | The search index is ready |
 
 - Covers: REQ-019, REQ-044, REQ-007
@@ -1266,8 +1367,15 @@ for this.
 
 ## 8. HVSC
 
-**SPEC-140 Setting HVSC up.** "Get HVSC", from the empty screen or the HVSC screen, runs these steps as a job
-on the long worker, shown on the HVSC screen:
+**SPEC-140 Setting HVSC up.** **HVSC is set up** when the collection root has a song length database that
+gave a listing (SPEC-142); its **release** is known when `hv_sids.txt` names one (SPEC-148). A **job** is one
+of four things the user starts and can watch and stop: setting HVSC up, updating it (SPEC-148), the
+complete download (SPEC-144) and "Fetch missing" (SPEC-174). One job runs at a time; while one runs, the
+rows that would start another are not shown. Building the index and measuring the engines are not jobs:
+they run by themselves and cannot be stopped.
+
+"Get HVSC", from the empty screen or the HVSC screen, runs these steps as a job on the long worker, shown on
+the HVSC screen:
 
 1. The notice gate (SPEC-152).
 2. Check that the card has room (SPEC-146).
@@ -1280,8 +1388,8 @@ on the long worker, shown on the HVSC screen:
    song length file last.
 6. Build the listing and start the index (SPEC-161). Raise the notice `MSG_HVSC_READY`.
 
-If the user is on the HVSC screen or the empty screen when step 6 ends, the browser opens at the root;
-otherwise the screen is left alone. If any step fails, what was there before is untouched, the notice
+If the user is on the HVSC screen or the empty screen when step 6 ends, the browser opens at the root, once
+no panel or help is open; otherwise the screen is left alone. If any step fails, what was there before is untouched, the notice
 `MSG_HVSC_FAILED` names the step, and the row can be chosen again. From the empty screen this is two key
 presses, Enter and Enter on the notice; from Settings, three (SPEC-102).
 - Covers: REQ-080, REQ-085, REQ-081
@@ -1298,12 +1406,19 @@ creating that folder. When the file has arrived it must pass SPEC-203's check, a
 the listing gives for that path. Then it is renamed to its name, the tune becomes present, it is added to the
 index, and it is played. Otherwise it is deleted and the fetch has failed (SPEC-069). Rules:
 
+- Fetches run on the fetch worker (SPEC-022), one at a time. A request for the tune to be played cancels
+  any other fetch in flight, unless that fetch is for the same tune, which it then takes over.
 - A tune chosen with Enter is requested at once. A tune reached by a next or previous key is requested once
   it has been the current entry for 700 ms‡, the Waiting state, so stepping past tunes fetches nothing.
-- One fetch at a time. A request for another tune cancels the one in flight.
-- Unattended, the next entry is requested when the playing song has 10 s‡ or less to go, or at its turn if
-  that comes sooner, and nothing further ahead. Unattended requests are limited to six in any minute‡;
-  beyond that the player waits in Waiting for the next one allowed.
+- The **fetch-ahead**: while a song plays unattended to its end, the entry that SPEC-065 will play next, if
+  it is absent, is requested when the playing song has 10 s‡ or less to go, and nothing further ahead. It
+  does not touch the player's state. If it is done before the song ends, the entry is simply present when
+  its turn comes. If it is still running when the song ends, the player goes to Fetching and waits for that
+  same request. If it has failed, nothing happens while the present song plays; at the song's end the entry
+  fails with that failure, by SPEC-069 and SPEC-143, without a second request. A fetch-ahead is not started
+  when the song has no length, during SPEC-143's 60 s‡, or while HVSC's notice is not accepted.
+- Unattended requests are limited to six in any minute‡; beyond that the player waits in Waiting for the
+  next one allowed.
 - Before a request the card must have 8 MiB‡ free, else the fetch fails with `MSG_CARD_FULL`.
 
 - Covers: REQ-088, REQ-124, REQ-086, REQ-082
@@ -1311,9 +1426,12 @@ index, and it is played. Otherwise it is deleted and the fetch has failed (SPEC-
 - Oracle: with the fake `HttpClient` and `Clock`: playing an absent tune with Enter makes one request at
   once, for exactly that path, and the file appears at its HVSC path and plays; playing it again makes none;
   an answer with other bytes fails with `MSG_FETCH_MISMATCH` and leaves no file; "next" pressed 50 times
-  within five seconds makes one request, 700 ms‡ after the last press, for the entry landed on; with
-  two-second songs and a queue of absent tunes, no more than six requests are made in any minute‡; with
-  7 MiB free no request is made.
+  within five seconds makes one request, 700 ms‡ after the last press, for the entry landed on. With a
+  30-second present tune followed by an absent one: the request is made when 10 s‡ remain and not before;
+  answered in time, the second tune starts with no gap in the player's states (Playing, Loading, Playing);
+  held back past the song's end, the player is Fetching and there is still one request; pressing Enter on a
+  third tune meanwhile cancels it. With two-second songs and a queue of absent tunes after a present one, no
+  more than six requests are made in any minute‡; with 7 MiB free no request is made.
 - Level: host-unit
 
 **SPEC-142 The listing.** HVSC's song length database is a text file with CRLF or LF line endings: a first
@@ -1321,7 +1439,7 @@ line `[Database]`, then for each tune a line starting `; ` that holds its HVSC p
 `MD5=length length …` with 32 hexadecimal digits and one length for each subtune, each `m:ss` or `m:ss.SSS`.
 The app's own reader, on the long worker, turns it into `listing.bin` in the cache: every path with its MD5
 and all its lengths in milliseconds, in the order of SPEC-042, with a table of where each folder starts and a
-table sorted by MD5. A path that fails SPEC-154, a line that fits neither form, and an MD5 line with no path
+table sorted by MD5. A path that is not an HVSC path (SPEC-154), a line that fits neither form, and an MD5 line with no path
 before it are skipped and counted; if more than one line in a hundred is skipped, or no tune is found, the
 file is refused with `MSG_LENGTHS_UNREADABLE` and there is no listing. The listing is built again when the
 database's size or modification time differs from what it records. The quick worker reads folders, lengths
@@ -1334,16 +1452,21 @@ and MD5s from it; it is mapped, not loaded.
   (SPEC-252), the listing has 61,157 tunes in 1,981 folders and 87,868 lengths.
 - Level: host-unit, host-integration
 
-**SPEC-143 Absent tunes without a network.** When an unattended fetch fails for the reasons of SPEC-069's two
-"SPEC-143" rows, the player moves to the next entry in the queue that is present, and for the next 60 s‡
-unattended playback treats absent entries as failed without a request. A tune chosen by a key is always
-requested. If the queue has no further present entry, in a whole round when repeat-all is on, the player goes
-to Idle with the notice `MSG_REST_ABSENT`. When the user chose the tune by a key, the player stays in Failed.
+**SPEC-143 Absent tunes that cannot be fetched.** When an unattended fetch, or a fetch-ahead, fails for one of
+the reasons SPEC-069 marks "SPEC-143", the player moves at the song's end to the next entry in the queue
+that is present. For 60 s‡ from that failure, unattended playback treats absent entries as failed without a
+request. A tune chosen by a key is always requested, and when that fetch fails the player stays in Failed.
+If the queue has no further present entry, playback ends: → Idle with the notice `MSG_REST_ABSENT`. With
+repeat-all on, "further" goes round the whole queue once, so a queue whose only present entry is the one
+that just played plays it again.
 - Covers: REQ-088, REQ-086
 - Priority: Must
-- Oracle: with the fake network down, a queue of absent, absent, present plays the third after one failed
-  request; a queue of absent tunes only, with repeat-all on, ends in Idle with that notice after one
-  request; within the 60 s‡, Enter on an absent tune still makes a request.
+- Oracle: with the fake network down and 30-second songs, the queue present, absent, absent, present,
+  started at the first, plays the first and then the fourth after one failed request, made when 10 s‡
+  remained; the queue present, absent, absent ends in Idle with that notice after one request, and with
+  repeat-all on plays the first again; within the 60 s‡, Enter on an absent tune still makes a request, and
+  its failure leaves the player Failed. With HVSC's notice not accepted, the same queues make no request at
+  all and show `MSG_NOTICE_NEEDED` once.
 - Level: host-unit
 
 **SPEC-144 The complete download.** "Download everything" is offered by SPEC-102 when SPEC-145 allows it. It
@@ -1359,23 +1482,30 @@ in:
    which is removed first if it exists. The `7z` process runs in its own process group and is ended if the
    job is stopped or the app exits.
 6. Check the result: no links or special files, and a song length file that gives a listing.
-7. Move it into place: every file of the staging folder is renamed over its place under the root, the
-   `DOCUMENTS` folder last. Then remove the files that the old listing named and the new one does not have.
-   Files the user put there are never removed.
-8. Build the listing and the index again. Delete the archive, the staging folder and the marker. Raise the
-   notice `MSG_DOWNLOAD_DONE`.
+7. Move it into place. First the listing in use is copied to `listing.old` in the cache. Then every file of
+   the staging folder is renamed over its place under the root, the `DOCUMENTS` folder last. Then each file
+   that `listing.old` names and the new song length database does not is removed, if its MD5 is still the
+   one `listing.old` gives. Files the user put there, or changed, are never removed. From here on the job cannot be stopped: "Stop" has no label.
+8. Build the listing and the index again. Delete the archive, the staging folder, `listing.old` and the
+   marker. Raise the notice `MSG_DOWNLOAD_DONE`.
 
 A failure or a stop in steps 1 to 6 leaves the root exactly as it was, removes the staging folder and the
-marker, and raises `MSG_DOWNLOAD_FAILED`; a partial archive is kept for SPEC-147. At start, a marker naming
-step 1 to 6 means the same clean-up; a marker naming step 7 or 8 means the move is taken up again from where
-it stopped, which is safe because each rename either has happened or has not.
+marker, and raises `MSG_DOWNLOAD_FAILED`; a partial archive is kept for SPEC-147. A failure in step 7 or 8
+(the card filling up, a file that cannot be renamed) raises `MSG_DOWNLOAD_FAILED`, keeps the marker, the
+staging folder and `listing.old`, and switches playing on again; what has been moved stays moved. At start,
+a marker naming step 1 to 6 means the clean-up; a marker naming step 7 or 8 means those steps are taken up
+again from where they stopped, which is safe because each rename either has happened or has not, and
+`listing.old` still says which files were HVSC's. Until that has succeeded, "Download everything" reads
+"Finish the download" and does the same.
 - Covers: REQ-089, REQ-081, REQ-082
 - Priority: Should
 - Oracle: with the fake `HttpClient`, a real `7z` and a small 7-Zip fixture archive, the steps end with the
   fixture tree under the root and every tune present; stopping at each of steps 3 to 6 leaves the root's
   contents, compared file by file, unchanged and no staging folder; a file the test planted in the root
   survives step 7; the program killed during step 7 and started again ends with the same tree as an
-  uninterrupted run; Enter on a tune during the job gives the notice and loads nothing.
+  uninterrupted run, with the files only the old release had gone and the planted file still there; a rename
+  made to fail in step 7 by the `Files` fake gives the notice, and "Finish the download" then ends with the
+  same tree; Enter on a tune during the job gives the notice and loads nothing.
 - Level: host-unit, host-integration
 
 **SPEC-145 When the complete download is offered.** It is offered when all of these hold, checked when the
@@ -1383,7 +1513,7 @@ HVSC screen opens and again when the row is chosen:
 
 | Condition | If not, this text is shown under the list |
 |---|---|
-| HVSC is set up | (the row is simply absent) |
+| HVSC is set up and its release is known (SPEC-140) | (the row is simply absent) |
 | `Unpacker` is available: a `7z`, `7zz` or `7za` program is on the path | `MSG_NEED_7ZIP`: "Install the 7zip package to download everything." |
 | `Memory` reports available memory plus free swap of at least 450 MiB‡ | `MSG_NEED_MEMORY`: "This device does not have enough free memory to unpack HVSC (n MiB free, 450 MiB needed)." |
 | The card has at least 700 MiB‡ free | `MSG_NEED_ROOM` |
@@ -1430,8 +1560,8 @@ server answers without honouring the range.
 **SPEC-148 Releases.** The release number is the first number after the word "Release" in the root's
 `DOCUMENTS/hv_sids.txt`, a file of two lines that HVSC keeps for this purpose. The HVSC screen shows it as
 "HVSC #n". "Check for a newer release" requests that file from `url_files` and compares: a higher number
-adds the row "Update to #m" and raises `MSG_HVSC_NEWER`; otherwise `MSG_HVSC_NEWEST`. "Update" runs
-SPEC-140's steps 2 to 6. Afterwards, for present tunes:
+adds the row "Update to #m" and raises `MSG_HVSC_NEWER`; otherwise `MSG_HVSC_NEWEST`; and if the file cannot
+be fetched or names no release, `MSG_CHECK_FAILED`. "Update" runs SPEC-140's steps 2 to 6 as a job. Afterwards, for present tunes:
 
 - a tune whose path the new listing no longer has, and whose MD5 it has at another path, is moved there;
 - a tune whose path and MD5 the new listing does not have stays where it is, as a tune of the user's own;
@@ -1489,7 +1619,8 @@ playing present tunes that the listing agrees with, and changing settings make n
 **SPEC-152 The notice, and the gate.** While `notice_accepted` is off, the app makes no request of any kind.
 Whatever would make the first one (SPEC-140, SPEC-141, SPEC-144, SPEC-148 or SPEC-174) first opens the
 `notice-panel` with this text, and goes on only when Enter accepts it, which sets `notice_accepted`. ESC
-cancels what was asked for.
+cancels what was asked for. Only a key press opens the panel: unattended playback that reaches an absent
+tune while the notice is not accepted does not fetch it and does not ask (SPEC-143).
 
 > SidPlayZero can fetch music from the High Voltage SID Collection (HVSC), a free collection kept by the
 > HVSC crew at hvsc.c64.org. HVSC says of its tunes: "All of the tunes available in the High Voltage SID
@@ -1515,18 +1646,32 @@ C64 KERNAL, BASIC or character ROM. The fixtures are written by a generator in t
 - Oracle: the check passes on the real tree and fails when a tune that is not in the manifest is added.
 - Level: host-unit, host-package
 
-**SPEC-154 HVSC paths are checked wherever they come in.** A path is accepted as an HVSC path, from the song
-length database, a playlist, an imported file or the saved state, only if it: starts with `/`; is at most
-255 characters; has no empty part and no part that is `.` or `..`; consists only of the letters A to Z and a
-to z, digits, `_`, `-`, `.` and `/`; and ends in `.sid` in any case. A file is written under the collection
-root only at such a path. A playlist's `file://` entries name files outside the collection; they are only
-ever read.
-- Covers: REQ-122, REQ-123
+**SPEC-154 Paths are checked wherever they come in.** Two rules, a strict one for where the app writes and a
+wider one for what it only reads:
+
+| | **HVSC path** | **Collection path** |
+|---|---|---|
+| Used for | Every path taken from the song length database, and every path a fetched file is written to | Every other path of a tune inside the collection: one the browser found on the device, a playlist's or an imported file's entry, the saved state |
+| Must | Start with `/`; have no empty part and no part that is `.` or `..`; end in `.sid` in any case | The same |
+| Length | At most 255 characters | At most 1,024 bytes |
+| Characters | Only the letters A to Z and a to z, digits, `_`, `-`, `.` and `/` | Any valid UTF-8 but control characters and the backslash |
+
+A path that fails its rule is refused where it comes in: the line of the database is skipped (SPEC-142), the
+playlist entry becomes a missing one, the saved state's path is dropped. The app writes a tune under the
+collection root only at an HVSC path that the listing names. A collection path is only ever joined to the
+root and read. A playlist's `file://` entries name files outside the collection; they too are only read.
+So the user's own tunes may have spaces and accents in their names, and can be played, made favourites and
+put in playlists like any other; they are never fetched.
+- Covers: REQ-122, REQ-123, REQ-006
 - Priority: Must
-- Oracle: a table of paths (with `..`, a doubled slash, a backslash, a control character, a space, 256
-  characters, no `.sid`) is each refused by the listing reader, the playlist reader and the importers, and
-  with the fake `Files` no write outside the root is ever attempted in those tests.
-- Level: host-unit
+- Oracle: a table of paths (with `..`, a doubled slash, a backslash, a control character, 256 characters, no
+  `.sid`) is each refused by the listing reader, and the same table without the length row by the playlist
+  reader, the importers and the state reader; a path with a space is refused by the listing reader and
+  accepted by the others; with the fake `Files`, no write outside the root, and none at a path the listing
+  does not name, is attempted in any of those tests. A tune of the test's own at `/My Rips/Cool Söng.sid`
+  is listed, plays, becomes a favourite, is still in Favourites after a restart, and is restored as the
+  current entry.
+- Level: host-unit, simulator
 
 ## 9. Searching
 
@@ -1579,10 +1724,11 @@ with no word gives no search. A search is one pass over the index and runs on th
   from HVSC #85's listing returns within 500 ms‡ (`search_ms_max`).
 - Level: host-unit, device
 
-**SPEC-164 Filters.** The `filter` panel has three lines: chip model (any, 6581, 8580), clock (any, PAL, NTSC)
-and years (any, or a first and last year typed as digits). Applied, they limit the results to tunes that
-fit; absent tunes, whose headers are not known, are left out while any filter is set. The top line shows that
-a filter is set.
+**SPEC-164 Filters.** The `filter` panel has four lines, each changed with Left and Right: chip model (any,
+6581, 8580); clock (any, PAL, NTSC); first year and last year (each "any", or a year from 1982 to the
+present one). Enter applies them and ESC leaves them as they were. Applied, they limit the results to tunes
+that fit, a tune with no year fitting only "any"; absent tunes, whose headers are not known, are left out
+while any filter is set. The top line shows that a filter is set.
 - Covers: REQ-092
 - Priority: Could
 - Oracle: each filter alone, and all together, remove exactly the fixture tunes that do not match.
@@ -1615,9 +1761,9 @@ read, with two kinds of line of its own:
 `#PLAYLIST:` holds the name as the user typed it, and is what the app shows. Each entry is its tune's line,
 preceded by an optional `#EXTINF:` (the length in seconds and "author - title", when known) and an optional
 `#SIDTUNE:` with `subtune=N`, `md5=` and the 32 digits of the file's MD5 when known, or both. A tune inside
-the collection is written as its HVSC path (SPEC-154). A tune outside it is written as `file://` followed by
-its full path, as it is. Without `subtune=` the entry means the tune's default subtune. Other `#` lines are
-kept with the entry they come before, and move with it.
+the collection is written as its path under the root (a collection path, SPEC-154). A tune outside it is
+written as `file://` followed by its full path, as it is. Without `subtune=` the entry means the tune's
+default subtune. Other `#` lines are kept with the entry they come before, and move with it.
 - Covers: REQ-107, REQ-102
 - Priority: Should
 - Oracle: a playlist written by hand from this description, with and without the optional lines, loads and
@@ -1672,7 +1818,8 @@ path, the tune is **absent**; else the entry is **missing**. An absent entry is 
 - Level: host-unit
 
 **SPEC-174 Fetching for a playlist.** "Fetch missing" fetches the playlist's absent entries one after
-another, as a job on the long worker, with a pause of 250 ms‡ between them, showing "n of m". It fetches at
+another, as a job on the fetch worker, with a pause of 250 ms‡ between them, showing "n of m". A tune that
+is to be played meanwhile is fetched before the job's next file. It fetches at
 most 200‡ in one go and ends with the notice `MSG_FETCHED_SOME`. It passes the notice gate first (SPEC-152)
 and checks room as SPEC-141 does. "Stop", as in SPEC-147, ends it after the file in flight. It stops at the
 first failure for lack of network.
@@ -1680,18 +1827,20 @@ first failure for lack of network.
 - Priority: Should
 - Oracle: with the fake `HttpClient`: a playlist with three absent entries makes three requests, in order,
   and all three become present; one with 250 makes 200 and the notice says 50 remain; the request log holds
-  only those paths.
+  only those paths; Enter on another absent tune while the job runs puts that tune's request next in the
+  log.
 - Level: host-unit
 
 **SPEC-175 Importing: where from, and M3U.** The `import` panel lists the files ending in `.m3u`, `.m3u8`,
 `.js2`, `.json` or `.spl` in the `import` folder (SPEC-134) and in the collection root. Enter imports one
-into a new playlist named after the file (without its ending, cut to 40 characters, with " 2", " 3" and so on
-added if the name is taken). The file is only read. An M3U or M3U8 file is read as UTF-8 if it is valid
-UTF-8 and as Latin-1 if not, with either kind of line ending. `#PLAYLIST:` gives the name. Each line that is
+into a new playlist. Its name is the file's `#PLAYLIST:` line when it has one, and otherwise the file's name
+without its ending; either way control characters are removed, it is cut to 40 characters, and " 2", " 3"
+and so on is added while the name is taken or is "Favourites". The file is only read. An M3U or M3U8 file is
+read as UTF-8 if it is valid UTF-8 and as Latin-1 if not, with either kind of line ending. Each line that is
 not empty and does not start with `#` is an entry. Its subtune comes from the first of these that applies:
-a `#SIDTUNE:` line before it; a `#PHOSPHOR:` line before it holding `song=N`; an ending `?N` on the line; an
-ending `/tune_NNN.sid` after a name ending in `.sid`. The same entry twice is kept twice. These are the
-dialects, each as its player writes it:
+a `#SIDTUNE:` line before it; a `#PHOSPHOR:` line before it holding `song=N`; a `{N}` at the start of the
+line; an ending `?N` on the line; an ending `/tune_NNN.sid` after a name ending in `.sid`. The same entry
+twice is kept twice. These are the dialects, each as its player writes it:
 
 | Player | An entry |
 |---|---|
@@ -1701,12 +1850,14 @@ dialects, each as its player writes it:
 | SIDPLAY for macOS | `#EXTINF:235,Rob Hubbard - Commando` then a full path, in Latin-1 |
 | Audacious | `file:///home/u/C64Music/MUSICIANS/H/Hubbard_Rob/Commando.sid?2`, with `%20` for a space |
 | MPD | `MUSICIANS/H/Hubbard_Rob/Commando.sid/tune_002.sid` |
+| A leading `{N}`, as Winamp's SID plug-in writes | `{3}C:\C64Music\MUSICIANS\H\Hubbard_Rob\Commando.sid` |
 
 A line starting `file://` has that removed and its `%XX` sequences decoded.
 - Covers: REQ-105
 - Priority: Should
 - Oracle: one fixture file for each row of the table, written exactly so, imports with the expected tunes,
-  subtunes and order; a file with the same entry twice gives two entries.
+  subtunes and order; a file with the same entry twice gives two entries; a file `mix.m3u` holding
+  `#PLAYLIST:Favourites` becomes the playlist "Favourites 2", and one without that line becomes "mix".
 - Level: host-unit
 
 **SPEC-176 Importing: JSidplay2.** A `.js2` file is one tune per line; a leading `<HVSC>` is removed. A
@@ -1716,7 +1867,7 @@ carries subtunes.
 - Covers: REQ-105
 - Priority: Could
 - Oracle: fixture files of both kinds import with the expected tunes in order; a `.json` file that is not an
-  array of objects imports nothing and says so.
+  array of objects imports nothing, makes no playlist, and shows `MSG_IMPORT_NOTHING`.
 - Level: host-unit
 
 **SPEC-177 Importing: Sidplay/w.** A `.spl` file has a line `[SIDPLAY/Windows Playlist]` and a `Format=` line.
@@ -1745,7 +1896,8 @@ Time=79                             time=6
 finds a tune in the listing or under the root is used: the part after `/C64Music/`, if the path has one; the
 path as it stands, as an HVSC path; the path with a `/` put in front; the path taken relative to the folder
 of the file being imported; the same four again without regard to case; the file's name alone, if exactly
-one tune in the listing has that name. A path that passes none, or fails SPEC-154, becomes a missing entry
+one tune in the listing has that name. A path that passes none, or fails SPEC-154's rule for a collection
+path, becomes a missing entry
 holding the original text. After an import a `text` panel says how many entries were imported and lists
 those not found.
 - Covers: REQ-105, REQ-103
@@ -1766,23 +1918,23 @@ notice `MSG_EXPORTED` gives the path.
 
 ## 11. Real SID chips
 
-**SPEC-191 USBSID-Pico.** Not built in version 1.0 unless the build option `SIDPLAYZERO_USBSID` is turned on,
-which waits for the licence wording of the driver's `usbsid_protocol.h` to be cleared with its author (R9,
+**SPEC-191 USBSID-Pico.** Not built in version 1.0 unless the part `usbsid` is asked for (SPEC-115), which
+waits for the licence wording of the driver's `usbsid_protocol.h` to be cleared with its author (R9,
 FIND-007). When on, libsidplayfp is built with its USBSID backend, the package depends on `libusb-1.0-0`, and
 the setting `output` (`software`, the default, or `usbsid`) appears in Settings. With `usbsid`, a second
 `SoundBackend` is used: the engine runs in step with the real clock and drives the device, and nothing goes
 to `AudioSink`. Its `can()` reports no skip and no registers. Subtunes, song lengths and SPEC-065 work
-unchanged, because they belong to the player. If the device is not there the load fails with "USBSID-Pico is
-not connected"; if it goes away the backend reports `device_lost` and the player goes to Paused with the
-same words.
+unchanged, because they belong to the player. If the device is not there the load fails with
+`MSG_USBSID_MISSING`; if it goes away the backend reports `device_gone`, and the player pauses and raises the
+same message as a notice.
 - Covers: REQ-111
 - Priority: Could
 - Oracle: the player's host-unit tests (SPEC-060 to SPEC-069) pass against a fake `SoundBackend` whose
   `can()` is the hardware's; a fake that reports the device gone gives the message. On the device, with the
-  option on, the checklist plays a tune on a USBSID-Pico, steps through its subtunes, and unplugs it.
+  part built, the checklist plays a tune on a USBSID-Pico, steps through its subtunes, and unplugs it.
 - Level: host-unit, device
 
-**SPEC-192 Permission to use the device.** With `SIDPLAYZERO_USBSID` on, the package installs
+**SPEC-192 Permission to use the device.** With the part `usbsid` built, the package installs
 `/usr/lib/udev/rules.d/60-sidplayzero.rules`, holding one rule that gives the logged-in user access to USB
 device `cafe:4011` by tagging it `uaccess`. The rule runs no program.
 - Covers: REQ-112, REQ-125
@@ -1801,8 +1953,9 @@ device `cafe:4011` by tagging it `uaccess`. The rule runs no program.
    (SPEC-207).
 3. Set up the display and the keyboard.
 4. Show the browser at the remembered folder (SPEC-131), or the empty screen (SPEC-048).
-5. Only then, on the workers: the clean-up of SPEC-202; a check of the listing and the index (SPEC-142,
-   SPEC-161); SPEC-144's marker; and SPEC-072's measurement if it is due.
+5. Only then, on the workers, in this order: the clean-up of SPEC-202; SPEC-144's marker, before anything
+   reads the song length database; a check of the listing and the index (SPEC-142, SPEC-161); and SPEC-072's
+   measurement if it is due.
 
 Nothing in this order uses the network. The **start time** runs from the start of the process, as the system
 records it, to the first screen update flushed after the browser has its first screenful, and is at most
@@ -1812,7 +1965,7 @@ records it, to the first screen update flushed after the browser has its first s
 - Oracle: the simulator, started with a `HttpClient` that fails the test if it is called, shows the browser
   and answers a key; a second copy of the real program, started while the first runs, exits with status 1
   and the first carries on. On the device `start_ms`, for each of five starts from the launcher with
-  networking off and the cache in place, is at most 2,000‡.
+  networking off, HVSC set up and the caches in place, is at most 2,000‡.
 - Level: simulator, host-integration, device
 
 **SPEC-201 Stopping.** A held ESC (SPEC-106), SIGTERM and SIGINT all do the same, in this order: stop taking
@@ -1888,10 +2041,10 @@ takes at most 2 s‡ before the app answers keys again, because it is read on a 
 (SPEC-203); the playlist reader and each importer (SPEC-170, SPEC-175 to SPEC-178); the song length reader
 (SPEC-142); the STIL reader; the release reader (SPEC-148); the settings and state reader (SPEC-133); the
 reader of `7z`'s listing (SPEC-149); and the readers of `index.bin` and `listing.bin`. `tools/test fuzz`
-builds them with libFuzzer, AddressSanitizer and UndefinedBehaviorSanitizer and runs each for 20 s‡ from the
+builds them with libFuzzer, AddressSanitizer and UndefinedBehaviorSanitizer and runs each for 15 s‡ from the
 starting files in `tests/fuzz/corpus/`, failing on a crash, a sanitizer report, or an input that takes
 longer than 2 s‡. One more target gives arbitrary bytes that pass SPEC-203 to the real backend and renders
-one second.
+one second. That is thirteen targets, a little over three minutes of running.
 - Covers: REQ-122
 - Priority: Must
 - Oracle: the command's status; and a deliberately broken reader, built by a test of the framework itself,
@@ -1952,8 +2105,10 @@ by `-1`, the revision of the packaging, and its file is `sidplayzero_<that versi
 **SPEC-221 What it depends on.** `Depends`: `libc6`, `libstdc++6`, `libgcc-s1`, `libcurl4t64`,
 `ca-certificates`, `libpulse0`, `pulseaudio-utils`. `Recommends`: `7zip`. With SPEC-191 on, `Depends` gains
 `libusb-1.0-0`. All are in Debian trixie's main archive. `Architecture` is `arm64`. `Maintainer` comes from
-the build setting `SIDPLAYZERO_MAINTAINER`, which has no default in the repository; a package build without
-it fails with a message that says so.
+the environment variable `SIDPLAYZERO_MAINTAINER` when the package is built. It has no default in the
+repository, and a package build without it fails with a message that says so. The tests build with
+`SidPlayZero test build <test@example.invalid>`, a name the store's own check refuses, so a package made by
+the tests cannot be published by mistake.
 - Covers: REQ-141, REQ-143
 - Priority: Must
 - Oracle: a check reads the package's `Depends` and `Recommends` and finds each name in a copy of trixie's
@@ -1964,8 +2119,9 @@ it fails with a message that says so.
 - Level: host-package
 
 **SPEC-222 The launcher's entry.** The `.desktop` file has `Type=Application`, `Name=SidPlayZero`,
-`Exec=/usr/bin/sidplayzero`, `Icon=share/images/sidplayzero.png` and `Terminal=false`. The icons are 64, 80
-and 100 pixels square.
+`Exec=/usr/bin/sidplayzero`, `Icon=share/images/sidplayzero.png` and `Terminal=false`. The icons have the
+sizes of the app template's: `sidplayzero.png` and `sidplayzero_100.png` are 100 pixels square and
+`sidplayzero_80.png` is 80.
 - Covers: REQ-140
 - Priority: Must
 - Oracle: the file in the package has exactly these lines, and the three images have those sizes. On the
@@ -1973,26 +2129,44 @@ and 100 pixels square.
 - Level: host-package, device
 
 **SPEC-223 The store's manifest.** `app-builder.json` has `app_name` "SidPlayZero", `package_name`
-"sidplayzero", the version, and a `store` section with: a summary of at most 80 characters; a description;
-the category "Media"; `license` "GPL-3.0-or-later"; the source repository; the author, from a build setting;
-a share code; the icon; three to six screenshots, taken from the approved images of SPEC-255; and the seven
-permissions, of which only `network` is true, and `additional_hardware` too when SPEC-191 is on. Until the
-screenshots exist, in Phase 5, the manifest names placeholder images and this item's test is marked as
-waiting for them.
+"sidplayzero", the version, and a `store` section with these fields, which are what the store's own check
+asks for:
+
+| Field | Value |
+|---|---|
+| `summary` | One line of at most 80 characters |
+| `description` | A few paragraphs, among them that the app contains no music and what HVSC is |
+| `categories` | `["Media"]` |
+| `license` | `GPL-3.0-or-later` |
+| `source_repo` | The address of the source repository |
+| `author` | `display_name`: "The SidPlayZero authors" |
+| `share_code` | `SIDZ`: exactly four letters or digits |
+| `icon` | A square PNG of 256 pixels, kept apart from the launcher's icons |
+| `screenshots` | Three to six PNGs of exactly 320×170, chosen from the approved images of SPEC-255 |
+| `permissions` | The seven declarations, all `false` but `network`, and `additional_hardware` too when SPEC-191 is on |
+
+Until the screenshots exist, in Phase 5, this item's test fails for want of them and for no other reason.
 - Covers: REQ-145
 - Priority: Should
-- Oracle: the Template's `validate_app_builder.cmake`, at commit `477fa6d2` of `CardputerZero/Template`,
-  passes on the manifest and its files; a summary of 81 characters makes it fail.
+- Oracle: the package level writes the store's `meta.json` from the manifest as the store's publishing tool
+  does (the title from `app_name`; the fields above; the icon as its bare file name; each screenshot as
+  `screenshots/` and its file name) and runs the store's `store_meta_policy.py`, at commit `21ea24cf` of
+  `CardputerZero/packages`, on it: no error is reported. Copies of the manifest with a summary of 81
+  characters, a share code of five, a store icon of 100 pixels and a screenshot 321 pixels wide each get an
+  error. The publishing tool itself is not run.
 - Level: host-package
 
 **SPEC-224 The store's checks run on every build.** The package level runs the store's
-`install_path_policy.py`, at commit `21ea24cf` of `CardputerZero/packages`, and the package checks of that
-repository's `validate-pr.yml` workflow at the same commit, on the built `.deb`. The two commits are named in
-one file in the repository and are moved forward by hand.
+`install_path_policy.py`, at commit `21ea24cf` of `CardputerZero/packages`, on the built `.deb`, and makes
+the other checks that repository's `validate-pr.yml` workflow makes of a package at that commit: the control
+fields `Package`, `Version` and `Architecture` are present and well formed, no service runs as root, the
+`.desktop` entry is in place, and the maintainer is not a placeholder. The commit is named in one file in
+the repository and is moved forward by hand.
 - Covers: REQ-142
 - Priority: Must
-- Oracle: the checks pass on the real package, and fail on a copy of it to which a test has added a file
-  `/usr/bin/other`.
+- Oracle: on the package the tests build, every check passes but the maintainer's, which reports the test
+  build's placeholder; on a copy to which a test has added a file `/usr/bin/other`, the install-path check
+  fails too.
 - Level: host-package
 
 **SPEC-225 Nothing of one person's.** `tools/check_repo.py` looks through every tracked file, and through the
@@ -2067,9 +2241,9 @@ which is the form a device that fetches on demand can be measured in.
   document and fails if a key it names is not one SPEC-241 writes.
 - Level: host-unit, device
 
-**SPEC-241 Measurements the app takes of itself.** Started with `--metrics FILE`, or while a self-test is
-asked for (SPEC-260), the app writes a text file of `key = value` lines when it exits and at the end of each
-self-test step. The keys are those of SPEC-240's table and these:
+**SPEC-241 Measurements the app takes of itself.** Started with `--metrics FILE`, the app writes a text file
+of `key = value` lines when it exits; while a device test asks for it (SPEC-260), it appends the same lines
+to `selftest.results`. The keys are those of SPEC-240's table and these:
 
 | Key | Holds |
 |---|---|
@@ -2133,12 +2307,12 @@ with status 0 only if everything it ran passed, and prints the names of what fai
 
 | Command | Level | What it builds and runs | Time on the CI machine‡ |
 |---|---|---|---|
-| `tools/test unit` | host-unit | `core` and the fakes, with the unit tests (SPEC-251), plain and again with AddressSanitizer and UndefinedBehaviorSanitizer; then `tools/check_repo.py` | 3 minutes |
+| `tools/test unit` | host-unit | `core` and the fakes, with the unit tests (SPEC-251), plain and again with AddressSanitizer and UndefinedBehaviorSanitizer; the same once more with only the Must parts (SPEC-115); then `tools/check_repo.py` and the tests of the checker itself | 4 minutes |
 | `tools/test integration` | host-integration | The real engine against the `sidplayfp` program (SPEC-071); the real program started, signalled and killed; a local HTTPS server; a real `7z`; stand-ins for `pactl` and `7z` that record their arguments; and the simulator tests once more under ThreadSanitizer | 15 minutes |
-| `tools/test fuzz` | host-integration | SPEC-205 | 5 minutes |
+| `tools/test fuzz` | host-integration | SPEC-205 | 8 minutes |
 | `tools/test package` | host-package | The `cp0-cross-package` build, then every check of section 13 on the `.deb`, with the install in an emulated arm64 container | 20 minutes |
 | `tools/test host` | | The four above, in that order | |
-| `tools/test simulator` | simulator | The `linux-x86-64` build and the scripts of SPEC-253 | 5 minutes |
+| `tools/test simulator` | simulator | The `linux-x86-64` build and the tests of SPEC-253, with all parts and again with only the Must parts (SPEC-115) | 8 minutes |
 | `tools/test device` | device | Builds the `.deb` and prints what to copy to the device and what to run there (SPEC-260) | One sitting of about an hour |
 
 So REQ-161's three levels have the commands `tools/test host`, `tools/test simulator` and
@@ -2168,8 +2342,8 @@ different and renders the same every time. The set has:
 
 - a one-subtune tune titled "Commando Test" by "Test Author", and a three-subtune tune with default 2;
 - two-SID and three-SID tunes; tunes marked 6581 and 8580, PAL and NTSC, and one marked for either;
-- a tune marked as needing BASIC; a tune titled "Hülsbeck Tëst" with 32-character fields; and a tune whose
-  fields hold every printable Windows-1252 character;
+- a tune marked as needing BASIC; a tune titled "Hülsbeck Tëst" with 32-character fields; and seven tunes
+  whose title, author and released fields between them hold every printable Windows-1252 character;
 - the bad tunes of SPEC-203;
 - a song length database, a STIL file, an `HVSC.txt`, a `BUGlist.txt` and an `hv_sids.txt` for them, written
   in HVSC's forms as observed in release 85: CRLF line endings; `[Database]`, `; /path` and `md5=lengths`
@@ -2197,14 +2371,17 @@ test is reported as skipped.
 `SIDPLAYZERO_TEST_HOOKS`, takes these options:
 
 ```
-sidplayzero --headless --script FILE --out DIR [--fakes DIR] [--engine real|fake]
-            [--clock fake|real] [--seed N] [--metrics FILE]
+sidplayzero --headless --script FILE --out DIR [--fakes DIR] [--backend software|fake]
+            [--engine real|fake] [--clock fake|real] [--seed N] [--metrics FILE]
 ```
 
 With `--headless` it opens no window and no sound device: LVGL draws into memory and sound goes to a
-recording sink. Time is the fake clock unless `--clock real` is given. The engine is the real one unless
-`--engine fake` is given. The runner gives every script a new, empty home folder and sets `HOME`, the XDG
-variables and `HVSC_BASE` into it. The fakes are set up from the `--fakes` folder:
+recording sink. With `--backend fake` the player drives the fake `SoundBackend` of SPEC-025 and no engine
+runs at all; otherwise it drives the software backend, with the real engine unless `--engine fake` is given.
+Time is the fake clock unless `--clock real` is given; then `advance` and `hold` wait that long in real time,
+the sink takes its frames in real time, and only `settle` waits for the app to be settled. The runner gives
+every script a new, empty home folder and sets `HOME`, the XDG variables and `HVSC_BASE` into it. The fakes
+are set up from the `--fakes` folder:
 
 | In the folder | Sets up |
 |---|---|
@@ -2222,7 +2399,10 @@ A script is lines of these commands; a line starting with `#` is a comment:
 | `type TEXT` | Types the text, one key press for each character (SPEC-099) |
 | `advance MS` | Moves the fake clock on, in steps of 10 ms. The recording sink takes exactly the frames that much time holds |
 | `settle` | Waits until the app is settled (below) |
-| `fake NAME VALUE` | Changes a value of `fakes.ini` while running; also `fake http release URL`, `fake http down`, `fake http up`, `fake sink drop MS`, `fake backend underrun SECONDS` |
+| `fake NAME VALUE` | Changes a value of `fakes.ini` while running; also `fake http release URL`, `fake http down`, `fake http up`, `fake sink drop MS` |
+| `fake backend EVENT` | With `--backend fake`: makes the fake report `song_ended`, `device_lost`, `device_back`, `device_gone`, `failed REASON` or `underrun SECONDS`, or sets what it returns with `registers CHIP REGISTER VALUE` |
+| `put FROM PATH`, `remove PATH`, `readonly PATH`, `writable PATH` | Copies a file or folder of the fakes folder to PATH under the home folder; deletes PATH; takes away or gives back the right to write there |
+| `restart` | Leaves as `quit` does, then starts the app again with the same options, home folder and fakes, whose logs carry on |
 | `dump NAME` | Writes the screen description (SPEC-254) to `NAME.json` in the `--out` folder |
 | `shot NAME` | Writes the screen to `NAME.png` there (SPEC-255) |
 | `expect WHAT IS VALUE` | Compares a value of the screen description. WHAT is a path into it such as `title`, `rows[2].text`, `notice.id` or `player.state`; IS is `=`, `!=`, `contains`, `matches` (a regular expression), `<` or `>` |
@@ -2234,21 +2414,24 @@ A script is lines of these commands; a line starting with `#` is a comment:
 
 The app is **settled** when: no message is waiting for the UI thread; both workers are idle, or their job is
 waiting for the fake clock or for an answer the fake is holding back; the render loop is waiting; and LVGL
-has drawn everything it had to. Every `key`, `hold`, `type`, `advance` and `fake` waits for that before the
-next line runs, so a script sees the same thing on every run. If the app has not settled within 10 s of real
+has drawn everything it had to. Every `key`, `hold`, `type`, `advance`, `fake`, `put`, `remove` and `restart`
+waits for that before the next line runs, so a script sees the same thing on every run. If the app has not settled within 10 s of real
 time the script fails. A failed `expect` ends the run with status 1 and writes the line, what was expected,
 what was found, the screen description and the screen to the `--out` folder; a script that cannot be read
 ends it with status 2.
 
 A simulator test is a script in `tests/simulator/`, with comment lines at its top naming its SPEC items, its
-fakes folder and its options. One more test starts the windowed build under a virtual display and checks
-that it draws a frame and leaves on a held ESC.
+parts (SPEC-115), its fakes folder and its options. For the few things a script cannot ask, such as whether
+a font has a glyph (SPEC-010), the level also has test programs in C++ that link the `ui` part and LVGL with
+no display. One more test starts the windowed build under a virtual display and checks that it draws a
+frame and leaves on a held ESC.
 - Covers: REQ-160, REQ-149
 - Priority: Must
-- Oracle: three scripts, written from this item alone, behave as it says: one that reads the empty screen's
+- Oracle: scripts written from this item alone behave as it says: one that reads the empty screen's
   description passes; the same with a wrong expected title fails with status 1 and writes its report; one
-  with an unknown command fails with status 2. Two runs of one script give byte-identical dumps and
-  screens.
+  with an unknown command fails with status 2; one that changes a setting, uses `restart` and reads the
+  setting back passes; one that `put`s a tune into the empty root sees the browser. Two runs of one script
+  give byte-identical dumps and screens.
 - Level: simulator
 
 **SPEC-254 The screen description.** `dump` and `expect` read one JSON object, made by one function from the
@@ -2256,10 +2439,11 @@ screens' own state and from LVGL's objects. A field that does not apply is `null
 
 | Field | Holds |
 |---|---|
-| `screen`, `stack` | The top screen and the whole stack (SPEC-090): `browser`, `empty`, `playing`, `search`, `playlists`, `playlist`, `settings`, `hvsc`, `about` |
+| `screen`, `stack` | The top screen and the whole stack (SPEC-090): `browser`, `empty`, `playing`, `search`, `playlists`, `playlist`, `settings`, `hvsc`, `about`, `selftest` |
+| `place` | The place of the key map whose keys apply now: a screen's name, `search-field` or `search-results`, a panel's name, `help` or `key-step` |
 | `title`, `position` | The top line's left part: the title or path, and "n/total" |
 | `mini` | The top line's right part: `state`, `title`, `elapsed`, and `job` for the job mark |
-| `rows` | The rows on the screen, top to bottom: each with `text`, `kind` (`folder`, `tune`, `entry`, `setting`, `action`), `value` for a setting, `marks` (any of `absent`, `missing`, `favourite`, `playing`) and `highlighted` |
+| `rows` | The rows on the screen, top to bottom: each with `text`, `kind` (`folder`, `tune`, `entry`, `setting`, `action`), `value` for a setting, `marks` (any of `absent`, `fetching`, `missing`, `favourite`, `playing`) and `highlighted` |
 | `list` | `total` entries, the index of the `first` row shown, and `objects`, the number of LVGL objects the list holds |
 | `detail` | The detail line |
 | `actions` | Five strings, the labels over the keys 4 to 8, empty where a key has none |
@@ -2267,20 +2451,40 @@ screens' own state and from LVGL's objects. A field that does not apply is `null
 | `panel` | The open panel: `id` (SPEC-114), `title`, `text`, `rows`, `fields` |
 | `help` | The lines of the help panel, when it is open |
 | `notice` | The notice showing: `id` (SPEC-116) and `text` |
-| `player` | `state` (SPEC-060), `message` (an identifier, in Failed), `path`, `subtune`, `subtunes`, `elapsed_ms`, `length_ms`, `engine`, `chips`, `model`, `clock`, `muted`, `filter`, `chip`, `mode`, `underrun_frames` |
-| `lines` | The text lines of the now-playing, HVSC and About screens, as drawn |
+| `player` | `state`, `message`, `path`, `subtune`, `subtunes`, `elapsed_ms`, `length_ms`, `engine`, `chips`, `model`, `clock`, `muted`, `filter`, `chip`, `mode`, `underrun_frames` |
+| `lines` | The text lines of the now-playing, HVSC, About and self-test screens, as drawn |
 | `voices` | For each bar of SPEC-080: `height` and `lit` |
 | `job` | The running job: `kind`, `step`, `text`, `done`, `total` |
 | `text` | All the text on the screen, in reading order |
-| `boxes` | For each label drawn: `id`, `band`, `x`, `y`, `w`, `h`, `text`, and `clipped` when the text did not fit |
+| `boxes` | For each label drawn: `id`, `band`, `x`, `y`, `w`, `h`, `text`, `text_w` (the width the whole text needs) and `clipped` (whether it was cut to fit) |
 
-Where another item's oracle names a field, this is the field it means.
+The forms of the values:
+
+| Value | Form |
+|---|---|
+| `player.state`, `mini.state` | `idle`, `waiting`, `fetching`, `loading`, `playing`, `paused` or `failed` |
+| `player.message`, `notice.id` | An identifier of SPEC-116 |
+| `player.path` | The collection path, or the `file://` form for a tune outside the collection |
+| `player.subtune`, `subtunes`, `chips`, `chip` | Numbers, counted from 1 |
+| `player.model`, `clock`, `engine` | `"6581"` or `"8580"`; `"PAL"` or `"NTSC"`; `"accurate"` or `"light"` |
+| `player.muted`, `filter` | For each chip: three true-or-false values, true for a muted voice; and one, true for a filter that is on |
+| `player.mode` | The value of `when_song_ends` |
+| `mini.elapsed`, and times in `lines` and `detail` | Text as `m:ss` |
+| `rows[].text` | A folder's name; a tune's file name with its ending; a playlist entry's title, or file name, as SPEC-172 shows it; a setting's name, with its value in `value`; an action's words |
+| `position`, `list.first` | Text as "n/total", n counted from 1; `first` counted from 0 |
+| `job.kind`, `job.step` | `setup`, `update`, `download` or `fetch`; the number of the step in the job's item |
+| `job.done`, `job.total` | Bytes, or files for "Fetch missing" and while unpacking |
+
+On the empty screen, `rows` holds one row of kind `action`, "Get HVSC", and `actions` are five empty
+strings. Where another item's oracle names a field, this is the field it means.
 - Covers: REQ-160
 - Priority: Must
 - Oracle: the description of the browser on the fixture collection, and of the now-playing screen playing
-  "Commando Test" with the fake backend, equal two JSON files written by hand from this table and those
-  screens' items; every dump in the simulator level passes the JSON schema kept beside the tests, which
-  allows no field this table does not name.
+  "Commando Test" with the fake backend, equal two JSON files written by hand from these tables and those
+  screens' items, in every field but `boxes` and `list.objects`, which no hand can write before the screens
+  exist and which other oracles check by what must hold of them (SPEC-091, SPEC-043, SPEC-098); every dump
+  in the simulator level passes the JSON schema kept beside the tests, which allows no field and no form
+  these tables do not name.
 - Level: simulator
 
 **SPEC-255 Reference images.** A screen can only be drawn once it is built, so no oracle in this document
@@ -2300,8 +2504,7 @@ reference yet", without failing. The store's screenshots (SPEC-223) are chosen f
 identifiers of the SPEC items it checks, in its name or in a comment line of the form `SPEC-nnn`.
 `tools/check_repo.py` fails if: a requirement has no SPEC item; a SPEC item names a requirement that does
 not exist; an item lacks one of its four lines, or names a level that SPEC-250 does not have; `keymap.tsv`
-has two rows for one place and key, a label on a key other than 4 to 8 or longer than seven characters, a
-key name that SPEC-111 does not have, or a priority that is not one of the three; and, from Phase 4 on, if
+breaks one of SPEC-094's rules; and, from Phase 4 on, if
 a SPEC item has no test at each of its levels other than the device, or a test names an item that does not
 exist. For the device level, each item with that level must be named by a line of the checklist or a key of
 the results file (SPEC-260).
@@ -2318,8 +2521,9 @@ workflow holds no secret but `PRIVATE_TERMS`. Until the test framework exists, i
 `tools/check_repo.py` alone.
 - Covers: REQ-161
 - Priority: Should
-- Oracle: on a pull request that breaks a unit test, "All checks passed" fails; on one that changes only a
-  document, it passes.
+- Oracle: `tools/check_repo.py` reads the workflow and fails if a job is not among those "All checks passed"
+  waits for, or if a step uses a secret other than `PRIVATE_TERMS`. Once, at the Phase 3 gate, a pull request
+  with a deliberately failing unit test is shown to end with a failed "All checks passed".
 - Level: host-unit
 
 **SPEC-258 The results file holds nothing private.** The device script builds the results file from the
@@ -2329,45 +2533,71 @@ the user's name, and anything with the form of an IPv4 address, an IPv6 address 
 address; it then says how many replacements it made. It never deletes the file.
 - Covers: REQ-162, REQ-143
 - Priority: Must
-- Oracle: a host-unit test runs that step on a text holding a host name, a user name inside and outside
-  longer words, and one address of each kind: only the whole words and the addresses are replaced, and the
-  count is right. The real results file passes `tools/check_repo.py`'s check for private details.
-- Level: host-unit, device
+- Oracle: an integration test runs that step of the script on a text holding a host name, a user name
+  inside and outside longer words, and one address of each kind: only the whole words and the addresses are
+  replaced, and the count is right. The real results file passes `tools/check_repo.py`'s check for private
+  details.
+- Level: host-integration, device
 
 **SPEC-260 The device level.** The device level is one script, `tools/device-run.sh`, and one checklist,
-`docs/device-checklist.md`, done in one sitting of about an hour with the tester at the device. The app is
-always started from the launcher, as the launcher's user and with that user's sound, never from the script's
-shell. The script and the app talk through files: the script puts a **request file**, `selftest.request`,
-in the app's state folder; while it is there, each start of the app appends its measurements to
-`selftest.results` beside it and, if the request names steps not yet done, runs the next of them on a screen
-of its own that says what it is doing. A held ESC leaves the self-test like any screen. The sitting goes in
-this order, and the script prints each instruction and waits for the tester:
+`docs/device-checklist.md`, done in one sitting of about an hour with the tester at the device.
+
+*Who runs what.* The tester runs the script over SSH as the device's normal user, the one the launcher
+starts apps as; it uses `sudo` for `apt install` and `apt remove` and for nothing else, and refuses to run
+as root. The app is always started by the tester from the launcher, never from the script's shell, so it
+runs as the launcher's user with that user's sound. After the first start the script looks for the app's
+results in its own state folder; if they are not there, the app ran as another user, and the script stops
+and says so.
+
+*How they talk.* The script writes the **request file**, `selftest.request`, in the app's state folder: one
+line, `step = NAME`. (A build with the test hooks of SPEC-253 also reads a line `benchmark_seconds = N`.) While that file exists, the app appends `key = value` lines to `selftest.results`
+beside it: `start_ms` at every start, `exit_ms` at every exit, and the measurements of a step when the step
+ends, followed by `step_done = NAME`. A key written again is a newer value, except `start_ms` and `exit_ms`,
+of which every line is kept. The script changes the request before each of the tester's steps and waits for
+`step_done`, or for the tester's answer. The steps:
+
+| `step` | What the app does at its next start |
+|---|---|
+| `none` | Runs as usual; only the start and exit times are recorded |
+| `keys` | Shows the **key step** in place of the browser: it names one key at a time, from SPEC-111's table and the characters `/ . _ : ~ -`, and records the code that arrives. In this step every key is only recorded; a held ESC still leaves. It writes `key_codes_wrong` |
+| `engines` | Shows the self-test screen; measures the two engines (SPEC-072) and renders the built-in tune twice with each; writes the speed factors and the three `render_` keys |
+| `benchmark` | Shows the self-test screen; fetches the benchmark set if it is absent, plays it for 30 minutes while the **key script** presses keys, then builds the index again while a tune plays; writes the keys of SPEC-240 |
+
+The self-test screen takes the browser's place, shows the step and its progress as lines of text, and, when
+a step is done, "Done. Hold ESC to leave." Its keys are those of the key map's `selftest` place and the
+groups; the key step is the place `key-step`, where no group applies.
+
+*The order of the sitting.* The script prints each instruction and waits:
 
 | Step | Who | What | Settles |
 |---|---|---|---|
-| 1 | Script | Installs the `.deb` with `sudo apt install`; records the package's file list; writes the request file | SPEC-220, SPEC-229 |
-| 2 | Tester | Turns networking off; starts SidPlayZero from the launcher and leaves with a held ESC, five times; turns networking on | SPEC-200, SPEC-201, SPEC-222, SPEC-106 |
-| 3 | Tester | Starts it: the **key step** asks for each key of SPEC-111's table and the characters `/ . _ : ~ -` in turn, and records the code that arrived | SPEC-111, SPEC-099 |
-| 4 | App | Measures the two engines; renders the built-in tune twice with each and records whether the samples were the same | SPEC-072, SPEC-071 |
-| 5 | Tester | With an empty collection folder: Enter, Enter sets HVSC up; plays `Commando.sid`; says whether sound comes from the loudspeaker, and whether the screen shows "Commando", "Rob Hubbard" and 3:55 | SPEC-140, SPEC-141, SPEC-046, SPEC-063, SPEC-070 |
-| 6 | Tester | Volume keys: the level heard changes; brightness keys; headphones in and out twice | SPEC-076, SPEC-104, SPEC-078 |
-| 7 | App | Fetches the benchmark set and plays it for 30 minutes, pressing keys itself from the **key script**; then builds the index again while a tune plays | SPEC-242, SPEC-072, SPEC-112, SPEC-043, SPEC-161, SPEC-162 |
-| 8 | Tester | Leaves a tune playing for two minutes without touching the device, and says what the screen did | SPEC-207 |
-| 9 | Tester | Leaves the app: the launcher answers at once, its key sounds play, and its volume and the brightness are as they were | SPEC-201, REQ-127 |
-| 10 | Tester | If the HVSC screen offers it and the tester chooses to: "Download everything" | SPEC-145, SPEC-144 |
-| 11 | Script | Removes the package; checks that the settings, playlists and collection are still there; gathers the results file (SPEC-258) | SPEC-229, SPEC-134 |
+| 1 | Script | Installs the `.deb`; records the package's file list; writes the request, `keys` | SPEC-220, SPEC-229 |
+| 2 | Tester | Starts SidPlayZero from the launcher and presses each key the screen asks for; leaves with a held ESC | SPEC-111, SPEC-099, SPEC-222, SPEC-106 |
+| 3 | App | Request `engines`: the tester starts the app and waits for "Done" | SPEC-072, SPEC-071 |
+| 4 | Tester | Request `none`. With an empty collection folder: Enter, Enter sets HVSC up; plays `Commando.sid`; says whether sound comes from the loudspeaker and whether the screen shows "Commando", "Rob Hubbard" and 3:55 | SPEC-140, SPEC-141, SPEC-046, SPEC-063, SPEC-070 |
+| 5 | Tester | If the HVSC screen offers "Download everything" and the tester chooses to: runs it to its end. The steps after this then measure a complete collection | SPEC-145, SPEC-144 |
+| 6 | Tester | Turns networking off; starts the app and leaves with a held ESC, five times; turns networking on | SPEC-200, SPEC-201 |
+| 7 | Tester | Volume keys: the level heard changes; brightness keys; headphones in and out twice | SPEC-076, SPEC-104, SPEC-078 |
+| 8 | App | Request `benchmark`: the tester starts the app and leaves the device alone for about 35 minutes | SPEC-242, SPEC-072, SPEC-112, SPEC-043, SPEC-161, SPEC-162 |
+| 9 | Tester | Request `none`. Leaves a tune playing for two minutes without touching the device, and says what the screen did | SPEC-207 |
+| 10 | Tester | Leaves the app: the launcher answers at once, its key sounds play, and its volume and the brightness are as they were | SPEC-201, REQ-127 |
+| 11 | Script | Removes the package; checks that the settings, playlists and collection are still there; gathers the results file (SPEC-258) and removes the request and the app's results | SPEC-229, SPEC-134 |
 
-The key script, built into the app, repeats this round every 20 s‡ during step 7: open and leave the two
-folders of SPEC-240; hold Down for 10 s in the first, once in each five rounds; rest on three present tunes
-for the detail line; open Search, type "hub 1985" and then "galway ark", and go back; open and close
-Settings. The checklist has one line for each tester's step, answered yes, no, or in the words asked for,
-and the script puts the answers in the results file.
+The five starts of step 6 come after HVSC is set up and its caches exist, as REQ-055 means them. The key
+script, built into the app, repeats this round every 20 s‡ during step 8: open and leave the two folders of
+SPEC-240; hold Down for 10 s in the first, once in each five rounds; rest on three present tunes for the
+detail line; open Search, type "hub 1985" and then "galway ark", and go back; open and close Settings. The
+checklist has one line for each tester's step, answered yes, no, or in the words asked for, and the script
+puts the answers in the results file. In the results file `start_ms` and `exit_ms` are lists, in order.
 - Covers: REQ-162, REQ-160, REQ-043, REQ-127
 - Priority: Must
-- Oracle: a host-integration test runs the script's own steps (asking, gathering, cleaning) against a
-  stand-in for the device's side, and the simulator runs the self-test screen, with the fake backend and a
-  30-second benchmark, through to a results file with every key of SPEC-240 and SPEC-241. The results file
-  from the reference device has all of those keys and an answer for every checklist line.
+- Oracle: a simulator script with `step = keys` in its home folder sees `screen = selftest` and
+  `place = key-step`, feeds the keys asked for with one wrong, and finds that key's name in
+  `key_codes_wrong`; with `step = benchmark`, the fake backend and `benchmark_seconds = 30`, it ends with every key of SPEC-240 in `selftest.results` and `step_done = benchmark`; with
+  `step = none`, two starts leave two `start_ms` lines. A host-integration test runs `tools/device-run.sh`
+  against a stand-in that plays the app's and the tester's parts through files, and gets a results file with
+  an answer for each checklist line; run as root, the script refuses. The results file from the reference
+  device has all of SPEC-240's and SPEC-241's keys and every answer.
 - Level: host-integration, simulator, device
 
 **SPEC-262 The engines are measured on the device before their thresholds are relied on.** The number in
