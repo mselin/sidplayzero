@@ -4,6 +4,8 @@
 # C++ library only. It has no include path to LVGL, the engine library, the sound library or libcurl,
 # and gets none from what links it, because nothing it links has one (TF-003).
 add_library(spz_core STATIC
+    json.cpp
+    keys.cpp
     version.cpp
 )
 target_include_directories(spz_core PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")

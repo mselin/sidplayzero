@@ -1,0 +1,4 @@
+# TF-042 SPEC-253 a line that is not a command ends the run with status 2
+# expect-status: 2
+expect screen = empty
+dance wildly

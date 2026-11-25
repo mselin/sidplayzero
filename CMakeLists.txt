@@ -53,3 +53,8 @@ endif()
 if(SIDPLAYZERO_BUILD_UNIT_TESTS)
     add_subdirectory(tests/unit)
 endif()
+
+option(SIDPLAYZERO_BUILD_SIM_TESTS "Build the C++ tests of the simulator level (SPEC-253)" OFF)
+if(SIDPLAYZERO_BUILD_APP AND SIDPLAYZERO_BUILD_SIM_TESTS)
+    add_subdirectory(tests/simulator)
+endif()

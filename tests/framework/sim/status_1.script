@@ -1,0 +1,5 @@
+# TF-042 SPEC-253 a failed expect ends the run with status 1
+# expect-status: 1
+expect screen = empty
+expect title = "Some other app"
+expect screen = never-reached

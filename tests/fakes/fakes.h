@@ -5,7 +5,9 @@
 #pragma once
 
 #include <algorithm>
+#include <atomic>
 #include <chrono>
+#include <condition_variable>
 #include <cstdint>
 #include <cstring>
 #include <deque>
@@ -13,6 +15,7 @@
 #include <fstream>
 #include <functional>
 #include <map>
+#include <mutex>
 #include <string>
 #include <utility>
 #include <vector>
@@ -125,6 +128,10 @@ public:
     void fail_at(int n, FileStatus status = FileStatus::Failed) { fail_in_ = n; fail_status_ = status; }
     // Every write, rename, remove and make_folders under `prefix` fails with NoAccess.
     void make_read_only(const std::string& prefix) { read_only_.push_back(prefix); }
+    // Undoes make_read_only for that prefix.
+    void make_writable(const std::string& prefix) {
+        read_only_.erase(std::remove(read_only_.begin(), read_only_.end(), prefix), read_only_.end());
+    }
     // What free_bytes reports, in place of the real figure.
     void set_free_bytes(std::uint64_t bytes) { free_override_ = true; free_bytes_ = bytes; }
     // Called before every operation, for a test that wants to do something in the middle of one.
@@ -257,7 +264,17 @@ public:
         std::string last_modified;
         std::uint64_t cut_after = 0;                // if not 0: write this many bytes, then fail as Network
         int steps = 1;                              // how many times progress is reported on the way
+        bool stall = false;                         // hold the answer back until release(url) is called
     };
+
+    // Lets a stalled answer go. Called from another thread than the one that waits in fetch().
+    void release(const std::string& url) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        released_.push_back(url);
+        waiting_.notify_all();
+    }
+    // How many fetches are being held back right now.
+    int stalled() const { return stalled_; }
 
     void answer(const std::string& url, Answer a) { answers_[url] = std::move(a); }
     void answer(const std::string& url, const std::string& body) {
@@ -291,6 +308,18 @@ public:
         result.etag = a.etag;
         result.last_modified = a.last_modified;
         result.total = a.body.size();
+        if (a.stall) {   // wait to be released; the progress call is still asked now and then, so it can cancel
+            std::unique_lock<std::mutex> lock(mutex_);
+            ++stalled_;
+            while (std::find(released_.begin(), released_.end(), request.url) == released_.end()) {
+                waiting_.wait_for(lock, std::chrono::milliseconds(10));
+                lock.unlock();
+                const bool go_on = !progress || progress(0, result.total);
+                lock.lock();
+                if (!go_on) { --stalled_; result.failure = HttpFailure::Cancelled; return result; }
+            }
+            --stalled_;
+        }
         // A range is honoured only when the server gave validators and they still match.
         std::uint64_t from = 0;
         if (request.resume_from > 0 && !a.etag.empty() && request.if_etag == a.etag &&
@@ -319,6 +348,10 @@ public:
 
 private:
     std::map<std::string, Answer> answers_;
+    std::mutex mutex_;
+    std::condition_variable waiting_;
+    std::vector<std::string> released_;
+    std::atomic<int> stalled_{0};
 };
 
 // ---------------------------------------------------------------------------------------------------

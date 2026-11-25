@@ -1,0 +1,13 @@
+# TF-042 canary: a script reads the empty screen, and what it expects holds
+expect screen = empty
+expect place = empty
+expect title = SidPlayZero
+expect rows[0].text = "Get HVSC"
+expect rows[0].highlighted = true
+expect actions[0] = ""
+expect text contains C64Music
+expect text matches "collection .* found"
+expect boxes[0].y < 16
+expect notice = null
+dump empty
+shot empty
