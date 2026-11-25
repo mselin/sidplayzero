@@ -15,17 +15,6 @@ brief the project started from, so the findings below are raised against that br
 
 ## Open
 
-### FIND-006 The complete HVSC archive may not unpack on the device
-- Phase: 1, requirements
-- Observed: the complete collection is one 7-Zip archive of 80.8 MB, on a mirror that HVSC's site links to and
-  does not run. HVSC's archives are "solid", and some have used compression methods that need a lot of memory
-  or that some unpackers do not have. The device has 512 MB of RAM. The mirror could not be reached from the
-  environment this was researched in, so the archive itself has not been inspected.
-- Concerns: the brief's candidate "downloading HVSC locally should be easy"; REQ-080
-- Resolution: none yet. Phase 2 inspects the archive and tries unpacking it within a memory limit (R1 in
-  `requirements.md`). If it cannot be done on the device, REQ-080 comes back to Phase 1 to be changed.
-- Status: open, with Phase 2
-
 ### FIND-007 USBSID-Pico needs a newer engine library than the device's system has
 - Phase: 1, requirements
 - Observed: USBSID-Pico support came in libsidplayfp 2.16.0. Debian trixie, which the device runs, has 2.12.0.
@@ -33,20 +22,81 @@ brief the project started from, so the findings below are raised against that br
   contradicts the rest.
 - Concerns: the brief's fact "Debian trixie carries libsidplayfp 2.12.0" and the wish to "possibly support
   USBSID"; REQ-111, REQ-144
-- Resolution so far: the licence is GPL-3 (REQ-144, CON-21). How the engine library reaches the device is R3,
-  and the header is R9, both for Phase 2.
-- Status: open, with Phase 2
-
-### FIND-009 Whether Debian's engine library has a known vulnerability is not known
-- Phase: 1, requirements
-- Observed: upstream 3.1.2 fixes an out-of-bounds read, CVE-2026-111148. Whether the 2.12.0 in Debian trixie
-  has the fault, or a fix for it, has not been checked.
-- Concerns: the brief's fact "Debian trixie carries libsidplayfp 2.12.0"; REQ-126
-- Resolution: none yet. Phase 2 checks the affected code against 2.12.0 and Debian's security record before
-  choosing the library (R3).
-- Status: open, with Phase 2
+- Resolution so far: the licence is GPL-3 (REQ-144, CON-21), and the specification builds a library version
+  that has USBSID support into the package, with that support switched off until the header's licence is
+  cleared with its author (R9).
+- Status: open; it matters only when REQ-111 is taken up
 
 ## Closed
+
+### FIND-006 The complete HVSC archive cannot be relied on to unpack on the device
+- Phase: 1, requirements; confirmed with measurements in phase 2, specification
+- Observed: the complete collection is one 7-Zip archive of 81 MB whose tunes are in a single solid block
+  compressed with a 340 MB dictionary. Unpacking it took 364 MB of memory at its peak with 7-Zip and 540 MB
+  with libarchive. The RAR archive needed 391 MB with the one free program that can read it. The device has
+  512 MB in all.
+- Concerns: REQ-080 as approved, which had the app download and unpack the complete archive
+- Resolution: the owner decided on 25 November 2026 that HVSC is set up for use on demand. In
+  `requirements.md`, REQ-080 no longer depends on the complete archive, REQ-088 has tunes fetched when they
+  are played, and REQ-089 keeps the complete download for devices that pass a memory check. CON-15 and CON-22
+  hold the measurements. Carried forward into the specification in the same change.
+- Status: closed. Accepted on 25 November 2026, when the owner approved the specification and had the pull
+  request with the changed requirements merged
+
+### FIND-010 "Missing" in the playlist requirements came to mean two things
+- Phase: 2, specification (raised by the independent review, item RV-018)
+- Observed: REQ-103 says an entry "whose tune is not on the device" is shown as missing and skipped, and
+  REQ-104 offers to fetch such entries. Since FIND-006, most of HVSC is not on the device and any tune HVSC
+  lists is fetched when played (REQ-088). Read literally, REQ-103 would make a playlist skip nearly
+  everything on a device that fetches on demand.
+- Concerns: REQ-103, REQ-104, REQ-093
+- Resolution: in `requirements.md`, an entry is missing only when its tune is neither on the device nor in
+  HVSC's list; one that HVSC lists is fetched when played. REQ-104 is the fetching of a playlist's tunes
+  ahead of playing them, and REQ-093 points at REQ-088 for fetching a single tune. The specification's
+  terms "absent" and "missing" (section 1, SPEC-173, SPEC-174) follow this.
+- Status: closed. Accepted with the specification on 25 November 2026
+
+### FIND-011 REQ-011 named the wrong requirement for stepping past the last subtune
+- Phase: 2, specification (review item RV-018)
+- Observed: REQ-011's acceptance said that stepping past either end of a tune's subtunes "follows REQ-014".
+  REQ-014 is the setting for what happens when a song reaches its length by itself; it has values, "repeat"
+  and "stop", that make no sense for a key press.
+- Concerns: REQ-011
+- Resolution: REQ-011 now says that next and previous subtune, past the last or the first, go to the next
+  or previous tune (REQ-012). SPEC-061 says the same.
+- Status: closed. Accepted with the specification on 25 November 2026
+
+### FIND-012 An acceptance test needed HVSC's tunes where they may not be
+- Phase: 2, specification (review item RV-018)
+- Observed: REQ-051's acceptance had both engine settings "play the benchmark tunes on the host". The
+  benchmark tunes are HVSC's, and REQ-087 keeps HVSC's files out of the repository, so no host test can
+  have them.
+- Concerns: REQ-051
+- Resolution: REQ-051's acceptance uses the project's own test tunes on the host, with ones for two and
+  three SID chips among them; the benchmark tunes are played on the device only (SPEC-242).
+- Status: closed. Accepted with the specification on 25 November 2026
+
+### FIND-013 The brightness keys do nothing while the app runs
+- Phase: 2, specification (review item RV-043)
+- Observed: the launcher handles `fn`+U and `fn`+I, the brightness keys, in the same key handler as the
+  volume keys, and pauses that handler while an app runs (CON-09). The requirements gave the volume keys to
+  the app (REQ-042) and said nothing of the brightness keys, so they would have done nothing in SidPlayZero.
+- Concerns: CON-09; the requirements, which had no item for these keys
+- Resolution: REQ-129 added (Should): the keys change the screen's brightness when the system lets the app.
+  CON-09 names them. SPEC-104 specifies it. Whether the stock user may change the brightness is still not
+  known (R7); the device run records it.
+- Status: closed. Accepted with the specification on 25 November 2026
+
+### FIND-009 Debian's engine library has a known vulnerability and no fix
+- Phase: 1, requirements; settled in phase 2, specification
+- Observed: upstream 3.1.2 fixes an out-of-bounds read, CVE-2026-111148, by checking that a tune's data
+  offset lies inside the file. The 2.12.0 in Debian trixie takes the offset from the file header and uses it
+  without that check, as does 2.16.1. On 25 November 2026 Debian's security, updates and backports archives
+  for trixie held no newer version.
+- Concerns: the brief's fact "Debian trixie carries libsidplayfp 2.12.0"; REQ-126
+- Resolution: the specification builds upstream 3.1.2 into the package and does not depend on Debian's
+  library. The app also checks a tune's header itself before handing it to the engine.
+- Status: closed
 
 ### FIND-001 The emulator is not part of `czdev` any more
 - Phase: 1, requirements

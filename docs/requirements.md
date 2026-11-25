@@ -2,9 +2,19 @@
 
 | | |
 |---|---|
-| Status | **Draft 1, awaiting the owner's approval.** This is the Phase 1 artifact. No later phase starts before it is approved. |
+| Status | **Approved by the owner on 25 November 2026**, with the priorities as proposed. Changed after that by FIND-006, following the owner's decision of the same day, and by FIND-010 to FIND-013, which the review of the specification raised (see "Changes since approval" below). Those changes were accepted on 25 November 2026, when the owner approved the specification that rests on them and had the pull request carrying them merged. |
 | Date | 25 November 2026 |
 | Next artifact | `docs/spec.md` (Phase 2), which traces every SPEC item to the REQ ids here |
+
+Changes since approval:
+
+| Finding | What changed | State |
+|---|---|---|
+| FIND-006: the complete HVSC archive cannot be relied on to unpack on the device | REQ-080 reworded: setting HVSC up no longer depends on the complete archive. REQ-088 added: tunes are fetched when played. REQ-089 added: the complete download, offered only when the device can do it (this was REQ-080). REQ-004, REQ-007, REQ-082, REQ-084, REQ-086, REQ-090, REQ-091 and REQ-123 adjusted to match. CON-15 corrected with measured figures and CON-22 added | Decided by the owner ("on demand first"); accepted with the specification, 25 November 2026 |
+| FIND-010: after FIND-006, "missing" in the playlist requirements meant two different things | REQ-103 reworded: an entry is missing only when its tune is neither on the device nor in HVSC's list; one that HVSC lists is fetched when played. REQ-104 reworded to match: "Fetch what is missing" fetches a playlist's tunes ahead of playing them. REQ-093 now points at REQ-088 for fetching one tune | Accepted with the specification, 25 November 2026 |
+| FIND-011: REQ-011 pointed at the wrong requirement for stepping past the last subtune | REQ-011 now says that next and previous subtune, past either end, go to the next or previous tune (REQ-012) | Accepted with the specification, 25 November 2026 |
+| FIND-012: REQ-051's acceptance needed HVSC's tunes on the host, where REQ-087 forbids them | REQ-051's acceptance now uses the test tunes on the host | Accepted with the specification, 25 November 2026 |
+| FIND-013: the brightness keys do nothing while an app runs unless the app handles them | REQ-129 added: brightness keys (Should). CON-09 names those keys too | Accepted with the specification, 25 November 2026 |
 
 ## 1. What SidPlayZero is
 
@@ -69,19 +79,20 @@ How sure each one is:
 | CON-06 | Keys arrive from one Linux input device that apps share without grabbing it. The keyboard driver works out the `sym`, `shift` and `fn` layers and the press-once, press-twice and hold behaviour of those keys, so the app receives finished key codes: `fn`+F/X/Z/C are Up/Down/Left/Right, `fn`+Q/W/E are Play-Pause/Previous/Next, `fn`+A/S/D are Mute/Volume down/Volume up, `fn`+U/I are brightness, `fn`+H is Help, `fn`+J is Print Screen, `fn`+K/N are Home/End, `fn`+L/M are Page Up/Page Down | Keyboard driver and device tree keymaps, key specification | Source |
 | CON-07 | Key conventions that apps are asked to follow: the number keys 4 to 8 sit under the screen and trigger five actions drawn along its bottom edge (icon centres at x = 49, 105, 161, 217 and 273, y = 153, 22×22 pixels); Enter confirms; a short ESC goes back; F/X/Z/C work as arrows without `fn` wherever text is not being typed; `fn`+H shows help. The stock apps also use TAB for a menu or settings | cardputer.cc key specification, M5Stack usage guide | Documented |
 | CON-08 | Sound goes through PipeWire with its PulseAudio-compatible server, run for the logged-in user. The sound card is `ES8389-Audio`. Plugging in headphones switches the output in the system; the app does not route anything. The stock Music app plays through the PulseAudio client library and changes the system volume in 5 % steps | Image builder, device tree, Music app | Source; the sink's sample rate and format are Unknown |
-| CON-09 | While an app runs, the launcher pauses its own key handling. So the volume, mute and media keys do nothing unless the app handles them | Launcher source (`keyboard_pause`) | Source, by inference; to be confirmed on the device |
+| CON-09 | While an app runs, the launcher pauses its own key handling. So the volume, mute, media and brightness keys do nothing unless the app handles them | Launcher source (`keyboard_pause`, and the one key handler that serves all of those keys) | Source, by inference; to be confirmed on the device |
 | CON-10 | The launcher locks its home screen after a period without key presses (30 s by default, setting "DarkTime"). Whether the screen dims or locks while another app is running is not known | Usage guide, launcher source | Unknown |
 | CON-11 | The supported way to build an app is the CardputerZero Template: C++17, LVGL 9.5.0, CMake 3.31 or newer, a desktop simulator built with SDL2, a cross build for arm64 against M5Stack's sysroot, and a `.deb` made by CPack. I built the template and ran its simulator without a display: synthetic key presses reached it, and its own screenshot function wrote 320×170 PNGs | Template; built and run on 25 November 2026 | Run |
 | CON-12 | The `czdev` tool now only scaffolds and publishes. Its emulator was removed, and the manifest fields `runtime`, `entry` and `lvgl_version` are no longer read. The desktop simulator is part of the template instead | AppBuilder documentation | Source |
 | CON-13 | Engine versions: Debian trixie has libsidplayfp 2.12.0 and sidplayfp 2.12.0, with the reSID and reSIDfp engines and no USBSID support. USBSID-Pico support arrived in 2.16.0. Upstream is at 3.1.2 (25 October 2026): reSID is gone, there is a new light engine called sidlite, reSIDfp is a separate library, the default sample rate is 48 kHz, and 3.1.2 fixes an out-of-bounds read, CVE-2026-111148 | Debian package indexes for arm64, upstream release notes | Source |
 | CON-14 | The stock image does not include libsidplayfp. M5Stack's sysroot does include the PulseAudio and ALSA client libraries, libusb, libcurl, libarchive, liblzma, SQLite and fmt | Sysroot 0.0.4 file list | Source; the installed image may differ, the probe confirms |
-| CON-15 | HVSC: release #85 of 28 June 2026 has 61,157 tunes in 1,981 folders, the largest holding 1,298 tunes. There are two releases a year. The complete collection is a 7-Zip archive of 80.8 MB on a mirror that HVSC's site links to; it unpacks to one `C64Music` folder of roughly 395 MB. Update packs are about 3.3 MB but need HVSC's own update tool, which applies a script, must be run once and in order, and has no arm64 build. HVSC's site also serves every file on its own at `https://hvsc.c64.org/download/C64Music/` followed by the HVSC path. Song lengths are in `DOCUMENTS/Songlengths.md5` (5.2 MB, one entry per tune, looked up by the MD5 of the whole file, lengths as `mm:ss` or `mm:ss.SSS` per subtune). Paths use only letters, digits, `_`, `-` and `.`, at most 94 characters, and no two differ only by case. Folder names do change between releases, sometimes only in case | hvsc.c64.org and HVSC's own documents, fetched 25 November 2026; the song length file, measured | Source. The archive's inner layout, compression method and unpacked size are from third parties, because the mirror could not be reached from here |
+| CON-15 | HVSC: release #85 of 28 June 2026 has 61,157 tunes in 1,981 folders, the largest holding 1,298 tunes. There are two releases a year. The complete collection is a 7-Zip archive of 80.8 MB on a mirror that HVSC's site links to; it unpacks to one `C64Music` folder holding 61,324 files of 376 MB in all, which take 466 MB on a card with 4 KiB blocks. Update packs are about 3.3 MB but need HVSC's own update tool, which applies a script, must be run once and in order, and has no arm64 build. HVSC's site also serves every file on its own at `https://hvsc.c64.org/download/C64Music/` followed by the HVSC path. Song lengths are in `DOCUMENTS/Songlengths.md5` (5.2 MB, one entry per tune, looked up by the MD5 of the whole file, lengths as `mm:ss` or `mm:ss.SSS` per subtune). Paths use only letters, digits, `_`, `-` and `.`, at most 94 characters, and no two differ only by case. Folder names do change between releases, sometimes only in case. Five tunes picked at random each arrived from HVSC's site in under a second and matched their MD5 in the song length file. HVSC's documents (song lengths, STIL, the main text file and the bug list) are 9.0 MB together | hvsc.c64.org, HVSC's own documents and the complete archive, fetched and measured 25 November 2026 | Run |
 | CON-16 | HVSC's terms: the collection is free of charge, and every tune remains the copyright of its author or publisher. "Use of the SIDs in this collection for any purpose other than private enjoyment is subject to relevant copyright law." Nothing grants a right to redistribute it inside other software | HVSC's copyright notice and disclaimer | Source |
 | CON-17 | App store rules: an arm64 `.deb`; the package name in lowercase letters, digits, `.`, `+` and `-`; files only in places named after the package (`/usr/bin/sidplayzero…`, `/usr/share/sidplayzero/`, `/usr/lib/sidplayzero/`, `/etc/sidplayzero…`) plus `/usr/share/APPLaunch/` and `/usr/share/doc/`; a udev rule is allowed if named after the package and free of `RUN` and `PROGRAM`; no setuid files, no device files, no service that runs as root; an SPDX licence id; seven yes-or-no permission declarations; one to six screenshots of exactly 320×170; a first release is reviewed by a person and needs a video of the app on a real device. Depending on Debian packages is normal: 179 of the 191 apps in the store do. GPL apps are accepted: 26 of the 191 use a GPL-3 licence. There is no SID player in the store today | The store's validator scripts and its registry, read 25 November 2026 | Source |
 | CON-18 | Settings belong in `$HOME/.config/<app>/`. The system fonts are DejaVu Sans, JetBrains Mono and Noto CJK; 12 pixels or larger is recommended | cardputer.cc development guidelines | Documented |
 | CON-19 | USBSID-Pico is a USB device with id `cafe:4011`. A program needs permission to open it, which on Linux is given by a udev rule. It works only when the CardputerZero's USB switch is set to host mode | USBSID-Pico repository, M5Stack product page | Source; not tried |
 | CON-20 | `sidplayfp -w` does not write the same WAV twice by default, because the engine starts with a random power-on delay. With the delay fixed (`--delay=0`) repeated renders are identical byte for byte, with both reSID and reSIDfp | Tried with sidplayfp 2.6.2 on x86-64 | Run; to be repeated with the version and processor the app ships on |
 | CON-21 | Licences of what the app would be built from: the engine library is GPL-2.0-or-later (122 of its 126 GPL source files say "or any later version"), so it can be part of a GPL-3 program. The four exceptions are its exSID hardware backend, which is GPL version 2 only and so must be left out of a GPL-3 build. The USBSID-Pico driver the library embeds is GPL-3.0-or-later, which makes GPL-3 the only GPL version a build with USBSID can have; one header of that driver, `usbsid_protocol.h`, carries "version 2" wording that contradicts the rest. LVGL, fmt and the app template are MIT | The source files' own licence headers | Source |
+| CON-22 | Unpacking the complete HVSC archive needs more memory than the device can be counted on to have. The 7-Zip archive holds the tunes in one solid block compressed with a 340 MB dictionary, and the documents in another that needs 256 MB. Measured peak memory while unpacking: 364 MB with 7-Zip, 540 MB with libarchive. The RAR archive is no better: libarchive cannot read it (it is solid), Debian's free 7-Zip cannot decode it, and The Unarchiver needs 391 MB. The device has 512 MB in all (CON-01) | The archives of release #85, unpacked on an x86-64 host with 7-Zip 23.01, libarchive 3.7.2 and unar 1.10 | Run; how the device behaves with its swap is Unknown until the probe's unpack test is run |
 
 ## 4. Requirements
 
@@ -116,7 +127,8 @@ no more than 64 MB‡ of memory while doing so.
   test runs against a generated tree of the same shape.
 
 **REQ-004 See what a tune is before playing it.** For the highlighted tune the browser shows its title,
-author and length, taken from the file and the song length database.
+author and length, taken from the file and the song length database. For a tune that has not been fetched
+yet (REQ-088) it shows the length and that the tune is not on the device.
 - Why: many file names are abbreviations, and several subtunes hide behind one name.
 - Priority: Should
 - Acceptance: highlighting `Commando.sid` in a test collection shows "Commando", "Rob Hubbard" and the length
@@ -137,7 +149,7 @@ a screenful, and the list shows where the highlight is (for example "214/1298").
   plays them, using the default length.
 
 **REQ-007 Nothing there yet.** When the collection folder is missing or empty, the app says so in plain words,
-shows where it looked, and offers the ways to get a collection: download HVSC (REQ-080) or copy one to the
+shows where it looked, and offers the ways to get a collection: set HVSC up (REQ-080) or copy one to the
 folder.
 - Why: this is what a new user sees first.
 - Priority: Must
@@ -153,12 +165,12 @@ folder.
   samples are missing or repeated.
 
 **REQ-011 Subtunes.** A tune starts at the subtune its file names as the default. Next and previous subtune
-step through the others.
+step through the others, and past the last or the first they go to the next or previous tune (REQ-012).
 - Why: HVSC's 61,157 tunes hold 87,868 songs, so many tunes have several. The file's default is the one
   meant to be heard first.
 - Priority: Must
 - Acceptance: for a test tune with 3 subtunes and default 2, play starts at 2, next gives 3, previous gives 2
-  then 1, and stepping past either end follows REQ-014.
+  then 1; next from 3 starts the next tune and previous from 1 the previous tune.
 
 **REQ-012 Next and previous tune.** Next and previous move to the neighbouring tune in whatever is being played
 from: the folder, the search results or the playlist.
@@ -333,8 +345,9 @@ provides. The default is whichever meets REQ-050 with the best sound.
 - Why: which engines exist depends on the library version (CON-13); the choice of version is made in the
   specification.
 - Priority: Must
-- Acceptance: both settings play the benchmark tunes on the host; the on-device run records the speed of each,
-  and the default is the one the specification names from those figures.
+- Acceptance: both settings play the test tunes on the host, among them tunes for two and for three SID
+  chips; the on-device run records the speed of each engine, and the default is the one the specification
+  names from those figures.
 
 **REQ-052 Sample rate.** The sample rate can be set, with at least 44,100 and 48,000 Hz. The default matches
 what the device's sound system runs at.
@@ -471,15 +484,16 @@ none of them, and none of the collection.
 
 ### 4.8 Getting HVSC onto the device
 
-**REQ-080 Download HVSC from inside the app.** From the empty-collection screen or the settings, the user can
-fetch the complete current HVSC with no more than three‡ key presses and without a terminal. The app
-downloads the archive, checks it arrived whole, unpacks it and puts it in the collection folder.
-- Why: asked for directly: "downloading HVSC locally should be easy".
+**REQ-080 Get HVSC from inside the app.** From the empty-collection screen or the settings, the user can set
+HVSC up with no more than three‡ key presses and without a terminal. The app downloads HVSC's documents,
+about 9 MB, which list every tune. From then on it shows the whole collection and can play any tune in it
+(REQ-088).
+- Why: asked for directly: "downloading HVSC locally should be easy". Setting up must not depend on the
+  complete archive, because the device cannot be counted on to unpack it (CON-22, FIND-006).
 - Priority: Must
-- Acceptance: on the reference device with an empty home folder and Wi-Fi, the steps on the screen end with
-  HVSC browsable and playing. On the host, the same code runs against a small test archive served locally.
-- Open point: whether the archive can be unpacked within the device's memory is not known yet (R1 in
-  section 6). If it cannot, this requirement comes back here to be changed.
+- Acceptance: on the reference device with an empty home folder and Wi-Fi, the steps on the screen end,
+  within two minutes‡, with all of HVSC listed in the browser and a chosen tune playing. On the host, the
+  same code runs against a local test server.
 
 **REQ-081 Progress, cancel, try again.** The download shows what it is doing and how far it has got, and can
 be cancelled at any point. A download that was interrupted can be continued or started again cleanly. Until
@@ -489,8 +503,8 @@ the new collection is complete, the old one stays in place and usable.
 - Acceptance: cancelling at 50 % leaves the previous collection untouched and no leftover files larger than
   the partial download; cutting the network mid-way and retrying completes the download.
 
-**REQ-082 Check there is room.** Before downloading, the app checks that the storage has room for the archive
-and the unpacked collection together, with a margin, and says how much is needed if not.
+**REQ-082 Check there is room.** Before downloading, the app checks that the storage has room for what it is
+about to download and unpack, with a margin, and says how much is needed if not.
 - Why: a full microSD card can stop the whole system from working.
 - Priority: Must
 - Acceptance: with a test file system too small, the download does not start and the message names the
@@ -502,14 +516,16 @@ files are settings, with HVSC's own site and the mirror it links to as defaults.
 - Priority: Must
 - Acceptance: pointing the settings at a local test server makes all downloads go there and nowhere else.
 
-**REQ-084 Newer releases.** The app shows which HVSC release is installed. When asked, it checks whether a
-newer one exists and can install it by downloading the complete archive again. It does not apply HVSC's
-update packs.
+**REQ-084 Newer releases.** The app shows which HVSC release its documents are from. When asked, it checks
+whether a newer one exists and can move to it by downloading the documents again. A tune that the new release
+changed is fetched again the next time it is played. A complete local collection (REQ-089) is brought up to
+date by downloading the complete archive again. The app does not apply HVSC's update packs.
 - Why: two releases a year; the update packs need HVSC's own tool, which is not available for the device
   (CON-15).
 - Priority: Should
-- Acceptance: with release 84 installed and a test server offering 85, "check for a newer release" reports 85
-  and installing it leaves 85 in place; playlists still resolve (REQ-102).
+- Acceptance: with release 84 set up and a test server offering 85, "check for a newer release" reports 85;
+  after moving to it the browser lists what 85 lists, a tune whose content changed is fetched again when
+  played, and playlists still resolve (REQ-102).
 
 **REQ-085 HVSC's terms are shown.** Before the first download the app shows where the collection comes from
 and HVSC's copyright notice, and the user confirms.
@@ -518,13 +534,15 @@ and HVSC's copyright notice, and the user confirms.
 - Acceptance: the download does not start until the notice has been shown and confirmed; the notice can be
   read again from the About screen.
 
-**REQ-086 Works without a network.** Everything except downloading works with no network. The app contacts
-the network only when the user starts a download, a fetch or a check, and never by itself.
+**REQ-086 Works without a network.** Everything except downloading works with no network: every tune that is
+on the device can be browsed, searched for and played. Tunes that have not been fetched yet are shown as not
+on the device. The app contacts the network only when the user starts a download or a check, or plays a tune
+that has to be fetched (REQ-088), and never otherwise.
 - Why: a pocket computer is often offline, and an app that goes online by itself owes its users and the store
   an explanation.
 - Priority: Must
 - Acceptance: a host test runs every other feature with networking forbidden and counts zero attempts to
-  connect; starting the app makes no connection.
+  connect; starting the app makes no connection; playing a tune that is on the device makes none.
 
 **REQ-087 No music and no ROMs in the package.** The package contains no part of HVSC, no other tunes and no
 C64 ROMs. Test fixtures in the repository are tunes written for this project or generated by it.
@@ -533,19 +551,49 @@ C64 ROMs. Test fixtures in the repository are tunes written for this project or 
 - Acceptance: a check of the built `.deb` and of the repository finds no `.sid` file that is not one of the
   project's own fixtures, and no ROM images.
 
+**REQ-088 Play HVSC without downloading all of it.** Once HVSC is set up (REQ-080), the browser shows every
+tune HVSC lists, whether or not its file is on the device, and marks the ones that are not. Playing such a
+tune fetches that one file from HVSC's site, checks it against the MD5 in HVSC's song length database, keeps
+it at its HVSC path in the collection folder, and plays it. Unattended playback fetches each next tune when
+its turn comes, one at a time. The app fetches only tunes that are about to be played or that the user asked
+for (REQ-104), never the collection in bulk.
+- Why: the owner's decision of 25 November 2026, resolving FIND-006. It gives a usable collection within a
+  minute instead of depending on an archive the device may not be able to unpack. One request per tune played
+  is how HVSC's own site is used; fetching 61,157 files in bulk would be misuse of it.
+- Priority: Must
+- Acceptance: against a local test server: after set-up the browser lists a tune that is not on the device,
+  marked as such; playing it makes exactly one request, for that file, stores the file at its HVSC path and
+  plays it; playing it again makes no request; a file whose MD5 differs from the database's is rejected with
+  a message and not stored; with no network the tune says it cannot be fetched, and unattended playback
+  moves on to the next tune that is on the device; stepping quickly past 50 tunes that are not on the device
+  fetches only the one landed on.
+
+**REQ-089 Download all of HVSC when the device can.** The user can ask for the complete collection to be
+downloaded and unpacked, so that everything plays without a network. The app offers this only when a check of
+free memory and storage says the device can do it. Otherwise it says why not, and explains how to copy a
+collection from another computer.
+- Why: this was REQ-080 before FIND-006. Unpacking the complete archive needs 364 MB of memory at its peak
+  (CON-22), which the device may or may not have.
+- Priority: Should
+- Acceptance: on the host, with a small test archive served locally, the steps end with the complete tree in
+  the collection folder; with the memory check made to fail, the download is not offered and the explanation
+  is shown. On the reference device the on-device run records whether the check passes and, if it does,
+  that the complete download ends with every tune on the device.
+
 ### 4.9 Searching
 
 **REQ-090 Search the collection.** The user can type words and get the tunes whose title, author, released
 line or path contain words starting with them, in any order and without regard to case, as HVSC's own site
-search does ("hub 1985" finds Rob Hubbard's tunes of 1985). A result can be played, or opened in the browser
-at its folder. The search works without a network.
+search does ("hub 1985" finds Rob Hubbard's tunes of 1985). For a tune that has not been fetched yet
+(REQ-088) only its path is known, which holds the composer's folder and the file name. A result can be played,
+or opened in the browser at its folder. The search works without a network.
 - Why: asked for directly: "search and play from HVSC".
 - Priority: Must
 - Acceptance: on a test collection of known tunes, a table of queries gives exactly the expected results; on
   the reference device with HVSC #85, results for a two-word query appear within 500 ms‡.
 
-**REQ-091 The index builds itself.** What the search needs is built in the background from the tunes
-themselves, with progress shown. Browsing and playing work meanwhile. The index is kept between runs, rebuilt
+**REQ-091 The index builds itself.** What the search needs is built in the background from HVSC's list of
+tunes and from the tunes on the device, with progress shown. Browsing and playing work meanwhile. The index is kept between runs, rebuilt
 when the collection changes, and building it resumes if it was interrupted. On the reference device the
 first build of HVSC #85 takes 5 minutes‡ or less and causes no underruns in a tune playing at the same time.
 - Why: reading 61,157 files takes minutes on a microSD card. It cannot be done at every start, or while the
@@ -560,7 +608,7 @@ first build of HVSC #85 takes 5 minutes‡ or less and causes no underruns in a 
 - Acceptance: each filter removes exactly the non-matching tunes of the test collection.
 
 **REQ-093 Search HVSC online.** With a network, the user can search HVSC's site for tunes that are not on the
-device and fetch one (REQ-104).
+device and fetch one (REQ-088).
 - Why: it would let the app be useful without the full collection. It depends on a search address on HVSC's
   site that is not documented or offered for other software to use.
 - Priority: Could, and only if HVSC's maintainers agree
@@ -593,22 +641,24 @@ MD5. A tune outside the collection is referred to by its full path.
 - Acceptance: after a folder in the test collection is renamed, every entry of a playlist that pointed into it
   still plays.
 
-**REQ-103 Missing tunes do not break a playlist.** An entry whose tune is not on the device is shown as
-missing and skipped when playing. It stays in the playlist.
+**REQ-103 Missing tunes do not break a playlist.** An entry whose tune is neither on the device nor in HVSC's
+list of tunes is shown as missing and skipped when playing. It stays in the playlist. An entry whose tune
+HVSC lists, but that has not been fetched yet, is not missing: it is fetched when it is played, like any such
+tune (REQ-088).
 - Why: playlists outlive the collection they were made with: releases change, and playlists get shared.
 - Priority: Must, if playlists are in
 - Acceptance: a playlist of a present, a missing and a present tune plays the two present ones and shows the
-  middle one as missing.
+  middle one as missing, and still holds three entries afterwards.
 
-**REQ-104 Fetch single tunes.** A missing entry that has an HVSC path can be downloaded by itself and put in
-its place in the collection folder. "Fetch what is missing" does this for a whole playlist, one file at a
+**REQ-104 Fetch a playlist's tunes ahead.** "Fetch what is missing" downloads the tunes of a playlist that
+HVSC lists and that are not on the device yet, each to its place in the collection folder, one file at a
 time, up to a limit of 200‡ files per request. The app never downloads tunes the user has not asked for.
 - Why: asked for directly: playlists that download single files, or just link to files in the collection.
   HVSC's site serves single files (CON-15); fetching them in bulk would be misuse of it.
 - Priority: Should
-- Acceptance: against a local test server, fetching a missing entry makes it playable and stores it at its
-  HVSC path; a playlist with 250 missing entries fetches 200 and says so; the server's log shows only the
-  files asked for.
+- Acceptance: against a local test server, a playlist with three such entries fetches three files and stores
+  each at its HVSC path; one with 250 fetches 200 and says so; the server's log shows only the files asked
+  for.
 
 **REQ-105 Import playlists from other SID players.** The app can read playlists that other players write and
 turn them into its own:
@@ -695,7 +745,7 @@ with `..` in them, and links and device files. It stops if the total size or the
 a limit. It unpacks only into a new folder of its own and moves the result into place when complete.
 - Why: an archive from the network is untrusted, and unpacking is the classic way for a file to be written
   where it should not be.
-- Priority: Must, with REQ-080
+- Priority: Must, with REQ-089
 - Acceptance: test archives with each of those tricks are rejected with nothing written outside the new
   folder.
 
@@ -737,6 +787,14 @@ presses, and any key brings it back.
 - Priority: Could
 - Acceptance: on-device checklist: leave a tune playing for two minutes; it plays to its end whatever the
   screen does.
+
+**REQ-129 Brightness keys.** `fn`+U and `fn`+I lower and raise the screen's brightness on every screen, when
+the system lets the app change it, and the app shows the new level briefly.
+- Why: the system leaves these keys to the app while it runs, as it does the volume keys (CON-09). Without
+  this, two keys printed on the keyboard do nothing in SidPlayZero.
+- Priority: Should
+- Acceptance: against a fake backlight, each key requests the expected change; on the reference device the
+  brightness changes, or the results file records that the app is not allowed to change it.
 
 ### 4.13 The package and how it is offered
 
@@ -876,7 +934,7 @@ view when the priorities are set.
 
 | Id | Open point | How it gets settled |
 |---|---|---|
-| R1 | Can the device unpack the complete HVSC archive? It is a "solid" 7-Zip archive; some of HVSC's archives have used compression methods that need a lot of memory or that some unpackers lack | Reach the mirror, inspect the archive, unpack it with the candidate library under a 256 MB limit. The fall-backs are an external `7z` program as a dependency, or fetching single files |
+| R1 | Can the device unpack the complete HVSC archive? It is a "solid" 7-Zip archive; some of HVSC's archives have used compression methods that need a lot of memory or that some unpackers lack | Settled in Phase 2: it cannot be relied on (CON-22). This became FIND-006 and changed REQ-080 |
 | R2 | How fast are the engines on the device? | The benchmark part of `tools/device-probe.sh` |
 | R3 | Which engine library, and how does it reach the device: Debian's 2.12.0 as a dependency (has reSID; no USBSID; not checked for CVE-2026-111148), or a pinned newer release built into the package (has USBSID and the fixes; reSID is replaced by sidlite)? | Decided in the specification from R2 and from whether REQ-111 is in |
 | R4 | Link the engine library, or drive the `sidplayfp` program? | The evidence so far favours linking: the app is an ordinary process and may use threads (CON-03), and only the library lets the app fix the power-on delay (CON-20), mute voices and switch subtunes directly. The specification records the choice |
@@ -898,8 +956,10 @@ Already decided, and built into the requirements above:
 | The engine is sidplayfp's unless something better is shown | REQ-056 |
 | The licence is GPL-3 | REQ-144 |
 | The source is public, at github.com/mselin/sidplayzero | REQ-143 |
+| HVSC is set up for use on demand; the complete download is offered only when the device can unpack it | REQ-080, REQ-088, REQ-089 |
 
-Still open:
+Asked at the time of approval. Points 1, 2, 5, 6, 8 and 9 were accepted as proposed when the requirements
+were approved on 25 November 2026. Points 3, 4 and 7 are still wanted:
 
 1. **Priorities.** Are the proposed priorities right? In particular the set of Musts, which defines 1.0:
    browsing, playing with song lengths, the now-playing view, volume and output, real-time speed, the key
