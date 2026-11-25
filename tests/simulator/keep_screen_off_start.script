@@ -1,0 +1,6 @@
+# SPEC-207 SPEC-200 a start that finds backlight_saved = 70 in state.ini sets the backlight to 70
+# parts: screen-off
+# fixture: keep/state_backlight_70.ini .local/state/sidplayzero/state.ini
+# fakes: fakes/keep_backlight_dark
+expect-log backlight contains "set 70"
+expect screen = empty

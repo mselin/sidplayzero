@@ -1,0 +1,20 @@
+# SPEC-202 SPEC-132 at start the app removes the temporary files a killed run left in its own folders, and those in a folder of the collection as it lists it
+# fixture: collections/85/C64Music C64Music
+# fixture: keep/settings_comments.ini .config/sidplayzero/.settings.ini.tmp-sidplayzero
+# fixture: keep/settings_comments.ini .local/state/sidplayzero/.state.ini.tmp-sidplayzero
+# fixture: keep/settings_comments.ini .cache/sidplayzero/.index.bin.tmp-sidplayzero
+# fixture: keep/settings_comments.ini .local/share/sidplayzero/playlists/.Favourites.m3u8.tmp-sidplayzero
+# fixture: tunes/two_sid.sid C64Music/.Top.sid.tmp-sidplayzero
+# fixture: tunes/two_sid.sid C64Music/DEMOS/.Other.sid.tmp-sidplayzero
+expect screen = browser
+expect title = /
+expect-file .config/sidplayzero/.settings.ini.tmp-sidplayzero absent
+expect-file .local/state/sidplayzero/.state.ini.tmp-sidplayzero absent
+expect-file .cache/sidplayzero/.index.bin.tmp-sidplayzero absent
+expect-file .local/share/sidplayzero/playlists/.Favourites.m3u8.tmp-sidplayzero absent
+expect-file C64Music/.Top.sid.tmp-sidplayzero absent
+key Enter
+expect title = /DEMOS
+expect list.total = 1
+expect-file C64Music/DEMOS/.Other.sid.tmp-sidplayzero absent
+expect-file C64Music/DEMOS/A-F/Clock_Demo.sid exists

@@ -1,0 +1,15 @@
+# a file with every kind of fault that SPEC-133 names, and a key of a later version
+engine = fast
+this line is not a setting
+default_length = 0:04
+default_length = 60:00
+future_key = kept and otherwise ignored
+= a value with no key
+engine
+current_path = /MUSICIANS/../../etc/passwd.sid
+current_subtune = many
+queue_kind = shelf
+notice_accepted = perhaps
+backlight_saved = bright
+url_files = http://not.https.example.org/
+url_archive = https://mirror.example.org/no-release-in-it.7z

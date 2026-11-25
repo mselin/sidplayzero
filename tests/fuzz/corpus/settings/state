@@ -1,0 +1,9 @@
+browser_folder = /MUSICIANS/T/Tester_Tom
+browser_entry = New_Chip.sid
+current_path = /MUSICIANS/T/Tester_Tom/Three_Songs.sid
+current_subtune = 3
+queue_kind = folder
+queue_source = /MUSICIANS/T/Tester_Tom
+queue_place = 6
+notice_accepted = on
+backlight_saved = 70

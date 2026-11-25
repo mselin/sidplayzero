@@ -1,0 +1,11 @@
+# SPEC-133 started twice with a faulty settings file that is not saved in between, the second copy is settings.ini.bad.2
+# fixture: keep/settings_noise.ini .config/sidplayzero/settings.ini
+# fixture: keep/settings_noise.ini original.ini
+expect notice.id = MSG_SETTINGS_RESET
+expect-file .config/sidplayzero/settings.ini.bad equals original.ini
+restart
+expect notice.id = MSG_SETTINGS_RESET
+expect-file .config/sidplayzero/settings.ini.bad equals original.ini
+expect-file .config/sidplayzero/settings.ini.bad.2 equals original.ini
+expect-file .config/sidplayzero/settings.ini.bad.3 absent
+expect-file .config/sidplayzero/settings.ini equals original.ini
