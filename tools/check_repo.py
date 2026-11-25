@@ -364,8 +364,8 @@ def tests_in(rel, text):
 
 # SPEC-256: from the Phase 4 gate on, every item has a test at each of its levels other than the device,
 # and each item with the device level is named in the device checklist. Switched on when Phase 4's tests
-# are all written; `--untested` lists what is missing at any time.
-EVERY_ITEM_HAS_A_TEST = False
+# are all written (25 November 2026); `--untested` lists what is missing at any time.
+EVERY_ITEM_HAS_A_TEST = True
 
 TEST_LEVELS = (  # the first folder that fits decides
     ("tests/framework/sim/", "simulator"),

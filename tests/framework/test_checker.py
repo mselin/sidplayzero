@@ -12,7 +12,7 @@ from pathlib import Path
 
 from support import ROOT, run
 
-COPIED = ["docs", ".github/workflows", "tests/waiting.tsv"]
+COPIED = ["docs", ".github/workflows", "tests"]
 
 
 class CheckerCase(unittest.TestCase):
@@ -22,7 +22,7 @@ class CheckerCase(unittest.TestCase):
             source, target = ROOT / name, self.folder / name
             target.parent.mkdir(parents=True, exist_ok=True)
             if source.is_dir():
-                shutil.copytree(source, target)
+                shutil.copytree(source, target, ignore=shutil.ignore_patterns("fixtures", "__pycache__"))
             elif source.exists():
                 shutil.copy(source, target)
 
@@ -167,6 +167,24 @@ class Tests(CheckerCase):
         self.add("tests/integration/test_x.py",
                  'import unittest\n\nclass X(unittest.TestCase):\n    def test_a(self):\n        """TF-999 x"""\n')
         self.refused("TF-999 is not defined")
+
+
+    def test_item_without_a_test(self):
+        """SPEC-256 an item with no test at one of its levels is reported, and one with tests at all of them is not"""
+        self.assertEqual(self.check()[0], 0)
+        for path in (self.folder / "tests").rglob("*"):
+            if path.is_file() and "SPEC-097" in path.read_text(encoding="utf-8", errors="replace"):
+                if path.name != "waiting.tsv":
+                    path.unlink()
+        status, output = self.check()
+        self.assertNotEqual(status, 0)
+        self.assertIn("SPEC-097 has no test at the host-unit level (SPEC-256)", output)
+        self.assertIn("SPEC-097 has no test at the simulator level (SPEC-256)", output)
+
+    def test_device_item_needs_the_checklist(self):
+        """SPEC-256 SPEC-260 an item with the device level is reported when the device checklist does not name it"""
+        self.change("docs/device-checklist.md", "SPEC-207", "SPEC-2O7", count=99)
+        self.refused("SPEC-207 has no test at the device level (SPEC-256)")
 
 
 class Music(CheckerCase):
