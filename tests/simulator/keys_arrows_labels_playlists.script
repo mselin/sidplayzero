@@ -1,0 +1,19 @@
+# SPEC-093 SPEC-095 on the browser the keys 6, 7 and 8 trigger Lists, Fav and Add
+# parts: playlists
+# fixture: tunes/commando_test.sid C64Music/A_Commando.sid
+# fixture: tunes/three_subtunes.sid C64Music/B_Three.sid
+# fixture: tunes/two_sid.sid C64Music/C_Two.sid
+expect screen = browser
+expect actions[2] = Lists
+expect actions[3] = Fav
+expect actions[4] = Add
+key 7
+expect notice.id = MSG_FAV_ADDED
+expect rows[0].marks contains favourite
+key 8
+expect panel.id = pick-playlist
+key Esc
+expect panel = null
+key 6
+expect screen = playlists
+expect stack = ["browser","playlists"]

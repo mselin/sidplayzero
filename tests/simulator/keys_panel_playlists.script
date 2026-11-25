@@ -1,0 +1,59 @@
+# SPEC-114 the panels of the part playlists open by their keys with their identifiers, ESC closes each, and the keys 4 to 8 do nothing while one is open
+# parts: playlists
+# fixture: tunes/commando_test.sid C64Music/A_Commando.sid
+# fixture: tunes/three_subtunes.sid C64Music/B_Three.sid
+# fixture: tunes/two_sid.sid C64Music/C_Two.sid
+# args: --backend fake
+expect screen = browser
+# "Add" in the browser
+key 8
+expect panel.id = pick-playlist
+expect place = pick-playlist
+key 4
+key 5
+key 6
+key 7
+key 8
+expect panel.id = pick-playlist
+expect screen = browser
+expect stack = ["browser"]
+key Esc
+expect panel = null
+# "More" on the now-playing screen
+key Enter
+expect screen = playing
+key 8
+expect panel.id = more-playing
+expect place = more-playing
+key 4
+key 5
+expect panel.id = more-playing
+expect screen = playing
+expect player.state = playing
+key Esc
+expect panel = null
+expect screen = playing
+key Esc
+# "Import" in Playlists
+key 6
+expect screen = playlists
+key 8
+expect panel.id = import
+expect place = import
+key 4
+expect panel.id = import
+expect screen = playlists
+key Esc
+expect panel = null
+# "More" in a playlist
+key Enter
+expect screen = playlist
+key 8
+expect panel.id = more-playlist
+expect place = more-playlist
+key 4
+expect panel.id = more-playlist
+expect screen = playlist
+key Esc
+expect panel = null
+expect stack = ["browser","playlists","playlist"]

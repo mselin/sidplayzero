@@ -1,0 +1,29 @@
+# SPEC-103 the About screen names the libraries and the licence, key 4 is "Back", and key 5, "Notice", opens a text panel that begins with HVSC's notice
+# fixture: tunes/commando_test.sid C64Music/A_Commando.sid
+# fixture: tunes/three_subtunes.sid C64Music/B_Three.sid
+# fixture: tunes/two_sid.sid C64Music/C_Two.sid
+expect screen = browser
+key Tab
+key 8
+expect screen = about
+expect place = about
+expect actions[0] = Back
+expect actions[1] = Notice
+expect actions[2] = ""
+expect actions[3] = ""
+expect actions[4] = ""
+expect text contains SidPlayZero
+expect text contains "libsidplayfp 3.1.2"
+expect text contains "libresidfp 1.3.0"
+expect text contains GPL-3.0-or-later
+key 5
+expect panel.id = text
+expect panel.text matches "^SidPlayZero can fetch music from the High Voltage SID Collection \(HVSC\), a free collection kept by the HVSC crew at hvsc\.c64\.org\."
+expect panel.text contains "All of the tunes available in the High Voltage SID Collection (HVSC) are copyrighted."
+expect panel.text contains "It does not contain HVSC's files and does not pass them on."
+key Enter
+expect panel = null
+expect screen = about
+key 4
+expect screen = settings
+expect stack = ["browser","settings"]

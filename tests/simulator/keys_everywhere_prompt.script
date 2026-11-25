@@ -1,0 +1,69 @@
+# SPEC-092 SPEC-099 in the text prompt the keys of `always` act, and P, L and Space are typed and do nothing else
+# fixture: tunes/commando_test.sid C64Music/A_Commando.sid
+# fixture: tunes/three_subtunes.sid C64Music/B_Three.sid
+# fixture: tunes/two_sid.sid C64Music/C_Two.sid
+# args: --backend fake
+expect screen = browser
+key Down
+key Enter
+expect screen = playing
+expect player.state = playing
+expect player.path = /B_Three.sid
+key Tab
+key End
+key Enter
+expect panel.id = prompt
+expect place = prompt
+expect typing = true
+# the keys of `always`: play or pause, next and previous tune
+key PlayPause
+expect player.state = paused
+key PlayPause
+expect player.state = playing
+key Next
+expect player.path = /C_Two.sid
+key Previous
+expect player.path = /B_Three.sid
+expect player.state = playing
+# volume and mute, from the fake's 50 %
+key VolumeUp
+expect notice.id = MSG_VOLUME
+expect notice.text = "Volume 55 %"
+expect-log volume contains "set 55"
+key VolumeDown
+expect notice.text = "Volume 50 %"
+expect-log volume contains "set 50"
+key Mute
+expect notice.id = MSG_VOLUME
+expect notice.text = Muted
+expect-log volume contains toggle_mute
+key Mute
+# help opens over it and closes again
+key Help
+expect place = help
+expect help != null
+key Help
+expect help = null
+expect place = prompt
+expect panel.id = prompt
+# P, L and Space are typed
+key End
+key P
+key L
+key Space
+expect panel.fields matches "pl .[,}]"
+expect panel.id = prompt
+expect screen = settings
+expect stack = ["browser","playing","settings"]
+expect player.state = playing
+# TAB is no key here
+key Tab
+expect panel.id = prompt
+expect stack = ["browser","playing","settings"]
+expect panel.fields matches "pl .[,}]"
+# ESC cancels the prompt and closes no screen; held, it leaves
+key Esc
+expect panel = null
+expect typing = false
+expect screen = settings
+hold Esc 1000

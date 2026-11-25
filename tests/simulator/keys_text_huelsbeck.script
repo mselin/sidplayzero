@@ -1,0 +1,22 @@
+# SPEC-098 the tune titled "Hülsbeck Tëst", with its 32-character author, gives lines that hold those strings exactly
+# fixture: collections/85/C64Music C64Music
+# args: --backend fake
+expect screen = browser
+key End
+expect rows[2].text = MUSICIANS
+expect rows[2].highlighted = true
+key Enter
+expect title = /MUSICIANS
+key Enter
+key Down
+key Enter
+expect title = /MUSICIANS/H/Huelsbeck_Chris
+expect rows[0].text = Huelsbeck_Test.sid
+key Enter
+expect screen = playing
+expect player.path = /MUSICIANS/H/Huelsbeck_Chris/Huelsbeck_Test.sid
+expect lines[0] = "Hülsbeck Tëst"
+expect lines[1] = "Thirty-two characters of author!"
+expect lines[2] = "1988 Thirty-two chars released."
+expect text contains "Hülsbeck Tëst"
+expect text contains "Thirty-two characters of author!"

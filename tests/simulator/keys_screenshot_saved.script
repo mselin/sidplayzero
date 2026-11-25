@@ -1,0 +1,12 @@
+# SPEC-108 Print Screen shows MSG_SCREENSHOT_SAVED with the path of a file named sidplayzero_YYYYMMDD_HHMMSS_mmm.png in Pictures/Screenshots
+# parts: screenshot
+# fixture: tunes/commando_test.sid C64Music/A_Commando.sid
+# fixture: tunes/three_subtunes.sid C64Music/B_Three.sid
+# fixture: tunes/two_sid.sid C64Music/C_Two.sid
+expect screen = browser
+expect-file Pictures absent
+key PrintScreen
+expect notice.id = MSG_SCREENSHOT_SAVED
+expect notice.text matches "^Saved.*Pictures/Screenshots/sidplayzero_[0-9]{8}_[0-9]{6}_[0-9]{3}\.png$"
+expect-file Pictures/Screenshots exists
+expect screen = browser

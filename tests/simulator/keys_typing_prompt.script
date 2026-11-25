@@ -1,0 +1,41 @@
+# SPEC-099 in a text prompt TAB, Up and Down do nothing, ESC cancels and Enter accepts
+# fixture: tunes/commando_test.sid C64Music/A_Commando.sid
+# fixture: tunes/three_subtunes.sid C64Music/B_Three.sid
+# fixture: tunes/two_sid.sid C64Music/C_Two.sid
+expect screen = browser
+key Tab
+key End
+key Enter
+expect panel.id = prompt
+expect typing = true
+key End
+type /x
+expect panel.fields matches "/x.[,}]"
+key Tab
+key Up
+key Down
+expect panel.id = prompt
+expect panel.fields matches "/x.[,}]"
+expect stack = ["browser","settings"]
+# the edit keys work as in any field
+key Left
+key Backspace
+expect panel.fields matches "[^/]x.[,}]"
+key End
+key Backspace
+type /y
+expect panel.fields matches "/y.[,}]"
+# ESC cancels: nothing is saved, and the value is as it was
+key Esc
+expect panel = null
+expect typing = false
+key Enter
+expect panel.id = prompt
+expect panel.fields matches "^(?!.*/y.[,}])"
+# Enter accepts, and the change is saved at once
+key End
+type /y
+key Enter
+expect panel = null
+expect typing = false
+expect-file .config/sidplayzero/settings.ini contains "/y"

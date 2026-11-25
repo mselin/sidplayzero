@@ -1,0 +1,35 @@
+# SPEC-090 Playlists and Playlist open by their keys, playing an entry opens now playing, and from the deepest stack five presses of ESC reach the browser
+# parts: playlists
+# fixture: tunes/commando_test.sid C64Music/A_Commando.sid
+# fixture: tunes/three_subtunes.sid C64Music/B_Three.sid
+# fixture: tunes/two_sid.sid C64Music/C_Two.sid
+# args: --backend fake
+expect screen = browser
+key 7
+expect notice.id = MSG_FAV_ADDED
+# key 6 in the browser opens Playlists
+key 6
+expect screen = playlists
+expect stack = ["browser","playlists"]
+expect place = playlists
+# Enter in Playlists opens the playlist
+key Enter
+expect screen = playlist
+expect stack = ["browser","playlists","playlist"]
+expect place = playlist
+# playing a tune from a playlist opens now playing
+key Enter
+expect screen = playing
+expect stack = ["browser","playlists","playlist","playing"]
+expect player.path = /A_Commando.sid
+key Tab
+key 5
+expect stack = ["browser","playlists","playlist","playing","settings","hvsc"]
+key Esc
+key Esc
+key Esc
+key Esc
+expect stack = ["browser","playlists"]
+key Esc
+expect stack = ["browser"]
+expect screen = browser

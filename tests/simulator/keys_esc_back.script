@@ -1,0 +1,24 @@
+# SPEC-106 a press of ESC released within 500 ms is "back", and acts when it is released
+# fixture: tunes/commando_test.sid C64Music/A_Commando.sid
+# fixture: tunes/three_subtunes.sid C64Music/B_Three.sid
+# fixture: tunes/two_sid.sid C64Music/C_Two.sid
+expect screen = browser
+key Tab
+expect screen = settings
+press Esc
+expect screen = settings
+advance 200
+expect screen = settings
+expect notice = null
+release Esc
+expect screen = browser
+expect stack = ["browser"]
+key Tab
+key 8
+expect stack = ["browser","settings","about"]
+hold Esc 200
+expect stack = ["browser","settings"]
+expect notice = null
+hold Esc 490
+expect stack = ["browser"]
+expect notice = null

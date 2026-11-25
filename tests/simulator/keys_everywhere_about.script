@@ -1,0 +1,73 @@
+# SPEC-092 on the About screen each key of `always`, of `lists` and of `screens` has its effect
+# fixture: tunes/commando_test.sid C64Music/A_Commando.sid
+# fixture: tunes/three_subtunes.sid C64Music/B_Three.sid
+# fixture: tunes/two_sid.sid C64Music/C_Two.sid
+# args: --backend fake
+expect screen = browser
+key Down
+key Enter
+expect screen = playing
+expect player.state = playing
+expect player.path = /B_Three.sid
+key Tab
+key 8
+expect screen = about
+# the keys of `always`: play or pause, next and previous tune
+key PlayPause
+expect player.state = paused
+key PlayPause
+expect player.state = playing
+key Next
+expect player.path = /C_Two.sid
+key Previous
+expect player.path = /B_Three.sid
+expect player.state = playing
+# volume and mute, from the fake's 50 %
+key VolumeUp
+expect notice.id = MSG_VOLUME
+expect notice.text = "Volume 55 %"
+expect-log volume contains "set 55"
+key VolumeDown
+expect notice.text = "Volume 50 %"
+expect-log volume contains "set 50"
+key Mute
+expect notice.id = MSG_VOLUME
+expect notice.text = Muted
+expect-log volume contains toggle_mute
+key Mute
+# help opens over it and closes again
+key Help
+expect place = help
+expect help != null
+key Help
+expect help = null
+expect place = about
+# the keys of `lists` scroll the text; the screen stays
+key Down
+key Up
+key PageDown
+key PageUp
+key End
+key Home
+expect screen = about
+expect place = about
+expect stack = ["browser","playing","settings","about"]
+# the keys of `screens`
+key Space
+expect player.state = paused
+key Space
+expect player.state = playing
+key P
+expect screen = playing
+expect stack = ["browser","playing"]
+key Tab
+key 8
+expect screen = about
+key Tab
+expect screen = settings
+expect stack = ["browser","playing","settings"]
+key 8
+# ESC closes the screen; held, it leaves
+key Esc
+expect screen = settings
+hold Esc 1000

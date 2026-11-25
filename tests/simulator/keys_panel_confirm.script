@@ -1,0 +1,61 @@
+# SPEC-114 SPEC-092 the confirm panel opens on "Stop", Enter is yes and ESC is no, and the keys 4 to 8, TAB, Space, P and L do nothing while it is open
+# fakes: fakes/keys_setup_stalled
+# fixture: tunes/commando_test.sid C64Music/A_Commando.sid
+expect screen = browser
+key Tab
+key 5
+expect screen = hvsc
+key Enter
+expect panel.id = notice-panel
+key Enter
+expect panel = null
+expect job.kind = setup
+expect actions[1] = Stop
+key 5
+expect panel.id = confirm
+expect place = confirm
+expect text contains "Stop the download?"
+# ESC is no: the job goes on
+key Esc
+expect panel = null
+expect job.kind = setup
+expect screen = hvsc
+key 5
+expect panel.id = confirm
+# the keys 4 to 8 do nothing while the panel is open
+key 4
+expect panel.id = confirm
+expect screen = hvsc
+key 5
+expect panel.id = confirm
+key 6
+key 7
+key 8
+expect panel.id = confirm
+expect screen = hvsc
+expect stack = ["browser","settings","hvsc"]
+expect job.kind = setup
+# a panel takes the keys: TAB, Space, P and L, the keys of `screens`, do nothing
+key Tab
+expect panel.id = confirm
+expect stack = ["browser","settings","hvsc"]
+key Space
+expect panel.id = confirm
+key P
+expect panel.id = confirm
+expect stack = ["browser","settings","hvsc"]
+key L
+expect panel.id = confirm
+expect screen = hvsc
+expect job.kind = setup
+# help can be open over the panel
+key Help
+expect place = help
+expect panel.id = confirm
+key Help
+expect place = confirm
+# Enter is yes: the job stops
+key Enter
+expect panel = null
+expect job = null
+expect screen = hvsc

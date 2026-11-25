@@ -1,0 +1,34 @@
+# SPEC-113 a notice takes no keys: a key pressed while one shows has its usual effect
+# fixture: tunes/commando_test.sid C64Music/A_Commando.sid
+# fixture: tunes/three_subtunes.sid C64Music/B_Three.sid
+# fixture: tunes/two_sid.sid C64Music/C_Two.sid
+# args: --backend fake
+expect screen = browser
+key VolumeUp
+expect notice.id = MSG_VOLUME
+key Down
+expect rows[1].highlighted = true
+expect position = 2/3
+expect notice.id = MSG_VOLUME
+key Tab
+expect screen = settings
+expect notice.id = MSG_VOLUME
+key 8
+expect screen = about
+expect notice.id = MSG_VOLUME
+key Esc
+expect screen = settings
+key Esc
+expect screen = browser
+key 5
+expect place = search-field
+type ab
+expect fields contains ""text":"ab""
+expect notice.id = MSG_VOLUME
+key Esc
+key Enter
+expect screen = playing
+expect player.path = /B_Three.sid
+expect notice.id = MSG_VOLUME
+advance 3000
+expect notice = null

@@ -1,0 +1,14 @@
+# SPEC-104 with a backlight that cannot be changed, the notice is MSG_BRIGHTNESS_UNAVAILABLE
+# parts: brightness
+# fixture: tunes/commando_test.sid C64Music/A_Commando.sid
+# fixture: tunes/three_subtunes.sid C64Music/B_Three.sid
+# fixture: tunes/two_sid.sid C64Music/C_Two.sid
+expect screen = browser
+fake backlight.writable no
+key BrightnessUp
+expect notice.id = MSG_BRIGHTNESS_UNAVAILABLE
+expect notice.text = "The brightness cannot be changed on this device"
+advance 3000
+expect notice = null
+key BrightnessDown
+expect notice.id = MSG_BRIGHTNESS_UNAVAILABLE

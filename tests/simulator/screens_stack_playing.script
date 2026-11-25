@@ -1,0 +1,20 @@
+# SPEC-090 playing a tune from the browser and from Search opens now playing on top of the stack
+# fixture: tunes/commando_test.sid C64Music/A_Commando.sid
+# fixture: tunes/three_subtunes.sid C64Music/B_Three.sid
+# fixture: tunes/two_sid.sid C64Music/C_Two.sid
+# args: --backend fake
+expect screen = browser
+key Enter
+expect screen = playing
+expect stack = ["browser","playing"]
+expect player.path = /A_Commando.sid
+key Esc
+expect stack = ["browser"]
+key 5
+type three
+key Enter
+expect place = search-results
+key Enter
+expect screen = playing
+expect stack = ["browser","search","playing"]
+expect player.path = /B_Three.sid

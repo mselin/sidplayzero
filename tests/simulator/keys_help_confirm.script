@@ -1,0 +1,37 @@
+# SPEC-107 help over a confirm panel lists its row, then the `lists` rows, then the `always` rows, and has no line for TAB, Space, P or L
+# fakes: fakes/keys_setup_stalled
+# fixture: tunes/commando_test.sid C64Music/A_Commando.sid
+expect screen = browser
+key Tab
+key 5
+expect screen = hvsc
+key Enter
+expect panel.id = notice-panel
+key Enter
+expect job.kind = setup
+key 5
+expect panel.id = confirm
+key Help
+expect place = help
+expect panel.id = confirm
+# the panel's own row
+expect help[0] matches "^[Ee][Nn][Tt][Ee][Rr]\W.*Yes$"
+# a panel is no screen, so no `screens` rows follow; no text is typed, so the `lists` rows do
+expect help[1] matches "^fn\+F\W.*Up$"
+expect help[2] matches "^fn\+X\W.*Down$"
+expect help[3] matches "^fn\+L\W.*A screenful up$"
+expect help[4] matches "^fn\+M\W.*A screenful down$"
+expect help[5] matches "^fn\+K\W.*First entry$"
+expect help[6] matches "^fn\+N\W.*Last entry$"
+# then the `always` rows
+expect help[7] matches "^fn\+Q\W.*Play or pause$"
+expect help[8] matches "^fn\+W\W.*Previous tune$"
+expect help[9] matches "^fn\+E\W.*Next tune$"
+expect help[10] matches "^fn\+A\W.*Mute$"
+expect help[11] matches "^fn\+S\W.*Volume down$"
+expect help[12] matches "^fn\+D\W.*Volume up$"
+# Enter closes help, and does not answer the panel under it
+key Enter
+expect help = null
+expect panel.id = confirm
+expect job.kind = setup

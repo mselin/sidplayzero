@@ -1,0 +1,47 @@
+# SPEC-114 SPEC-091 the prompt panel opens on a text setting, Enter accepts and ESC cancels, and the keys 4 to 8 are typed, not obeyed
+# fixture: tunes/commando_test.sid C64Music/A_Commando.sid
+# fixture: tunes/three_subtunes.sid C64Music/B_Three.sid
+# fixture: tunes/two_sid.sid C64Music/C_Two.sid
+expect screen = browser
+key Tab
+key End
+key Enter
+expect panel.id = prompt
+expect place = prompt
+expect typing = true
+# while text is typed the action bar shows these two instead of its labels
+expect text contains "Enter: OK"
+expect text contains "ESC: cancel"
+expect actions[0] = ""
+expect actions[1] = ""
+expect actions[4] = ""
+# the keys 4 to 8 do not trigger "Back", "HVSC" or "About"
+key End
+key 4
+expect panel.id = prompt
+expect stack = ["browser","settings"]
+key 5
+expect panel.id = prompt
+expect stack = ["browser","settings"]
+key 6
+key 7
+key 8
+expect panel.id = prompt
+expect stack = ["browser","settings"]
+expect panel.fields matches "45678.[,}]"
+# ESC cancels
+key Esc
+expect panel = null
+expect typing = false
+expect screen = settings
+expect actions[0] = Back
+# Enter accepts
+key Enter
+expect panel.id = prompt
+expect panel.fields matches "^(?!.*45678)"
+key End
+type /x
+key Enter
+expect panel = null
+expect screen = settings
+expect-file .config/sidplayzero/settings.ini contains "/x"

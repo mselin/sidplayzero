@@ -1,0 +1,15 @@
+# SPEC-108 with the screenshots folder made unwritable, Print Screen shows MSG_SCREENSHOT_FAILED
+# parts: screenshot
+# fixture: tunes/commando_test.sid C64Music/A_Commando.sid
+# fixture: tunes/three_subtunes.sid C64Music/B_Three.sid
+# fixture: tunes/two_sid.sid C64Music/C_Two.sid
+expect screen = browser
+put fixtures/MANIFEST Pictures/Screenshots/keep.txt
+readonly Pictures/Screenshots
+key PrintScreen
+expect notice.id = MSG_SCREENSHOT_FAILED
+expect notice.text = "The screenshot could not be saved"
+writable Pictures/Screenshots
+advance 3000
+key PrintScreen
+expect notice.id = MSG_SCREENSHOT_SAVED

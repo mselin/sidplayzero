@@ -1,0 +1,33 @@
+# SPEC-101 a value that is not allowed gives the notice MSG_INVALID_VALUE and leaves the prompt open
+# fixture: tunes/commando_test.sid C64Music/A_Commando.sid
+# fixture: tunes/three_subtunes.sid C64Music/B_Three.sid
+# fixture: tunes/two_sid.sid C64Music/C_Two.sid
+expect screen = browser
+key Tab
+expect screen = settings
+key End
+key Enter
+expect panel.id = prompt
+# an address has to begin with https://
+key Home
+type x
+expect panel.fields contains ""text":"xhttps://"
+key Enter
+expect notice.id = MSG_INVALID_VALUE
+expect notice.text = "That value is not allowed"
+expect panel.id = prompt
+expect typing = true
+expect panel.fields contains ""text":"xhttps://"
+# cancelled, the setting is as it was
+key Esc
+expect panel = null
+key Enter
+expect panel.id = prompt
+expect panel.fields matches "^(?!.*xhttps)"
+# a value that is allowed is accepted
+key End
+type /x
+key Enter
+expect panel = null
+expect screen = settings
+expect-file .config/sidplayzero/settings.ini contains "/x"
