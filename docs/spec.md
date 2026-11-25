@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | **Draft 3, reviewed independently; every review item is closed; awaiting the owner's approval.** This is the Phase 2 artifact |
+| Status | **Approved by the owner on 25 November 2026**, after independent review in which every item was closed. This is the Phase 2 artifact |
 | Date | 25 November 2026 |
 | Derives from | [`requirements.md`](requirements.md), approved 25 November 2026, with the changes made for FIND-006 and FIND-010 to FIND-013 |
 | Part of it | [`keymap.tsv`](keymap.tsv), the key map (SPEC-094) |

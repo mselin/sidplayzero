@@ -5,8 +5,8 @@ computer with a 320×170 screen and a keyboard. It will browse a collection of C
 device, normally the [High Voltage SID Collection](https://hvsc.c64.org), and play the tunes with the
 [sidplayfp](https://github.com/libsidplayfp/libsidplayfp) engine, all from the device's own keys.
 
-**There is nothing to install yet.** The requirements are approved, and the specification has been through
-an independent review and is waiting for the owner's approval.
+**There is nothing to install yet.** The requirements and the specification are approved. The test framework
+is being built next.
 
 ## How it is being built
 
@@ -15,9 +15,9 @@ until that gate has passed.
 
 | # | Phase | What it produces | State |
 |---|---|---|---|
-| 1 | Requirements | [`docs/requirements.md`](docs/requirements.md) | Approved 25 November 2026; changes made since (see its first page) await approval |
-| 2 | Specification | [`docs/spec.md`](docs/spec.md) and an independent review of it, [`docs/spec-review.md`](docs/spec-review.md) | Reviewed independently, every review item closed; awaiting approval |
-| 3 | Test framework | The harness for the three levels of tests | Not started |
+| 1 | Requirements | [`docs/requirements.md`](docs/requirements.md) | Approved 25 November 2026 |
+| 2 | Specification | [`docs/spec.md`](docs/spec.md) and an independent review of it, [`docs/spec-review.md`](docs/spec-review.md) | Approved 25 November 2026, after independent review |
+| 3 | Test framework | `docs/test-framework-tasks.md`, then the harness for the levels of tests | In progress |
 | 4 | Tests | `tests/`, each test tracing to the specification | Not started |
 | 5 | Implementation | `src/` | Not started |
 

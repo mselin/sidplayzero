@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | **Approved by the owner on 25 November 2026**, with the priorities as proposed. Changed since then by FIND-006, following the owner's decision of the same day, and by FIND-010 to FIND-013, which the review of the specification raised. The wording of those changes awaits his approval (see "Changes since approval" below). |
+| Status | **Approved by the owner on 25 November 2026**, with the priorities as proposed. Changed after that by FIND-006, following the owner's decision of the same day, and by FIND-010 to FIND-013, which the review of the specification raised (see "Changes since approval" below). Those changes were accepted on 25 November 2026, when the owner approved the specification that rests on them and had the pull request carrying them merged. |
 | Date | 25 November 2026 |
 | Next artifact | `docs/spec.md` (Phase 2), which traces every SPEC item to the REQ ids here |
 
@@ -10,11 +10,11 @@ Changes since approval:
 
 | Finding | What changed | State |
 |---|---|---|
-| FIND-006: the complete HVSC archive cannot be relied on to unpack on the device | REQ-080 reworded: setting HVSC up no longer depends on the complete archive. REQ-088 added: tunes are fetched when played. REQ-089 added: the complete download, offered only when the device can do it (this was REQ-080). REQ-004, REQ-007, REQ-082, REQ-084, REQ-086, REQ-090, REQ-091 and REQ-123 adjusted to match. CON-15 corrected with measured figures and CON-22 added | Decided by the owner ("on demand first"); wording awaits approval |
-| FIND-010: after FIND-006, "missing" in the playlist requirements meant two different things | REQ-103 reworded: an entry is missing only when its tune is neither on the device nor in HVSC's list; one that HVSC lists is fetched when played. REQ-104 reworded to match: "Fetch what is missing" fetches a playlist's tunes ahead of playing them. REQ-093 now points at REQ-088 for fetching one tune | Awaits approval |
-| FIND-011: REQ-011 pointed at the wrong requirement for stepping past the last subtune | REQ-011 now says that next and previous subtune, past either end, go to the next or previous tune (REQ-012) | Awaits approval |
-| FIND-012: REQ-051's acceptance needed HVSC's tunes on the host, where REQ-087 forbids them | REQ-051's acceptance now uses the test tunes on the host | Awaits approval |
-| FIND-013: the brightness keys do nothing while an app runs unless the app handles them | REQ-129 added: brightness keys (Should). CON-09 names those keys too | Awaits approval |
+| FIND-006: the complete HVSC archive cannot be relied on to unpack on the device | REQ-080 reworded: setting HVSC up no longer depends on the complete archive. REQ-088 added: tunes are fetched when played. REQ-089 added: the complete download, offered only when the device can do it (this was REQ-080). REQ-004, REQ-007, REQ-082, REQ-084, REQ-086, REQ-090, REQ-091 and REQ-123 adjusted to match. CON-15 corrected with measured figures and CON-22 added | Decided by the owner ("on demand first"); accepted with the specification, 25 November 2026 |
+| FIND-010: after FIND-006, "missing" in the playlist requirements meant two different things | REQ-103 reworded: an entry is missing only when its tune is neither on the device nor in HVSC's list; one that HVSC lists is fetched when played. REQ-104 reworded to match: "Fetch what is missing" fetches a playlist's tunes ahead of playing them. REQ-093 now points at REQ-088 for fetching one tune | Accepted with the specification, 25 November 2026 |
+| FIND-011: REQ-011 pointed at the wrong requirement for stepping past the last subtune | REQ-011 now says that next and previous subtune, past either end, go to the next or previous tune (REQ-012) | Accepted with the specification, 25 November 2026 |
+| FIND-012: REQ-051's acceptance needed HVSC's tunes on the host, where REQ-087 forbids them | REQ-051's acceptance now uses the test tunes on the host | Accepted with the specification, 25 November 2026 |
+| FIND-013: the brightness keys do nothing while an app runs unless the app handles them | REQ-129 added: brightness keys (Should). CON-09 names those keys too | Accepted with the specification, 25 November 2026 |
 
 ## 1. What SidPlayZero is
 
