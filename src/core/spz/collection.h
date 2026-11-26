@@ -33,6 +33,12 @@ CollectionRoot find_collection_root(const std::string& hvsc_base, const std::str
 // caller's to see to.
 bool name_comes_before(const std::string& a, const std::string& b);
 
+// SPEC-042, SPEC-162 (FIND-018): whether the tune at path `a` comes before the tune at path `b` in the order
+// of path: folder by folder, a folder's folders before its tunes, each by name_comes_before. Both are paths
+// under the root such as "/MUSICIANS/H/Hubbard_Rob/Commando.sid". The listing, the index and search
+// results are in this order.
+bool path_comes_before(const std::string& a, const std::string& b);
+
 // SPEC-041: a name as the screen shows it: the name itself if it is valid UTF-8, else with "?" in place
 // of each byte that is not.
 std::string shown_name(const std::string& name);
@@ -56,6 +62,7 @@ struct FolderListing {
     std::string notice;                 // "" or "MSG_FOLDER_UNREADABLE", and then there are no entries
     bool on_device = false;             // the folder itself is on the device
     std::int64_t modified_s = 0;        // its modification time when it was listed (SPEC-043); 0 if not on the device
+    std::int32_t modified_ns = 0;       // and the nanoseconds past that second (FIND-019)
 };
 
 // SPEC-046 (part `detail`): what the detail line says of the highlighted entry.
@@ -94,10 +101,23 @@ public:
     // Where on the device an entry of a folder is, or would be: the root, the folder and the name joined.
     std::string file_path(const std::string& folder, const std::string& name) const;
 
+    // SPEC-043: a folder's modification time on the device, to the nanosecond, for the browser's look at
+    // whether a folder it keeps has changed. False, with both 0, when the folder is not on the device.
+    bool folder_time(const std::string& folder, std::int64_t* seconds, std::int32_t* nanoseconds) const;
+
     // SPEC-046 (part `detail`): reads what the detail line shows for one entry of a folder. For a present
     // tune this reads its file: the header, and the MD5 for the length. Called on the quick worker, once
     // the highlight has rested on the entry for 150 ms.
     EntryDetail detail(const std::string& folder, const FolderEntry& entry, Millis default_length_ms) const;
+
+private:
+    // The place on the device of a folder of the collection ("/" is the root).
+    std::string folder_place(const std::string& folder) const;
+    bool listing_open() const;
+
+    Files* files_;
+    std::string root_;
+    const Listing* listing_;
 };
 
 }  // namespace spz

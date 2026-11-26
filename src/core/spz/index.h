@@ -5,8 +5,10 @@
 // thread while another builds it. There is no database library behind it (SPEC-008).
 #pragma once
 
+#include <atomic>
 #include <cstdint>
 #include <functional>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -17,6 +19,9 @@
 #include "spz/types.h"
 
 namespace spz {
+
+struct SearchFilter;
+struct SearchResults;
 
 // SPEC-160: what the file's header holds.
 struct IndexHeader {
@@ -115,6 +120,42 @@ public:
     std::vector<IndexRecord> records(int first, int count) const;
     // The record of one tune. False if there is none.
     bool find(const std::string& path, IndexRecord* out) const;
+
+private:
+    friend SearchResults search(const Index& index, const std::string& query, const SearchFilter& filter);
+
+    struct OnDevice {             // a tune found on the device by step two
+        std::string path;
+        FileInfo info;
+    };
+    IndexHeader present_header() const;
+    std::string place(const std::string& path) const;
+    bool listed(const std::string& path) const;
+    bool walk(const std::string& folder, bool deep, std::vector<OnDevice>* out) const;   // false: `folder` could not be listed
+    // Merges what is on the device with the records `in_scope` says are of the part looked at, and
+    // returns the tunes whose files are to be read, in order of path.
+    std::vector<OnDevice> reconcile(const std::vector<OnDevice>& device,
+                                    const std::function<bool(const std::string&)>& in_scope);
+    IndexRecord read_record(const OnDevice& tune) const;
+    void put(IndexRecord record, std::size_t* cursor = nullptr);   // cursor: where the last put went, to look there first
+    std::size_t locate(const std::string& path) const;   // the first record not before `path`; lock held
+    bool save();
+
+    Files* files_;
+    Clock* clock_;
+    const Listing* listing_;
+    std::string root_;
+    std::string index_file_;
+
+    mutable std::mutex mutex_;              // guards what follows: a search may run while a build does
+    IndexHeader header_;
+    std::vector<IndexRecord> records_;      // in order of path (path_comes_before)
+    bool complete_ = false;
+    bool loaded_ = false;                   // load() has been tried
+    bool have_file_ = false;                // and found an index that fits this build's format
+
+    std::atomic<bool> playing_{false};
+    std::atomic<int> percent_{0};
 };
 
 }  // namespace spz
