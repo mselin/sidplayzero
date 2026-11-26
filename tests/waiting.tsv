@@ -38,35 +38,7 @@ SPEC-100 SPEC-161 while the index is being built, Search shows "Indexing n %" an
 SPEC-100 SPEC-165 a query that matches nothing says "No results", and nothing is asked of HVSC's site; ESC closes Search from the list and from the field	code	expect screen = browser
 SPEC-100 Search: a query typed on the fixture collection gives the expected rows; Enter plays a result and the results become the queue; "Folder" shows a result in the browser at its folder, highlighted	code	expect screen = browser
 SPEC-100 in the search results the keys 7 and 8 are "Fav" and "Add", and act on the highlighted result	code	expect screen = browser
-SPEC-160 SPEC-047 with no listing in the root, every tune on the device has a record with its file's MD5	code	not built yet
-SPEC-160 an absent tune has a record with its path and nothing from a header	code	not built yet
-SPEC-160 an index built from the fixture collection and read back has one record per tune, with the fields of its file's header, and a tune of the user's own has its MD5	code	not built yet
-SPEC-160 search text is lower case, with accents taken off the letters and every character that is not a letter or a digit turned into a space	code	not built yet
-SPEC-160 the index's header holds its format number, the collection root, and the size and modification time of the song length database it was built from	code	not built yet
-SPEC-160 the search text of /MUSICIANS/H/Hubbard_Rob/Commando.sid contains the words hubbard, rob and commando	code	not built yet
-SPEC-161 SPEC-202 an index file that is cut short, or is no index at all, is refused, thrown away and built again	code	not built yet
-SPEC-161 a build handles 200 files at a time, and pauses 100 ms between two batches while a tune is playing and not otherwise	code	not built yet
-SPEC-161 a collection of 61,157 tunes: the build completes; interrupted after 10,000 tunes and started again it reads only the remaining files and equals an uninterrupted build	code	not built yet
-SPEC-161 a start with an index that fits reads no tune again; Rebuild the index reads them all; and only a build asked for by the user or made after set-up says MSG_INDEX_READY	code	not built yet
-SPEC-161 a tune that is fetched is added at once, from its file alone	code	not built yet
-SPEC-161 changing the root rebuilds the index: nothing of the collection of 61,157 tunes is left in it	code	not built yet
-SPEC-161 in the collection of 61,157 tunes, a tune added to the root, changed, and removed is found, updated and gone after the next start's step two, with only that file read	code	not built yet
-SPEC-161 step one gives every tune of the listing a record without opening any tune, which makes every path searchable	code	not built yet
-SPEC-161 the index is built again when the song length database is another one, and when the root is	code	not built yet
-SPEC-161 when the browser finds a folder changed, that folder alone is brought up to date	code	not built yet
-SPEC-162 a query is treated like search text and split at spaces into words	code	not built yet
-SPEC-162 a query with no word gives no search	code	not built yet
-SPEC-162 a search is one pass over the index, and one that runs past 2 s returns what it has by then	code	not built yet
-SPEC-162 an absent tune is found by a word from its path and not by its title	code	not built yet
-SPEC-162 at most 500 results are returned, the first in order of path, and the count is the true number of matches	code	not built yet
-SPEC-162 each query of a table gives exactly the expected tunes of the fixture collection, in order of path	code	not built yet
-SPEC-164 absent tunes, whose headers are not known, are left out while any filter is set [parts: filters]	code	not built yet
-SPEC-164 all four filters together remove exactly the tunes that do not fit every one [parts: filters]	code	not built yet
-SPEC-164 the chip model filter alone removes exactly the tunes of the other chip model [parts: filters]	code	not built yet
-SPEC-164 the clock filter alone removes exactly the tunes of the other clock [parts: filters]	code	not built yet
 SPEC-164 the filter panel has four lines, each changed with Left and Right; Enter applies them and ESC leaves them as they were; each filter alone, and all together, remove exactly the fixture tunes that do not fit	code	expect screen = browser
-SPEC-164 the year filters alone remove exactly the tunes outside the years, and a tune with no year fits only when both say any [parts: filters]	code	not built yet
-SPEC-164 with no filter set nothing is left out, and a filter knows whether any of its four lines is set [parts: filters]	code	not built yet
 SPEC-130 SPEC-009 a hand-written file with every key of the table gives every setting its value [parts: modes shuffle rate force roms resume screen-off download-all]	code	not built yet
 SPEC-130 SPEC-009 a settings file written by hand from the table loads, and what the app writes is UTF-8 text	code	not built yet
 SPEC-130 SPEC-022 a change is in force at once, and its save is the quick worker's	code	not built yet
