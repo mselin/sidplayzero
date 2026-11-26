@@ -21,7 +21,7 @@ public:
     void on_action(const KeyEvent& event) override;
     Json describe() const override;
 
-    static const int kFirstYear = 1982;     // SPEC-164: the first year a year line offers
+    static constexpr int kFirstYear = 1982;     // SPEC-164: the first year a year line offers
 
 private:
     std::string title() const override { return "Filter"; }
