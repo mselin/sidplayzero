@@ -116,7 +116,7 @@ add_library(spz_engine STATIC "${CMAKE_SOURCE_DIR}/src/platform/real_engine.cpp"
 target_include_directories(spz_engine PUBLIC "${CMAKE_SOURCE_DIR}/src")
 target_link_libraries(spz_engine PUBLIC spz_core PRIVATE spz::engine_libraries)
 add_dependencies(spz_engine spz_libsidplayfp)
-target_compile_options(spz_engine PRIVATE ${SPZ_WARNINGS})
+target_compile_options(spz_engine PRIVATE ${SPZ_SOURCE_WARNINGS})
 if(SIDPLAYZERO_SANITIZE STREQUAL "fuzzer")
     target_compile_definitions(spz_engine PRIVATE "SPZ_ENGINE_SANITIZER=\"address\"")
 else()

@@ -43,6 +43,8 @@ add_library(spz_fonts OBJECT ui/fonts/dejavu_sans_12.c ui/fonts/dejavu_sans_14.c
 target_link_libraries(spz_fonts PRIVATE spz_core)
 target_include_directories(spz_fonts SYSTEM PRIVATE $<TARGET_PROPERTY:lvgl,INTERFACE_INCLUDE_DIRECTORIES>)
 target_compile_definitions(spz_fonts PRIVATE $<TARGET_PROPERTY:lvgl,INTERFACE_COMPILE_DEFINITIONS>)
+# Made by a tool, not written: their warnings are shown but never errors, and the layer test's probe, which
+# compiles a C++ file with their C compiler's command, still compiles there.
 target_compile_options(spz_fonts PRIVATE ${SPZ_WARNINGS})
 target_sources(lvgl PRIVATE $<TARGET_OBJECTS:spz_fonts>)
 
@@ -69,7 +71,7 @@ add_library(spz_ui STATIC
 )
 target_include_directories(spz_ui PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 target_link_libraries(spz_ui PUBLIC spz_core lvgl)
-target_compile_options(spz_ui PRIVATE ${SPZ_WARNINGS})
+target_compile_options(spz_ui PRIVATE ${SPZ_SOURCE_WARNINGS})
 
 # --- platform: the outside world -----------------------------------------------------------------------
 # The real seams (SPEC-021): the engine (cmake/engine.cmake), sound through miniaudio (SPEC-005), HTTP
@@ -115,7 +117,7 @@ if(SIDPLAYZERO_TEST_HOOKS)
     target_compile_definitions(spz_platform PRIVATE SPZ_TEST_HOOKS=1)
 endif()
 set_source_files_properties(platform/miniaudio_impl.c PROPERTIES COMPILE_OPTIONS "-w")
-target_compile_options(spz_platform PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${SPZ_WARNINGS}>)
+target_compile_options(spz_platform PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${SPZ_SOURCE_WARNINGS}>)
 
 # --- the program ---------------------------------------------------------------------------------------
 # The app's frame (SPEC-022, SPEC-090): its threads, the stack of screens, and the list of screens.
@@ -138,7 +140,7 @@ add_executable(sidplayzero
     app/selftest_script.cpp
 )
 target_link_libraries(sidplayzero PRIVATE spz_ui spz_platform Threads::Threads)
-target_compile_options(sidplayzero PRIVATE ${SPZ_WARNINGS})
+target_compile_options(sidplayzero PRIVATE ${SPZ_SOURCE_WARNINGS})
 if(SIDPLAYZERO_TEST_HOOKS)
     # The hooks the simulator tests drive the program by (SPEC-253). Never in a package.
     target_sources(sidplayzero PRIVATE app/hooks/script.cpp app/hooks/sim_fakes.cpp)
@@ -148,7 +150,7 @@ if(SIDPLAYZERO_TEST_HOOKS)
     add_executable(spz_tool app/hooks/tool_main.cpp app/hooks/tool_hvsc.cpp app/hooks/tool_sound.cpp app/workers.cpp)
     target_link_libraries(spz_tool PRIVATE spz_platform)
     target_compile_definitions(spz_tool PRIVATE SPZ_TEST_HOOKS=1)
-    target_compile_options(spz_tool PRIVATE ${SPZ_WARNINGS})
+    target_compile_options(spz_tool PRIVATE ${SPZ_SOURCE_WARNINGS})
 else()
     target_compile_definitions(sidplayzero PRIVATE SPZ_TEST_HOOKS=0)
 endif()

@@ -67,8 +67,27 @@ endif()
 add_compile_options(${SPZ_COMPILE_OPTIONS})
 add_link_options(${SPZ_LINK_OPTIONS})
 
-# The warnings our own sources are compiled with (not LVGL's, the engine's or miniaudio's).
+# The warnings our own sources and the tests are compiled with (not LVGL's, the engine's or miniaudio's).
 set(SPZ_WARNINGS -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wno-sign-conversion)
+# The app's own sources (src/) use SPZ_SOURCE_WARNINGS: the same, and in the checks of a pull request
+# (.github/workflows/ci.yml sets SIDPLAYZERO_WERROR=ON in the environment of every build) each warning is an
+# error, so that none is merged.
+set(_spz_werror OFF)
+if(DEFINED ENV{SIDPLAYZERO_WERROR})
+    set(_spz_werror "$ENV{SIDPLAYZERO_WERROR}")
+endif()
+option(SIDPLAYZERO_WERROR "Treat warnings in the app's own sources as errors (on in CI)" ${_spz_werror})
+set(SPZ_SOURCE_WARNINGS ${SPZ_WARNINGS})
+if(SIDPLAYZERO_WERROR)
+    list(APPEND SPZ_SOURCE_WARNINGS -Werror)
+endif()
+
+# The builds for the tests check the C++ library's own preconditions too (an index out of range, front()
+# of an empty container ...): such a fault stops the test there, instead of reading memory it should not.
+# Not in the package, which is built without the tests' hooks.
+if(SIDPLAYZERO_BUILD_UNIT_TESTS OR SIDPLAYZERO_TEST_HOOKS OR SIDPLAYZERO_BUILD_FUZZ)
+    add_compile_definitions(_GLIBCXX_ASSERTIONS)
+endif()
 
 add_subdirectory(src/core)
 

@@ -34,7 +34,7 @@ struct LifeEntry {
         if (!life->alive) return;
         ++life->running;
         leave = [life] {
-            std::lock_guard<std::mutex> lock(life->mutex);
+            std::lock_guard<std::mutex> held(life->mutex);
             if (--life->running == 0) life->idle.notify_all();
         };
     }

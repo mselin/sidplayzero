@@ -13,6 +13,10 @@ on:
 permissions:
   contents: read
 
+# Every build of the checks treats a warning in the app's own sources (src/) as an error (CMakeLists.txt).
+env:
+  SIDPLAYZERO_WERROR: "ON"
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
