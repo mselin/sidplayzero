@@ -14,7 +14,7 @@ has passed.
 | 2 | Specification | [`docs/spec.md`](docs/spec.md), and an independent review of it, [`docs/spec-review.md`](docs/spec-review.md) | Every review item closed; then the owner approves | Approved 25 November 2026 |
 | 3 | Test framework | [`docs/test-framework-tasks.md`](docs/test-framework-tasks.md), then the framework | Every level runs one passing and one deliberately failing test with one command | Built and merged 25 November 2026; the device level's proof is still owed |
 | 4 | Tests | `tests/`, each test tracing to the specification | Every item has a test; the tests fail for the right reasons against stubs | Gate passed 26 November 2026: the tests merged, and FIND-016 to FIND-024 accepted by the owner and carried into the specification |
-| 5 | Implementation | `src/` | All tests pass on the host and in the simulator; the device checklist passes | Not started |
+| 5 | Implementation | `src/` | All tests pass on the host and in the simulator; the device checklist passes | Built 26 November 2026: every host and simulator test passes but four that wait on the owner (FIND-025, the store's screenshots); code-quality and security reviews done and fixed. The device sitting is owed |
 
 ## Rules that hold throughout
 
