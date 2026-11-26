@@ -102,8 +102,6 @@ SPEC-022 SPEC-148 with an update's download stalled on the long worker, Enter on
 SPEC-010 the 12-pixel font has a glyph for each of the 218 printable Windows-1252 characters	code	not built yet
 SPEC-010 the 14-pixel font has a glyph for each of the 218 printable Windows-1252 characters	code	not built yet
 SPEC-022 the scripts of the thread rules, run in the ThreadSanitizer build, pass and give no report	code	structure_threads_index.script: the script stopped at: expect screen = hvsc
-SPEC-103 the packaged program gives the version of the package's control file and of app-builder.json, with the two libraries, as the About screen's first lines	code	does not print libsidplayfp 3.1.2
-SPEC-002 the packaged program, run under emulation, prints libsidplayfp 3.1.2 by --version, and holds nothing of the exSID backend	code	does not print libsidplayfp 3.1.2
 SPEC-109 the mini player on the browser, Search and Settings shows the state, the title and the elapsed time while a tune plays or is paused, and the failed mark with the file's name when it cannot be played	code	expect screen = search
 SPEC-069 a playlist entry that is missing shows MSG_ENTRY_MISSING when a key chooses it, and is passed over at once, without the message, when playback reaches it by itself	code	expect screen = playlists
 SPEC-076 the volume keys set the system volume to the nearest multiple of 5 % above or below, Mute toggles the mute, and the notice MSG_VOLUME shows the new level or "Muted"	code	expect notice.id = MSG_VOLUME
