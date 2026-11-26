@@ -8,8 +8,7 @@
 #   ./device-run.sh --prove PACKAGE.deb   the device level's two canaries (docs/test-framework-tasks.md,
 #                                         TF-081): one check that must hold and one built to fail.
 #                                         About two minutes, and one start of the app from the launcher.
-#   ./device-run.sh PACKAGE.deb           the whole sitting, about an hour. It needs the app itself, which
-#                                         does not exist before Phase 5.
+#   ./device-run.sh PACKAGE.deb           the whole sitting of docs/device-checklist.md, about an hour.
 #   ./device-run.sh --scrub FILE          takes private details out of FILE, as it does for its own results
 #
 # It installs the package with sudo, and removes it again at the end; it uses sudo for nothing else, and
@@ -236,7 +235,8 @@ sitting() {
   ANSWERS="${ANSWERS}package_files = $(dpkg -L sidplayzero 2>/dev/null | grep -c .)"$'\n'
   # 2
   ask launcher_shows_app "Step 2. Does the launcher show SidPlayZero, with its icon? (yes/no)"
-  step_with_app keys "Start SidPlayZero from the launcher. Press each key the screen asks for, then hold ESC to leave." "$WAIT"
+  # 67 keys, some of them found with fn: three times the usual wait.
+  step_with_app keys "Start SidPlayZero from the launcher. Press each key the screen asks for, then hold ESC to leave." "$((WAIT * 3))"
   if ! [ -f "$RESULTS" ]; then
     remove_package
     stop "the app wrote no results to $STATE: the launcher starts apps as another user than the one running this script"
