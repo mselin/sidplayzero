@@ -403,34 +403,6 @@ SPEC-115 the keys of brightness, screenshot, too-slow and restart give their act
 SPEC-110 with only a mouse and a touch screen in the list, the input set-up still creates no pointer	code	not built yet
 SPEC-110 against a made-up list with a mouse, a touch screen and two keyboards, the input set-up creates one keypad and nothing else	code	not built yet
 SPEC-110 SPEC-111 the CardputerZero's own keyboard is chosen before another device with letters, and the path in SIDPLAYZERO_KEYBOARD before both	code	not built yet
-SPEC-007 SPEC-144 with the fake Unpacker the complete download runs its steps in order and ends with the archive's tree under the root [parts: download-all]	code	not built yet
-SPEC-144 the staging folder is removed first if it exists, and nothing of it reaches the root [parts: download-all]	code	not built yet
-SPEC-144 in step 7 the listing in use is copied to listing.old first, and the DOCUMENTS folder is moved last [parts: download-all]	code	not built yet
-SPEC-144 a file the user put in the root, or changed, is never removed by step 7 [parts: download-all]	code	not built yet
-SPEC-144 stopping at each of steps 3 to 6 leaves the root's contents unchanged and no staging folder [parts: download-all]	code	not built yet
-SPEC-144 SPEC-147 an archive download that was cut is carried on from the cut when the row is chosen again [parts: download-all]	code	not built yet
-SPEC-144 a failure in any of steps 3 to 6 leaves the root as it was, removes the staging folder and the marker, and the notice names the step [parts: download-all]	code	not built yet
-SPEC-144 a rename made to fail in step 7 gives the notice and keeps the marker, the staging folder and listing.old; Finish the download then ends with the same tree [parts: download-all]	code	not built yet
-SPEC-144 Finish the download is offered until it has succeeded [parts: download-all]	code	not built yet
-SPEC-144 a file that cannot be removed at the end of step 7 fails the step, and finishing removes it [parts: download-all]	code	not built yet
-SPEC-144 after being cut short while moving files, the next start takes steps 7 and 8 up again and ends with the same tree as an uninterrupted run [parts: download-all]	code	not built yet
-SPEC-144 at the next start a marker naming a step from 1 to 6 means the clean-up: the staging folder and the marker go, the root stays [parts: download-all]	code	not built yet
-SPEC-144 the marker names the step the download is in, and writing step 0 removes it [parts: download-all]	code	not built yet
-SPEC-146 SPEC-144 with one MiB less than 700 MiB free no download request is made and the notice shows the two numbers; with exactly enough the download starts [parts: download-all]	code	not built yet
-SPEC-146 SPEC-144 once the archive is listed, the room it needs is its size, its entries, a tenth and 64 MiB: one MiB less and nothing is unpacked [parts: download-all]	code	not built yet
-SPEC-146 the room for unpacking is the archive's size plus its entries, each rounded up to the block size, plus a tenth, plus 64 MiB [parts: download-all]	code	not built yet
-SPEC-145 with 450 MiB of memory and swap, a 7z, 700 MiB free and a folder that can be written, the complete download is offered [parts: download-all]	code	not built yet
-SPEC-145 with 449 MiB the row is absent and the text names the number [parts: download-all]	code	not built yet
-SPEC-145 each other condition, failed alone, gives its own text [parts: download-all]	code	not built yet
-SPEC-145 with HVSC not set up, or its release not known, the row is simply absent: no text [parts: download-all]	code	not built yet
-SPEC-145 SPEC-144 the conditions are checked again when the row is chosen: with too little memory by then, nothing is downloaded [parts: download-all]	code	not built yet
-SPEC-149 an archive whose every entry is a file or folder under C64Music passes [parts: download-all]	code	not built yet
-SPEC-149 an archive is refused for any one entry that could land outside the collection, or that is a link or a special file [parts: download-all]	code	not built yet
-SPEC-149 an archive is refused with more than 200,000 entries, or with sizes that add up to more than 2 GiB [parts: download-all]	code	not built yet
-SPEC-149 the reader of 7z's listing gives each entry's path, size and kind [parts: download-all]	code	not built yet
-SPEC-149 text that is not a listing of 7z is not read as one [parts: download-all]	code	not built yet
-SPEC-152 SPEC-144 with the notice not accepted, Download everything opens the panel and makes no request; Enter makes it [parts: download-all]	code	not built yet
-SPEC-151 SPEC-144 the complete download asks for nothing until its row is chosen, not even at start [parts: download-all]	code	not built yet
 SPEC-140 SPEC-113 when the set-up ends on the HVSC screen with help open, the notice shows and the browser opens once help is closed	code	expect job.kind = setup
 SPEC-148 SPEC-102 a check that cannot fetch the file says so, and adds no row	code	expect rows[0].text = "Check for a newer release"
 SPEC-102 SPEC-147 key 4, Back, closes the HVSC screen and leaves the job running; coming back shows its progress again	code	expect job.kind = setup
