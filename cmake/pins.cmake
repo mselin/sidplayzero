@@ -46,3 +46,9 @@ set(SPZ_LVGL_COMMIT "85aa60d18b3d5e5588d7b247abf90198f07c8a63")
 
 # doctest 2.4.12 is kept in third_party/doctest/doctest.h; this is the checksum of that file.
 set(SPZ_DOCTEST_SHA256 "2a31654ead2a6e5ef93086ca97659b701710c80275207b3bdb12676c012daceb")
+
+# The typeface of the app's fonts: DejaVu Sans, from DejaVu's release 2.37 (SPEC-010). The fonts are made
+# from it ahead of time by `cmake -P cmake/fonts.cmake`, and the sources made are kept in src/ui/fonts.
+spz_pin(dejavu_fonts
+    "https://github.com/dejavu-fonts/dejavu-fonts/releases/download/version_2_37/dejavu-fonts-ttf-2.37.tar.bz2"
+    "fa9ca4d13871dd122f61258a80d01751d603b4d3ee14095d65453b4e846e17d7")

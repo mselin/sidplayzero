@@ -99,8 +99,6 @@ SPEC-114 SPEC-172 SPEC-175 the panels of the playlists part open on their keys, 
 SPEC-172 SPEC-170 a playlist is made, three tunes are added, the third is moved to the top, the three play in the new order, and the playlist is renamed and deleted, its file following every step	code	expect screen = playlists
 SPEC-022 with the index build held by slow files on the long worker, Enter on an absent tune makes its request at once	code	expect screen = hvsc
 SPEC-022 SPEC-148 with an update's download stalled on the long worker, Enter on an absent tune makes its request at once, and the tune plays while the download still waits	code	expect screen = hvsc
-SPEC-010 the 12-pixel font has a glyph for each of the 218 printable Windows-1252 characters	code	not built yet
-SPEC-010 the 14-pixel font has a glyph for each of the 218 printable Windows-1252 characters	code	not built yet
 SPEC-022 the scripts of the thread rules, run in the ThreadSanitizer build, pass and give no report	code	structure_threads_index.script: the script stopped at: expect screen = hvsc
 SPEC-109 the mini player on the browser, Search and Settings shows the state, the title and the elapsed time while a tune plays or is paused, and the failed mark with the file's name when it cannot be played	code	expect screen = search
 SPEC-069 a playlist entry that is missing shows MSG_ENTRY_MISSING when a key chooses it, and is passed over at once, without the message, when playback reaches it by itself	code	expect screen = playlists

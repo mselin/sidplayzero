@@ -29,7 +29,7 @@ lv_color_t colour_panel();
 lv_color_t colour_line();
 
 // SPEC-091: the 12-pixel font for all text, the 14-pixel font for the title on the now-playing screen.
-// The app's own fonts (SPEC-010), or LVGL's while those are not built.
+// The app's own fonts (SPEC-010).
 const lv_font_t* text_font();
 const lv_font_t* title_font();
 

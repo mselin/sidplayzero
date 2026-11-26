@@ -2,7 +2,6 @@
 #include "ui/draw.h"
 
 #include <cstdint>
-#include <exception>
 #include <vector>
 
 #include "ui/app_fonts.h"
@@ -45,14 +44,6 @@ bool has_glyph(const lv_font_t* font, std::uint32_t letter) {
     return lv_font_get_glyph_dsc(font, &glyph, letter, 0) && glyph.adv_w > 0;
 }
 
-const lv_font_t* fallback_or(const lv_font_t* (*mine)(), const lv_font_t* fallback) {
-    try {
-        return mine();
-    } catch (const std::exception&) {
-        return fallback;            // SPEC-010's fonts are not built yet
-    }
-}
-
 }  // namespace
 
 lv_color_t colour_background() { return lv_color_hex(0x101014); }
@@ -62,15 +53,9 @@ lv_color_t colour_highlight() { return lv_color_hex(0x2E5AAC); }
 lv_color_t colour_panel() { return lv_color_hex(0x24242C); }
 lv_color_t colour_line() { return lv_color_hex(0x6A6A78); }
 
-const lv_font_t* text_font() {
-    static const lv_font_t* font = fallback_or(&spz::ui::font_12, &lv_font_montserrat_12);
-    return font;
-}
+const lv_font_t* text_font() { return spz::ui::font_12(); }
 
-const lv_font_t* title_font() {
-    static const lv_font_t* font = fallback_or(&spz::ui::font_14, &lv_font_montserrat_14);
-    return font;
-}
+const lv_font_t* title_font() { return spz::ui::font_14(); }
 
 int text_width(const std::string& text, const lv_font_t* font) {
     lv_point_t size;

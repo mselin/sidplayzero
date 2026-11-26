@@ -1,12 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// STUB: not built yet (Phase 5). Until then the stub's screen uses LVGL's own fonts (lv_conf.h).
+// The app's own fonts (SPEC-010). Their sources, src/ui/fonts/dejavu_sans_{12,14}.c, are made from DejaVu
+// Sans by tools/make_fonts.py (`cmake -P cmake/fonts.cmake`) and kept in the repository.
 #include "ui/app_fonts.h"
 
-#include "spz/not_built.h"
+extern "C" {
+extern const lv_font_t spz_font_dejavu_sans_12;
+extern const lv_font_t spz_font_dejavu_sans_14;
+}
 
 namespace spz::ui {
 
-const lv_font_t* font_12() { SPZ_NOT_BUILT("SPEC-010"); }
-const lv_font_t* font_14() { SPZ_NOT_BUILT("SPEC-010"); }
+const lv_font_t* font_12() { return &spz_font_dejavu_sans_12; }
+const lv_font_t* font_14() { return &spz_font_dejavu_sans_14; }
 
 }  // namespace spz::ui
