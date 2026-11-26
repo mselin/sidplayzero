@@ -42,6 +42,7 @@
 #include "platform/real_clock.h"
 #include "platform/real_engine.h"
 #include "platform/real_files.h"
+#include "platform/software_sound.h"
 #include "platform/system_seams.h"
 #include "platform/threads.h"
 #include "spz/complete_download.h"
@@ -54,7 +55,6 @@
 #include "spz/safe_file.h"
 #include "spz/settings.h"
 #include "spz/settings_file.h"
-#include "spz/software_backend.h"
 #include "spz/state_file.h"
 #include "spz/tune.h"
 
@@ -807,25 +807,20 @@ int audio_guard(const std::vector<std::string>& args) {
     MisbehavingSink sink(&real_sink, args[0]);
     spz::platform::RealClock clock;
     spz::platform::UiQueue ui;
-    spz::SoftwareBackend backend(&engine, &sink, &clock, &ui);
+    spz::platform::SoftwareSound sound(&engine, &sink, &clock, &ui);
+    spz::SoundBackend* backend = sound.backend();
     spz::EngineSettings settings;
     std::string why;
-    if (!backend.load(std::vector<std::uint8_t>(), 1, settings, &why)) {
+    if (!backend->load(std::vector<std::uint8_t>(), 1, settings, &why)) {
         say("load", "failed " + why);
         return 1;
     }
-    backend.start();
-    std::atomic<bool> running{true};
-    std::thread render([&] {
-        while (running) {
-            if (!backend.render_step()) std::this_thread::sleep_for(std::chrono::milliseconds(1));
-        }
-    });
+    backend->start();
+    sound.start_render_thread();
     const auto until = std::chrono::steady_clock::now() + std::chrono::seconds(1);
     run_ui(&ui, &clock, [&] { return std::chrono::steady_clock::now() >= until; });
-    running = false;
-    render.join();
-    backend.stop();
+    sound.stop_render_thread();
+    backend->stop();
     real_sink.close();
     ui.run_pending();
     say("callbacks", std::to_string(sink.callbacks.load()));
@@ -855,19 +850,20 @@ std::string load_one(const std::vector<std::uint8_t>& bytes) {
     spz::platform::UiQueue ui;
     std::string result = "played";
     {
-        spz::SoftwareBackend backend(&engine, &sink, &clock, &ui);
+        spz::platform::SoftwareSound sound(&engine, &sink, &clock, &ui);
+        spz::SoundBackend* backend = sound.backend();
         spz::EngineSettings settings;   // sidlite at 48,000 Hz, the model and clock from the header
         std::string why;
-        if (!backend.load(bytes, info.default_song > 0 ? info.default_song : 1, settings, &why)) {
+        if (!backend->load(bytes, info.default_song > 0 ? info.default_song : 1, settings, &why)) {
             result = "failed " + (why.empty() ? std::string("MSG_ENGINE_REFUSED") : why);
         } else {
-            backend.start();
+            backend->start();
             const std::size_t wanted = settings.sample_rate / 10;
-            for (int turn = 0; turn < 10000 && backend.buffered() < wanted; ++turn) {
-                if (!backend.render_step()) break;
+            for (int turn = 0; turn < 10000 && sound.buffered() < wanted; ++turn) {
+                if (!sound.render_step()) break;
                 ui.run_pending();
             }
-            backend.stop();
+            backend->stop();
         }
         ui.run_pending();
     }

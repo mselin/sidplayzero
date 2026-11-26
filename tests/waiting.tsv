@@ -867,7 +867,6 @@ SPEC-076 at 100 % volume up asks for nothing, and at 0 % volume down asks for no
 SPEC-076 mute toggles the system's mute, and the notice then says Muted, or the level again	code	not built yet
 SPEC-076 if the system's volume cannot be read or changed, the notice is MSG_VOLUME_FAILED	code	not built yet
 SPEC-076 five presses of volume up from 42 % ask for 45, 50, 55, 60 and 65 %	code	not built yet
-SPEC-025 the software backend's type is named only in its own files and in the one place that creates it	code	not built yet
 SPEC-080 the voice display: each bar is as high as its voice's frequency high byte divided by 8, lit while the gate bit is set, and it stands still while paused (tests/simulator/test_play.py compares the two dumps)	code	expect screen = browser
 SPEC-079 playing with the light engine already, underruns in three separate seconds raise the notice MSG_CANNOT_KEEP_UP, and the tune plays on as it was	code	expect screen = browser
 SPEC-075 the now-playing screen gives the number of SID chips of the one-, two- and three-SID fixtures, as their headers say and the real engine is given	code	expect screen = browser
