@@ -47,6 +47,21 @@ brief the project started from, so the findings below are raised against that br
 
 ## Closed
 
+### FIND-026 The archive check trusted one line of 7z's listing, and the move trusted every name
+- Phase: 5, implementation (found by the security review)
+- Observed: SPEC-149 recognised a link only "by its attributes". 7-Zip lists other archive types under a
+  `.7z` name, and for those it reports links as a mode (`lrwxrwxrwx`) or a `Symbolic Link`/`Hard Link`
+  line, with no attributes: such an archive passed the app's check, and only 7-Zip's own refusal stopped
+  the escape the review tried. SPEC-144's move then put every unpacked file into the collection, hidden
+  names and any folder included, which matters when the collection setting names a wide folder.
+- Concerns: SPEC-149, SPEC-144, SPEC-204, REQ-123
+- Resolution: SPEC-149 now refuses an archive that is not of type 7z (listed and unpacked with `-t7z`), an
+  entry that is a link or special by anything the listing says or of an unknown kind, and a listing longer
+  than SPEC-204's limit; `7z` runs in its own process group with a time limit. Only paths that pass HVSC's
+  rules (SPEC-154), and HVSC's documents, are moved into the collection. Nothing a user sees changes for a
+  genuine HVSC archive.
+- Status: closed. A tightening of security, made at once; to be confirmed by the owner
+
 ### FIND-024 Details the tests had to choose
 - Phase: 4, tests
 - Observed: the specification is silent on these, and each test had to pick one. Each choice is in the test

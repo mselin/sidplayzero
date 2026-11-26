@@ -1615,8 +1615,13 @@ Nothing checks for releases unless the user asks.
 
 **SPEC-149 Unpacking safely.** The archive is refused, and nothing is unpacked, if any entry in `7z`'s
 listing: has a path that starts with `/`, contains an empty part, a `.` or `..` part or a backslash; is a
-link or a special file by its attributes; or lies outside the one top-level folder `C64Music`. It is also
-refused if there are more than 200,000 entries or their sizes add up to more than 2 GiB. After unpacking, the
+link or a special file by anything the listing says of it (its attributes, its mode, a `Symbolic Link` or
+`Hard Link` value) or is of a kind the reader does not know; or lies outside the one top-level folder
+`C64Music`. It is also refused if there are more than 200,000 entries or their sizes add up to more than
+2 GiB, if `7z` does not report the archive as of type 7z (it is listed and unpacked with `-t7z`), or if the
+listing is longer than SPEC-204 allows; `7z` runs in a process group of its own, with a time limit, and is
+stopped with the app (FIND-026). Of what is unpacked, only the paths HVSC's rules allow (SPEC-154) and
+HVSC's own documents are moved into the collection; nothing else is (FIND-026). After unpacking, the
 staging folder is walked without following links, and any link or special file found makes the job fail. The
 reader of `7z`'s listing is the app's own and is one of SPEC-205's fuzz targets.
 - Covers: REQ-123, REQ-122
