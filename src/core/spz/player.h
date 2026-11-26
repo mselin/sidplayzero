@@ -117,7 +117,9 @@ struct PlayerOptions {
 class Player : public SoundBackendListener {
 public:
     // Makes itself the backend's listener. `settings` is read whenever a setting is needed, so a change
-    // takes effect at the next thing it governs; settings_changed() is for what takes effect at once.
+    // takes effect at the next thing it governs; settings_changed() is for what takes effect at once. It is
+    // read on the UI thread only, the thread that changes it (SettingsFile::settings()): a load job on the
+    // worker gets the values it needs copied into it when it is posted.
     Player(const PlayerSeams& seams, const PlayerOptions& options, const Settings* settings);
     ~Player() override;
 

@@ -288,7 +288,7 @@ void Composition::make_job_mark() {
     });
     // The job's progress changes by itself: everything is drawn again when what it shows changes.
     auto shown = std::make_shared<std::string>();
-    a->every(100, [a, jobs, shown] {
+    a->every(kWatchEveryMs, [a, jobs, shown] {
         const JobState state = jobs->state();
         const std::string now = std::to_string(static_cast<int>(state.kind)) + " " + std::to_string(state.step) +
                                 " " + std::to_string(state.done) + " " + std::to_string(state.total) +

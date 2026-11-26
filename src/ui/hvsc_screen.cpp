@@ -26,6 +26,7 @@ const char* const kFinish = "Finish the download";
 const char* const kRebuild = "Rebuild the index";
 
 const int kLineH = 18;           // a line of the status block and of the explanation
+const int kIndexBatch = 2000;    // the index's records counted at a time, each batch a copy made under its lock
 const int kRowsTop = 2 * kLineH + 2;
 const int kTextX = 4;
 const int kTextW = kWidth - 8;
@@ -149,9 +150,8 @@ void HvscScreen::look_again() {
             found.listed = listing->is_open() ? listing->tune_count() : 0;
             if (index) {
                 const int count = index->count();
-                const int batch = 2000;
-                for (int first = 0; first < count; first += batch) {
-                    for (const IndexRecord& record : index->records(first, batch)) {
+                for (int first = 0; first < count; first += kIndexBatch) {
+                    for (const IndexRecord& record : index->records(first, kIndexBatch)) {
                         if (record.present) ++found.present;
                     }
                 }

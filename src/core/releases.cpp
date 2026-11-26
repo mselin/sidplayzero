@@ -27,6 +27,7 @@ using namespace hvsc_detail;
 namespace {
 
 const std::size_t kChangedLimit = 16u * 1024 * 1024;
+const int kListingBatch = 1024;   // the old listing's tunes looked at a time, each batch a copy
 
 }  // namespace
 
@@ -80,9 +81,8 @@ struct Releases::Impl {
             it = now.by_path(*it, &listed) ? std::next(it) : changed.erase(it);
         }
         const int count = old_listing.tune_count();
-        const int batch = 1024;
-        for (int first = 0; first < count; first += batch) {
-            for (const ListedTune& old_tune : old_listing.tunes(first, batch)) {
+        for (int first = 0; first < count; first += kListingBatch) {
+            for (const ListedTune& old_tune : old_listing.tunes(first, kListingBatch)) {
                 const std::string file = p.root + old_tune.path;
                 Bytes bytes;
                 if (p.files->read(file, kTuneSizeLimit, &bytes) != FileStatus::Ok) continue;   // absent

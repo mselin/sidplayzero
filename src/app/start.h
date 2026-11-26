@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// What the program needs before its screens: the lock of SPEC-200, and the start time it measures. What a
-// device test asks for (SPEC-260) is the composition's: src/app/compose_selftest.cpp.
+// What the program needs before its screens, the same for the program (main.cpp) and the simulator's
+// scripts (hooks/script.cpp): the lock of SPEC-200, LVGL and the display, the signals of SPEC-201, the
+// engine's libraries by name, and the start time SPEC-200 measures.
 #pragma once
 
 #include <string>

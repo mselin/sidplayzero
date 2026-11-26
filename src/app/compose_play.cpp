@@ -336,7 +336,7 @@ void Composition::make_play() {
         });
         // The elapsed time changes by itself: the top line is drawn again when its second changes.
         auto shown = std::make_shared<std::string>();
-        a->every(100, [this, shown] {
+        a->every(kWatchEveryMs, [this, shown] {
             if (!scope_->player) return;
             const PlayerStatus st = scope_->player->status();
             const std::string now = std::string(state_word(st.state)) + " " + time_text(st.elapsed_ms);

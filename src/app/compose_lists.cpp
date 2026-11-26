@@ -2,9 +2,11 @@
 // The composition, playlists and favourites (SPEC-170 to SPEC-179), part `playlists`: the resolver of
 // entries, the playlists and Favourites, and "Fetch missing" (SPEC-174) with its PlaylistTuneFetcher on the
 // fetcher of SPEC-141. The screens and panels of the part are src/ui/playlists_screen.*, playlist_screen.*
-// and lists_panels.*. The playlists are touched only on the UI thread once the screens have them (the
-// browser's "Fav" does the same), so no lock is needed; what reads a file for long (an import, an export)
-// works on a copy, or on what it has read, on the quick worker.
+// and lists_panels.*. The playlists are read from their folder on the quick worker at start, before the
+// screens are given them (lists_at_start()); from then on they are touched only on the UI thread (the
+// browser's "Fav" too), so they need no lock. What takes long with a file (an import, an export) works on
+// the quick worker on what it has read, or on a copy of a playlist, and its result comes back to the UI
+// thread.
 #include <cstdint>
 #include <map>
 #include <vector>
@@ -86,7 +88,7 @@ void Composition::make_lists() {
     // SPEC-172: "Add" in the browser, Search and the now-playing "More" panel asks which playlist.
     App* a = app();
     s.add_to_playlist = [a](const Entry& entry) { ui::open_pick_playlist(a, entry); };
-    a->every(100, [this] {
+    a->every(kWatchEveryMs, [this] {
         if (scope_ && scope_->lists_events) scope_->lists_events->watch_stop();
     });
 }

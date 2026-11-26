@@ -9,15 +9,22 @@
 
 namespace spz::app {
 
+namespace {
+
+// How many of the index's records a search for an MD5 takes at a time: each batch is a copy, made under the
+// index's lock.
+const int kIndexBatch = 1000;
+
+}  // namespace
+
 // The user's own tunes, which HVSC does not list, found by their MD5 (SPEC-173): the index has them.
 struct Composition::OwnTunesInIndex : OwnTunes {
     explicit OwnTunesInIndex(const Index* of) : index(of) {}
     bool own_tune_by_md5(const std::string& md5, std::string* path) const override {
         const Index* in = index;
         const int count = in->count();
-        const int batch = 1000;
-        for (int first = 0; first < count; first += batch) {
-            for (const IndexRecord& record : in->records(first, batch)) {
+        for (int first = 0; first < count; first += kIndexBatch) {
+            for (const IndexRecord& record : in->records(first, kIndexBatch)) {
                 if (!record.md5.empty() && record.md5 == md5) {
                     *path = record.path;
                     return true;

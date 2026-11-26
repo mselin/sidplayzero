@@ -12,7 +12,7 @@
 //   compose_search.cpp   the index                                                            (SPEC-160 ...)
 //   compose_lists.cpp    playlists, favourites, "Fetch missing"                               (SPEC-170 ...)
 //
-// HOW TO ADD TO IT (wave 3b and later; see also the guide at the top of ui/screen.h)
+// How to add to it (see also how to add a screen, at the top of ui/screen.h):
 //
 // - An object of `core`: a member in its area's section below, made in its area's make_...() function, and
 //   given to the screens by a field of ui::Services (ui/screen.h, its area's section). Make it after what it
@@ -28,8 +28,8 @@
 //   exit (SPEC-201): add it to stop() in its place.
 // - Something to do when the listing changes (HVSC set up, updated or downloaded): add it to
 //   listing_changed().
-// Each area edits its own file and its own section; the order of the calls in composition.cpp is the one
-// place they share.
+// Each area has its own file and its own section; the order of the calls in composition.cpp is the one place
+// they share.
 #pragma once
 
 #include <atomic>
@@ -245,6 +245,9 @@ private:
     // workers (the App stops them before it goes), so a job may hold `this`.
     void on_ui(std::function<void()> fn);
     bool running() const { return running_.load(); }
+    // How often what is shown that changes by itself (a job's progress, the elapsed time, a "Fetch missing"
+    // that may have to stop) is looked at, on the UI thread: everything is drawn again only when it changed.
+    static constexpr Millis kWatchEveryMs = 100;
     // Runs `fn` on the UI thread once `ms` of the clock have passed, unless the app has begun to stop: a
     // timer of the composition's own, which stop() cancels.
     void after(Millis ms, std::function<void()> fn);

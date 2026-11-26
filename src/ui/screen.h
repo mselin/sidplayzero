@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // A screen of the app (SPEC-090), and what it may ask of the app's frame.
 //
-// HOW TO ADD A SCREEN (for the areas that build the browser, now playing, Search, the playlists and HVSC)
+// How to add a screen:
 //
 // 1. Write a class derived from ui::Screen, in src/ui/NAME_screen.{h,cpp}. Give it:
 //    - name(): its name in the screen description and the stack (SPEC-254): "browser", "playing", ...

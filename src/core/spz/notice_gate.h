@@ -35,8 +35,8 @@ public:
 // the same (SPEC-103).
 const std::string& hvsc_notice_text();
 
-// One class for every part of `core` that asks (FetchMissing of SPEC-174 included, through pass()): two
-// classes of this one name, as Phase 4 had in spz/playlist_fetch.h, break the one-definition rule.
+// One gate for every part of `core` that asks (FetchMissing of SPEC-174 included, through pass()), so that
+// the notice is shown once whoever asks first.
 class NoticeGate {
 public:
     NoticeGate(NoticeRecord* record, NoticePanel* panel);

@@ -24,8 +24,24 @@ namespace spz::app {
 namespace {
 
 // SPEC-091: the centres of the five action labels, for the keys 4 to 8.
+// SPEC-091's action bar: five labels centred over the keys 4 to 8, each with a tick under it.
 const int kActionCentres[5] = {49, 105, 161, 217, 273};
 const int kActionW = 52;
+const int kActionLabelY = 4;             // in the bar
+const int kActionLabelH = 16;
+const int kTickY = 22;                   // the tick that points at the label's key, in the bar
+const int kTickH = 8;
+// While text is typed, two labels in place of the five: "Enter: OK" over key 5, "ESC: cancel" over key 7.
+const int kTypingLabelW = 100;
+const int kTypingEnterCentre = kActionCentres[1];
+const int kTypingEscCentre = kActionCentres[3];
+// Help (SPEC-107): a framed panel over the content band, a line per key: the key, then what it does.
+const int kHelpFrameX = 4;               // the frame's line, then the panel 1 pixel inside it
+const int kHelpTextX = 10;
+const int kHelpKeyW = 96;
+const int kHelpWordsX = 110;
+// How often the screen on top is given its tick(): about 30 times a second (ui::Screen::tick()).
+const Millis kScreenTickMs = 33;
 const int kNoticeTop = ui::kContentTop + ui::kContentHeight - ui::kRowHeight;   // the last row of the content band
 
 // The screen an action of the key map opens, by SPEC-090's table, when the frame can open it by itself.
@@ -76,7 +92,7 @@ App::App(const Seams& seams)
     lv_obj_remove_flag(root, LV_OBJ_FLAG_SCROLLABLE);
     draw();
     // The screen's own clock: what changes by itself on the screen on top (SPEC-080, SPEC-098).
-    every(33, [this] {
+    every(kScreenTickMs, [this] {
         if (!panel_ && !help_open_) top()->tick();
     });
     // Step 5, on the workers.
@@ -506,18 +522,20 @@ void App::draw_top_line(lv_obj_t* root) {
 }
 
 void App::draw_help(lv_obj_t* content) {
-    ui::make_fill(content, 4, 0, ui::kWidth - 8, ui::kContentHeight, ui::colour_line());
-    ui::make_fill(content, 5, 1, ui::kWidth - 10, ui::kContentHeight - 2, ui::colour_panel());
-    ui::make_label(content, "help.title", "Keys", 10, 0, ui::kWidth - 20, ui::kRowHeight,
+    ui::make_fill(content, kHelpFrameX, 0, ui::kWidth - 2 * kHelpFrameX, ui::kContentHeight, ui::colour_line());
+    ui::make_fill(content, kHelpFrameX + 1, 1, ui::kWidth - 2 * (kHelpFrameX + 1), ui::kContentHeight - 2,
+                  ui::colour_panel());
+    ui::make_label(content, "help.title", "Keys", kHelpTextX, 0, ui::kWidth - 2 * kHelpTextX, ui::kRowHeight,
                    ui::LabelStyle{ui::Align::Left, nullptr, true, false});
     const std::vector<HelpLine> lines = help_lines(help_under_place());
     const std::size_t shown = static_cast<std::size_t>((ui::kContentHeight - ui::kRowHeight) / ui::kRowHeight);
     for (std::size_t i = help_first_; i < lines.size() && i < help_first_ + shown; ++i) {
         const int y = ui::kRowHeight * static_cast<int>(i - help_first_ + 1);
         const std::string id = "help.line" + std::to_string(i - help_first_);
-        ui::make_label(content, id + ".key", lines[i].key, 10, y, 96, ui::kRowHeight,
+        ui::make_label(content, id + ".key", lines[i].key, kHelpTextX, y, kHelpKeyW, ui::kRowHeight,
                        ui::LabelStyle{ui::Align::Left, nullptr, true, false});
-        ui::make_label(content, id, lines[i].words, 110, y, ui::kWidth - 120, ui::kRowHeight);
+        ui::make_label(content, id, lines[i].words, kHelpWordsX, y, ui::kWidth - kHelpWordsX - kHelpTextX,
+                       ui::kRowHeight);
     }
 }
 
@@ -527,17 +545,19 @@ void App::draw_action_bar(lv_obj_t* root) {
     const ui::LabelStyle centred{ui::Align::Centre, nullptr, false, false};
     if (typing()) {
         // SPEC-091: while text is typed, Enter and ESC are what can be done.
-        ui::make_label(bar, "typing.enter", "Enter: OK", 105 - 50, 4, 100, 16, centred);
-        ui::make_label(bar, "typing.esc", "ESC: cancel", 217 - 50, 4, 100, 16, centred);
+        ui::make_label(bar, "typing.enter", "Enter: OK", kTypingEnterCentre - kTypingLabelW / 2, kActionLabelY,
+                       kTypingLabelW, kActionLabelH, centred);
+        ui::make_label(bar, "typing.esc", "ESC: cancel", kTypingEscCentre - kTypingLabelW / 2, kActionLabelY,
+                       kTypingLabelW, kActionLabelH, centred);
         return;
     }
     const std::array<std::string, 5> labels = help_open_ || panel_ ? action_labels(place()) : top()->actions();
     for (int i = 0; i < 5; ++i) {
         const std::string& text = labels[static_cast<std::size_t>(i)];
         if (text.empty()) continue;
-        ui::make_label(bar, "action" + std::to_string(4 + i), text, kActionCentres[i] - kActionW / 2, 4, kActionW, 16,
-                       centred);
-        ui::make_fill(bar, kActionCentres[i], 22, 1, 8, ui::colour_dim());     // the tick, pointing at its key
+        ui::make_label(bar, "action" + std::to_string(4 + i), text, kActionCentres[i] - kActionW / 2, kActionLabelY,
+                       kActionW, kActionLabelH, centred);
+        ui::make_fill(bar, kActionCentres[i], kTickY, 1, kTickH, ui::colour_dim());   // the tick, pointing at its key
     }
 }
 
