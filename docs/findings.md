@@ -47,6 +47,17 @@ brief the project started from, so the findings below are raised against that br
 
 ## Closed
 
+### FIND-027 A settings file too large to read was read, to be copied
+- Phase: 5, implementation (found by the security review)
+- Observed: SPEC-133 has a faulty `settings.ini` copied to `settings.ini.bad`. For a file over the 64 KiB
+  limit, copying meant reading the whole file first: a settings file of some gigabytes (or a link to a
+  huge file) made the app run out of memory at every start.
+- Concerns: SPEC-133, SPEC-204
+- Resolution: a `settings.ini` over the limit is never read; it is renamed to `settings.ini.bad` (or
+  `.bad.N`), which keeps its bytes as they were. A faulty file within the limit is still copied. Since the
+  rename leaves no `settings.ini`, the next start finds nothing faulty and makes no `.bad.2`.
+- Status: closed. Made at once, as a safety fix; to be confirmed by the owner
+
 ### FIND-026 The archive check trusted one line of 7z's listing, and the move trusted every name
 - Phase: 5, implementation (found by the security review)
 - Observed: SPEC-149 recognised a link only "by its attributes". 7-Zip lists other archive types under a

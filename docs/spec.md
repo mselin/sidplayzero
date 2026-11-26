@@ -1359,7 +1359,9 @@ concerned keeps its default. So is a file that is not
 valid UTF-8 or is larger than 64 KiB, which is not used at all; for such a `settings.ini` the notice is
 `MSG_SETTINGS_RESET`, not SPEC-204's `MSG_FILE_TOO_LARGE` (FIND-021). When a file had a fault, it is copied to
 `settings.ini.bad`, or `settings.ini.bad.2` and so on if that exists, before anything is written, and the
-notice `MSG_SETTINGS_RESET` is shown once at start. `state.ini` is treated the same way, without the copy and
+notice `MSG_SETTINGS_RESET` is shown once at start. A file larger than 64 KiB is not read at all: it is
+renamed to that name instead of copied, so its bytes are kept as they were and nothing larger than the
+limit is ever read (FIND-027). `state.ini` is treated the same way, without the copy and
 the notice.
 - Covers: REQ-074
 - Priority: Must
