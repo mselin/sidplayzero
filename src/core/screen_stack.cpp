@@ -1,17 +1,34 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// STUB: not built yet (Phase 5).
+// The stack of open screens (SPEC-090).
 #include "spz/screen_stack.h"
 
-#include "spz/not_built.h"
+#include <algorithm>
 
 namespace spz {
 
-ScreenStack::ScreenStack() {}
+ScreenStack::ScreenStack() : screens_{"browser"} {}
 
-std::vector<std::string> ScreenStack::screens() const { SPZ_NOT_BUILT("SPEC-090"); }
-std::string ScreenStack::top() const { SPZ_NOT_BUILT("SPEC-090"); }
-void ScreenStack::open(const std::string&) { SPZ_NOT_BUILT("SPEC-090"); }
-bool ScreenStack::close_top() { SPZ_NOT_BUILT("SPEC-090"); }
-void ScreenStack::set_bottom(const std::string&) { SPZ_NOT_BUILT("SPEC-090"); }
+std::vector<std::string> ScreenStack::screens() const { return screens_; }
+
+std::string ScreenStack::top() const { return screens_.back(); }
+
+void ScreenStack::open(const std::string& screen) {
+    // The bottom screen is the browser or the empty screen in its place: opening "browser" returns there.
+    const bool bottom = screen == "browser" || screen == "empty";
+    auto at = bottom ? screens_.begin() : std::find(screens_.begin(), screens_.end(), screen);
+    if (at != screens_.end()) {
+        screens_.erase(at + 1, screens_.end());
+        return;
+    }
+    screens_.push_back(screen);
+}
+
+bool ScreenStack::close_top() {
+    if (screens_.size() <= 1) return false;
+    screens_.pop_back();
+    return true;
+}
+
+void ScreenStack::set_bottom(const std::string& screen) { screens_.front() = screen; }
 
 }  // namespace spz

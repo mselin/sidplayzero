@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// STUB (TF-005). The program's start: options, the display, the keyboard, and the UI loop.
+// The program's start: options, the display, the keyboard, and the UI loop (SPEC-022). The order of
+// SPEC-200 and the exit of SPEC-201 belong to the area that builds them; this is the least of both.
 #include <unistd.h>
 
 #include <csignal>
@@ -7,11 +8,13 @@
 #include <cstring>
 #include <string>
 
-#include "app/stub_app.h"
+#include "app/app.h"
+#include "app/start.h"
 #include "lvgl.h"
 #include "platform/display.h"
 #include "platform/keyboard.h"
 #include "platform/real_clock.h"
+#include "platform/real_files.h"
 #include "spz/version.h"
 
 #if SPZ_TEST_HOOKS
@@ -41,7 +44,8 @@ int main(int argc, char** argv) {
     for (int i = 1; i < argc; ++i) {
         const std::string word = argv[i];
         if (word == "--version") {
-            std::printf("%s\nengine: none (this is the stub of the test framework)\n", spz::version_line());
+            // SPEC-103: the About screen's first two lines. The second, the libraries, comes with the engine.
+            std::printf("%s\n", spz::version_line());
             return 0;
         }
 #if SPZ_TEST_HOOKS
@@ -92,7 +96,12 @@ int main(int argc, char** argv) {
     sigaction(SIGTERM, &action, nullptr);
     sigaction(SIGINT, &action, nullptr);
 
-    spz::app::StubApp app(&clock);
+    spz::platform::RealFiles files;
+    spz::app::Seams seams;
+    seams.clock = &clock;
+    seams.files = &files;
+    spz::app::App app(seams);
+    app.pump();
     lv_timer_handler();
     lv_refr_now(nullptr);
     spz::app::record_for_selftest("start_ms", std::to_string(spz::app::ms_since_process_start()));
@@ -102,6 +111,7 @@ int main(int argc, char** argv) {
         if (g_signals > 0) app.leave();
         keyboard.poll([&](int code, bool pressed) { app.key(code, pressed); });
         clock.run_due();
+        app.pump();
         lv_timer_handler();
         usleep(5000);
     }

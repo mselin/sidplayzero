@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/describe.h"
 
+#include "ui/draw.h"
+
 #include <algorithm>
 #include <string>
 #include <vector>
@@ -15,10 +17,6 @@ Json blank_description() {
         d.set(field, nullptr);
     }
     return d;
-}
-
-void name_box(lv_obj_t* label, const char* id) {
-    lv_obj_set_user_data(label, const_cast<char*>(id));
 }
 
 namespace {
@@ -40,8 +38,9 @@ void collect(lv_obj_t* object, std::vector<Box>* boxes) {
                          lv_obj_get_style_text_letter_space(object, LV_PART_MAIN),
                          lv_obj_get_style_text_line_space(object, LV_PART_MAIN), LV_COORD_MAX, LV_TEXT_FLAG_NONE);
         Box box;
-        const char* id = static_cast<const char*>(lv_obj_get_user_data(object));
-        box.id = id ? id : "";
+        int full_width = 0;
+        bool cut = false;
+        const bool recorded = label_record(object, &box.id, &full_width, &cut);
         box.text = text ? text : "";
         box.x = area.x1;
         box.y = area.y1;
@@ -49,8 +48,8 @@ void collect(lv_obj_t* object, std::vector<Box>* boxes) {
         box.h = area.y2 - area.y1 + 1;
         box.band = box.y <= kTopLineBottom ? "top" : box.y <= kContentBottom ? "content" : "actions";
         box.text_x = box.x;
-        box.text_w = size.x;
-        box.clipped = box.text_w > box.w;
+        box.text_w = recorded ? std::max(full_width, static_cast<int>(size.x)) : static_cast<int>(size.x);
+        box.clipped = cut || box.text_w > box.w;
         boxes->push_back(box);
     }
     const std::uint32_t children = lv_obj_get_child_count(object);

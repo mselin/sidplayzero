@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// STUB (TF-005): see stub_app.h.
-#include "app/stub_app.h"
+// See start.h.
+#include "app/start.h"
 
 #include <fcntl.h>
 #include <sys/file.h>
@@ -12,14 +12,10 @@
 #include <fstream>
 #include <sstream>
 
-#include "spz/keys.h"
 
 namespace spz::app {
 
 namespace {
-
-const std::int64_t kHoldNoticeMs = 500;    // SPEC-106
-const std::int64_t kHoldLeaveMs = 1000;
 
 std::string home() {
     const char* value = std::getenv("HOME");
@@ -27,6 +23,13 @@ std::string home() {
 }
 
 }  // namespace
+
+std::string home_folder() { return home(); }
+
+bool root_from_variable() {
+    const char* base = std::getenv("HVSC_BASE");
+    return base && *base;
+}
 
 std::string collection_root() {
     const char* base = std::getenv("HVSC_BASE");
@@ -86,27 +89,6 @@ void record_for_selftest(const std::string& key, const std::string& value) {
     if (!std::filesystem::exists(folder + "/selftest.request")) return;
     std::ofstream results(folder + "/selftest.results", std::ios::app);
     results << key << " = " << value << "\n";
-}
-
-StubApp::StubApp(Clock* clock) : clock_(clock), screen_(new ui::StubScreen(collection_root())) {}
-
-StubApp::~StubApp() {
-    clock_->cancel(notice_timer_);
-    clock_->cancel(leave_timer_);
-}
-
-void StubApp::key(int linux_code, bool pressed) {
-    if (key_from_code(linux_code) != Key::Esc) return;   // the stub has no other key
-    if (pressed && !esc_down_) {
-        esc_down_ = true;
-        notice_timer_ = clock_->call_after(kHoldNoticeMs, [this] { screen_->show_hold_notice(true); });
-        leave_timer_ = clock_->call_after(kHoldLeaveMs, [this] { leaving_ = true; });
-    } else if (!pressed && esc_down_) {
-        esc_down_ = false;
-        clock_->cancel(notice_timer_);
-        clock_->cancel(leave_timer_);
-        screen_->show_hold_notice(false);
-    }
 }
 
 }  // namespace spz::app

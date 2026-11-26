@@ -21,7 +21,8 @@
 #include <vector>
 
 #include "app/hooks/sim_fakes.h"
-#include "app/stub_app.h"
+#include "app/app.h"
+#include "app/start.h"
 #include "lvgl.h"
 #include "platform/display.h"
 #include "platform/real_clock.h"
@@ -179,7 +180,12 @@ private:
     // ---- the app's life ----------------------------------------------------------------------------
     void start_app() {
         if (!lock_.take()) throw Stop{kStatusScriptError, "SidPlayZero is already running in this home folder", "", ""};
-        app_.reset(new app::StubApp(clock_));
+        app::Seams seams;
+        seams.clock = clock_;
+        seams.files = &fakes_.files;
+        seams.backlight = &fakes_.backlight;
+        seams.held = [this] { return fakes_.http.stalled() > 0; };
+        app_.reset(new app::App(seams));
         settle();
     }
 
@@ -201,6 +207,7 @@ private:
     void run_ui_once() {
         if (g_signals > 0) throw Stop{0, "told to leave by a signal", "", ""};
         if (clock_ == &real_clock_) real_clock_.run_due();
+        if (app_) app_->pump();
         lv_timer_handler();
     }
 
@@ -210,7 +217,7 @@ private:
         for (;;) {
             run_ui_once();
             lv_refr_now(nullptr);
-            bool idle = true;
+            bool idle = !app_ || app_->settled();
             for (const auto& check : idle_checks()) idle = idle && check();
             if (idle) return;
             if (std::chrono::steady_clock::now() > limit) {
@@ -433,8 +440,9 @@ private:
         else if (name == "settle") settle();
         else if (name == "fake") { fake(rest); if (clock_ == &fake_clock_) settle(); }
         else if (name == "dump") {
+            const std::string text = describe().dump(2);      // first: no file is left when there is no app
             std::ofstream out(in_out(trim(rest) + ".json"));
-            out << describe().dump(2);
+            out << text;
         }
         else if (name == "shot") {
             need_app("shot");
@@ -501,7 +509,7 @@ private:
     fake::Clock fake_clock_;
     platform::RealClock real_clock_;
     Clock* clock_ = nullptr;
-    std::unique_ptr<app::StubApp> app_;
+    std::unique_ptr<app::App> app_;
     app::Lock lock_;
     std::string home_;
 };

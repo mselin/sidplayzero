@@ -11,16 +11,19 @@ namespace spz::ui {
 namespace {
 
 std::uint32_t crc32(const std::uint8_t* data, std::size_t size, std::uint32_t crc = 0) {
-    static std::uint32_t table[256];
-    static bool made = false;
-    if (!made) {
-        for (std::uint32_t n = 0; n < 256; ++n) {
-            std::uint32_t c = n;
-            for (int k = 0; k < 8; ++k) c = (c & 1) ? 0xEDB88320u ^ (c >> 1) : c >> 1;
-            table[n] = c;
+    // Made once, safely from any thread: a picture is encoded on a worker (SPEC-108) and on the UI thread.
+    struct Table {
+        std::uint32_t entries[256];
+        Table() {
+            for (std::uint32_t n = 0; n < 256; ++n) {
+                std::uint32_t c = n;
+                for (int k = 0; k < 8; ++k) c = (c & 1) ? 0xEDB88320u ^ (c >> 1) : c >> 1;
+                entries[n] = c;
+            }
         }
-        made = true;
-    }
+    };
+    static const Table made;
+    const std::uint32_t* table = made.entries;
     crc = ~crc;
     for (std::size_t i = 0; i < size; ++i) crc = table[(crc ^ data[i]) & 0xFF] ^ (crc >> 8);
     return ~crc;
@@ -61,8 +64,8 @@ bool snapshot_rgb(std::vector<std::uint8_t>* rgb, int* width, int* height) {
     return true;
 }
 
-bool write_png(const std::string& path, const std::vector<std::uint8_t>& rgb, int width, int height) {
-    if (width <= 0 || height <= 0 || rgb.size() != static_cast<std::size_t>(width) * static_cast<std::size_t>(height) * 3) return false;
+std::vector<std::uint8_t> encode_png(const std::vector<std::uint8_t>& rgb, int width, int height) {
+    if (width <= 0 || height <= 0 || rgb.size() != static_cast<std::size_t>(width) * static_cast<std::size_t>(height) * 3) return {};
     // Each row gets a filter byte of 0 in front.
     std::vector<std::uint8_t> raw;
     raw.reserve(rgb.size() + static_cast<std::size_t>(height));
@@ -98,7 +101,12 @@ bool write_png(const std::string& path, const std::vector<std::uint8_t>& rgb, in
     chunk(&file, "IHDR", header);
     chunk(&file, "IDAT", zlib);
     chunk(&file, "IEND", {});
+    return file;
+}
 
+bool write_png(const std::string& path, const std::vector<std::uint8_t>& rgb, int width, int height) {
+    const std::vector<std::uint8_t> file = encode_png(rgb, width, height);
+    if (file.empty()) return false;
     std::FILE* out = std::fopen(path.c_str(), "wb");
     if (out == nullptr) return false;
     const bool ok = std::fwrite(file.data(), 1, file.size(), out) == file.size();
