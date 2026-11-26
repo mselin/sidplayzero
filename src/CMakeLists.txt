@@ -134,6 +134,8 @@ add_executable(sidplayzero
     app/compose_search.cpp
     app/compose_lists.cpp
     app/compose_selftest.cpp
+    app/selftest_benchmark.cpp
+    app/selftest_script.cpp
 )
 target_link_libraries(sidplayzero PRIVATE spz_ui spz_platform Threads::Threads)
 target_compile_options(sidplayzero PRIVATE ${SPZ_WARNINGS})
@@ -143,7 +145,7 @@ if(SIDPLAYZERO_TEST_HOOKS)
     target_include_directories(sidplayzero PRIVATE "${CMAKE_SOURCE_DIR}/tests/fakes")
     target_compile_definitions(sidplayzero PRIVATE SPZ_TEST_HOOKS=1)
     # The integration tests' way into the `platform` layer (see app/hooks/tool_main.cpp).
-    add_executable(spz_tool app/hooks/tool_main.cpp app/workers.cpp)
+    add_executable(spz_tool app/hooks/tool_main.cpp app/hooks/tool_hvsc.cpp app/hooks/tool_sound.cpp app/workers.cpp)
     target_link_libraries(spz_tool PRIVATE spz_platform)
     target_compile_definitions(spz_tool PRIVATE SPZ_TEST_HOOKS=1)
     target_compile_options(spz_tool PRIVATE ${SPZ_WARNINGS})
