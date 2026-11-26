@@ -113,6 +113,9 @@ private:
     // The listing at listing.bin has changed (set up, updated, downloaded): opened again, and every part
     // that shows what it holds is told.
     void listing_changed();
+    // Runs `fn` on the UI thread once the quick, fetch and long workers have each finished what they were
+    // doing and are waiting, and lets them go on after it: for a change to something they all read.
+    void with_workers_parked(std::function<void()> fn);
     std::string listing_file() const;
     std::string database_file() const;
     struct GateRecord;                // NoticeRecord: notice_accepted in state.ini

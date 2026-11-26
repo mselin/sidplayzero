@@ -2,7 +2,10 @@
 // The composition, HVSC: the listing (SPEC-142), the notice and its gate (SPEC-152), jobs (SPEC-147), the
 // fetcher of single tunes (SPEC-141) with Releases as its ChangedTunes (SPEC-148), setting HVSC up
 // (SPEC-140) and the complete download (SPEC-144), and what they do at start.
+#include <chrono>
+#include <condition_variable>
 #include <memory>
+#include <mutex>
 
 #include "app/composition.h"
 #include "spz/keep_start.h"
@@ -256,27 +259,48 @@ void Composition::cleanup_at_start() {
 }
 
 void Composition::listing_changed() {
-    // The listing file is new (SPEC-140, SPEC-144, SPEC-148). It is opened again on the long worker, which
-    // ran the job that wrote it, and then every part that shows what it holds is told.
-    // NOTE for the areas that call this: the Listing object is shared by pointer with the collection (the
-    // quick worker), the player (the UI thread), the fetcher (the fetch worker) and the index (the long
-    // worker); it is opened again in place, so call this only at a job's end, as the listeners above do.
-    Files* files = seams_.files;
-    Listing* listing = listing_.get();
-    const std::string listing_path = listing_file();
-    app()->long_worker()->post([this, files, listing, listing_path] {
-        listing->open(files, listing_path, "");
-        on_ui([this] {
-            if (player_) player_->set_listing(listing_.get());
-            refresh_browser();
-            Index* index = index_.get();
-            if (!index) return;
-            app()->long_worker()->post([this, index] {
-                const IndexRun run = index->build(IndexReason::AfterSetup, [this] { return running(); });
-                if (!run.notice.empty()) on_ui([this, run] { app()->notice(run.notice); });
-            });
+    // The listing file is new (SPEC-140, SPEC-144, SPEC-148). The Listing object is shared by pointer with
+    // the collection (read on the quick worker), the player (the UI thread), the fetcher (the fetch worker)
+    // and the index (the long worker), so it is opened again on the UI thread while the three workers are
+    // parked between their jobs; then every part that shows what it holds is told.
+    with_workers_parked([this] {
+        listing_->open(seams_.files, listing_file(), "");
+        if (player_) player_->set_listing(listing_.get());
+        refresh_browser();
+        Index* index = index_.get();
+        if (!index) return;
+        app()->long_worker()->post([this, index] {
+            const IndexRun run = index->build(IndexReason::AfterSetup, [this] { return running(); });
+            if (!run.notice.empty()) on_ui([this, run] { app()->notice(run.notice); });
         });
     });
+}
+
+void Composition::with_workers_parked(std::function<void()> fn) {
+    struct Park {
+        std::mutex mutex;
+        std::condition_variable wake;
+        int parked = 0;
+        bool done = false;
+    };
+    auto park = std::make_shared<Park>();
+    Executor* const workers[] = {app()->quick(), app()->fetch_worker(), app()->long_worker()};
+    const int count = static_cast<int>(sizeof workers / sizeof workers[0]);
+    for (Executor* worker : workers) {
+        worker->post([this, park, fn, count] {
+            std::unique_lock<std::mutex> lock(park->mutex);
+            if (++park->parked == count) {
+                // The last to park: the UI thread does the work, then lets the three go on.
+                on_ui([park, fn] {
+                    fn();
+                    std::lock_guard<std::mutex> done(park->mutex);
+                    park->done = true;
+                    park->wake.notify_all();
+                });
+            }
+            while (!park->done && running()) park->wake.wait_for(lock, std::chrono::milliseconds(20));
+        });
+    }
 }
 
 }  // namespace spz::app
