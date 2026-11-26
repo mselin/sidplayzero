@@ -134,6 +134,9 @@ struct Services {
 
     // ---- search (SPEC-160 to SPEC-164): src/app/compose_search.cpp
     Index* index = nullptr;
+    // "Rebuild the index" (SPEC-102, SPEC-161): the index is thrown away and built again on the long worker,
+    // and MSG_INDEX_READY tells when it is done.
+    std::function<void()> rebuild_index;
 
     // ---- playlists and favourites (SPEC-170 to SPEC-179), part `playlists`: src/app/compose_lists.cpp
     Playlists* playlists = nullptr;

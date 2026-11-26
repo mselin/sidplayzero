@@ -142,6 +142,7 @@ void Composition::collection_changed() {
     browser_.reset();
     refresh_browser();
     remake_player();
+    search_root_changed();
 }
 
 }  // namespace spz::app

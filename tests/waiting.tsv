@@ -9,57 +9,39 @@ test	reason	words
 SPEC-260 the benchmark step plays the set on the ordinary screens while the key script presses keys, then ends on the self-test screen with its keys written	code	the browser and Search did not show in turn
 SPEC-223 SPEC-255 the manifest has three to six screenshots of exactly 320×170, each one of the approved images	images	needs three to six approved images
 SPEC-223 the store's own check, at its pinned commit, reports no error on what the manifest publishes	images	screenshots is required
-SPEC-095 the browser's keys: Up and Down move, Enter or Right opens a folder or plays a tune, Left goes to the parent, "Playing" has a label only when the player has a current entry, and "Search" opens Search	code	expect screen = search
-SPEC-100 SPEC-161 while the index is being built, Search shows "Indexing n %" and searches what has been indexed so far	code	expect screen = search
-SPEC-100 SPEC-165 a query that matches nothing says "No results", and nothing is asked of HVSC's site; ESC closes Search from the list and from the field	code	expect screen = search
-SPEC-100 Search: a query typed on the fixture collection gives the expected rows; Enter plays a result and the results become the queue; "Folder" shows a result in the browser at its folder, highlighted	code	expect screen = search
-SPEC-100 in the search results the keys 7 and 8 are "Fav" and "Add", and act on the highlighted result	code	expect screen = search
-SPEC-164 the filter panel has four lines, each changed with Left and Right; Enter applies them and ESC leaves them as they were; each filter alone, and all together, remove exactly the fixture tunes that do not fit	code	expect place = search-results
+SPEC-100 SPEC-161 while the index is being built, Search shows "Indexing n %" and searches what has been indexed so far	code	expect list.total = 1
+SPEC-100 in the search results the keys 7 and 8 are "Fav" and "Add", and act on the highlighted result	code	expect panel.id = pick-playlist
 SPEC-201 leaving while a download is held open cuts it short, and the app still ends with status 0	code	expect job.kind = setup
 SPEC-201 the same with a fake download held open: the download is cut short, and nothing of it is in the collection	code	line: expect screen = hvsc
 SPEC-090 "Get HVSC" on the empty screen opens the HVSC screen over it	code	expect screen = hvsc
 SPEC-090 Playlists and Playlist open by their keys, playing an entry opens now playing, and from the deepest stack five presses of ESC reach the browser	code	expect stack = ["browser","playlists","playlist","playing","settings","hvsc"]
-SPEC-090 SPEC-110 every screen that is always built opens by its keys alone, and the stack is as the item says after each	code	expect screen = search
-SPEC-090 SPEC-114 with a panel and help open over the fifth screen, six short presses of ESC reach the browser	code	expect place = search-results
+SPEC-090 SPEC-110 every screen that is always built opens by its keys alone, and the stack is as the item says after each	code	expect screen = hvsc
+SPEC-090 SPEC-114 with a panel and help open over the fifth screen, six short presses of ESC reach the browser	code	expect stack = ["browser","search","playing","settings","hvsc"]
 SPEC-090 a key for a screen that is already in the stack returns to it and closes those above; TAB in HVSC and in About gives the stack Settings had, and TAB in Settings changes nothing	code	expect stack = ["browser","playing","settings","hvsc"]
-SPEC-090 from the stack browser, Search, now playing, Settings, HVSC, four short presses of ESC reach the browser	code	expect place = search-results
-SPEC-090 playing a tune from the browser and from Search opens now playing on top of the stack	code	expect place = search-results
-SPEC-091 on every screen each action label has a box centred on its x, no two boxes of one band overlap, and every box lies inside its band	code	: the keys did not lead to the place search-results
-SPEC-091 while text is typed the action bar shows "Enter: OK" and "ESC: cancel" instead of its five labels	code	: the keys did not lead to the place search-field
+SPEC-090 from the stack browser, Search, now playing, Settings, HVSC, four short presses of ESC reach the browser	code	expect stack = ["browser","search","playing","settings","hvsc"]
+SPEC-091 on every screen each action label has a box centred on its x, no two boxes of one band overlap, and every box lies inside its band	code	: the keys did not lead to the place playlists
 SPEC-092 SPEC-104 the brightness keys act on every screen, in a panel and in the text prompt	code	expect screen = hvsc
 SPEC-092 SPEC-108 Print Screen acts on every screen, in a panel and in the text prompt	code	expect screen = hvsc
 SPEC-092 on the HVSC screen each key of `always`, of `lists` and of `screens` has its effect	code	expect screen = hvsc
-SPEC-092 on the result list of Search each key of `always`, of `lists` and of `screens` has its effect	code	expect place = search-results
 SPEC-092 on the two playlist screens and in a list panel the keys of `always`, of `lists` and of `screens` have their effect	code	expect notice.text = Muted
 SPEC-092 with a confirm panel open, TAB, Space, P and L leave the screen description unchanged	code	: the keys did not lead to the place confirm
-SPEC-093 SPEC-095 on the browser the keys 4 and 5 trigger the actions whose labels are above them	code	expect screen = search
 SPEC-093 SPEC-101 SPEC-103 in Settings, HVSC and About the keys with a label do what it says, and 6, 7, 9 and Q do nothing	code	expect screen = hvsc
-SPEC-098 for every box of every screen, the text is no wider than the box or the box is marked as clipped	code	: the keys did not lead to the place search-results
-SPEC-099 Backspace removes the character before the cursor and Delete the one after it, and Left, Right, Home and End move the cursor	code	expect place = search-field
-SPEC-099 SPEC-100 in the Search field Down moves to the results, and TAB and Up do nothing	code	expect place = search-results
-SPEC-099 a sequence with Shift and the sym codes types ~/C64_Music.2, and a letter is a capital only while Shift is down	code	expect place = search-field
-SPEC-099 the Search field holds 64 characters, and the 65th is not added, as the screen shows it	code	expect place = search-field
-SPEC-099 the key codes for "hub 1985" put exactly that text in the Search field, and the codes for F, X, Z and C are typed there	code	expect place = search-field
-SPEC-107 SPEC-115 help over the results of Search has exactly the lines the rule gives from the key map	code	: the keys did not lead to the place search-results
+SPEC-098 for every box of every screen, the text is no wider than the box or the box is marked as clipped	code	: the keys did not lead to the place playlists
 SPEC-107 help over a confirm panel has exactly the lines the rule gives, so none for TAB, Space, P or L	code	: the keys did not lead to the place confirm
 SPEC-107 help over a confirm panel lists its row, then the `lists` rows, then the `always` rows, and has no line for TAB, Space, P or L	code	expect screen = hvsc
 SPEC-107 help over the HVSC screen has exactly the lines the rule gives from the key map	code	: the keys did not lead to the place hvsc
-SPEC-107 help over the Search field has its rows and the `always` rows, and none of `lists` or `screens`	code	: the keys did not lead to the place search-field
-SPEC-107 help over the filter panel has exactly the lines the rule gives [parts: filters]	code	: the keys did not lead to the place filter
 SPEC-107 help over the notice panel has its row, the `lists` rows and the `always` rows	code	: the keys did not lead to the place notice-panel
 SPEC-113 SPEC-114 a download that finishes while a text prompt is open leaves the prompt and its text as they were, and is told by a notice	code	expect screen = hvsc
-SPEC-113 a notice takes no keys: a key pressed while one shows has its usual effect	code	expect place = search-field
 SPEC-114 SPEC-092 the confirm panel opens on "Stop", Enter is yes and ESC is no, and the keys 4 to 8, TAB, Space, P and L do nothing while it is open	code	expect screen = hvsc
 SPEC-114 SPEC-152 the notice panel opens on the first thing that would use the network, ESC cancels and Enter accepts, and the keys 4 to 8 do nothing while it is open	code	expect job.kind = setup
-SPEC-114 the filter panel opens on "Filter" in the results of Search, ESC cancels it, and the keys 4 to 8 do nothing while it is open	code	expect place = search-results
-SPEC-115 SPEC-091 on every screen the action bar has the key map's label for each key whose part is built, and none for a key whose part is not	code	: the keys did not lead to the place search-results
-SPEC-115 a key whose part is not built changes nothing and has no line in help; a key whose part is built has its line	code	: the keys did not lead to the place search-results
+SPEC-115 SPEC-091 on every screen the action bar has the key map's label for each key whose part is built, and none for a key whose part is not	code	: the keys did not lead to the place playlists
+SPEC-115 a key whose part is not built changes nothing and has no line in help; a key whose part is built has its line	code	: the keys did not lead to the place playlists
 SPEC-140 SPEC-113 when the set-up ends on the HVSC screen with help open, the notice shows and the browser opens once help is closed	code	expect job.kind = setup
 SPEC-148 SPEC-102 a check that cannot fetch the file says so, and adds no row	code	expect rows[0].text = "Check for a newer release"
 SPEC-102 SPEC-147 key 4, Back, closes the HVSC screen and leaves the job running; coming back shows its progress again	code	expect job.kind = setup
 SPEC-147 SPEC-102 with a download held open, the HVSC screen shows the job in step 3; ESC returns to Settings, the job mark goes on reporting, and a notice tells the end	code	expect screen = hvsc
 SPEC-147 SPEC-114 Stop asks "Stop the download?" in a confirm panel: ESC lets the job go on, Enter stops it, and nothing of it is left	code	expect job.kind = setup
-SPEC-151 SPEC-200 a session that starts, browses, searches, plays present tunes and changes settings makes no request: any request would fail this run	code	expect screen = search
+SPEC-151 SPEC-200 a session that starts, browses, searches, plays present tunes and changes settings makes no request: any request would fail this run	code	expect screen = hvsc
 SPEC-152 SPEC-148 with the notice not accepted, Check for a newer release opens the notice panel and makes no request; ESC makes none; Enter makes the request	code	expect rows[0].text = "Check for a newer release"
 SPEC-152 SPEC-144 with the notice not accepted, Download everything opens the notice panel and makes no request; ESC makes none; Enter starts the download	code	expect rows matches "Download everything"
 SPEC-152 SPEC-140 Get HVSC on the HVSC screen opens the notice panel and makes no request; ESC makes none; Enter makes the five	code	expect rows[0].text = Get HVSC
@@ -82,5 +64,4 @@ SPEC-172 SPEC-171 Add from the now-playing screen's More panel adds the playing 
 SPEC-022 with the index build held by slow files on the long worker, Enter on an absent tune makes its request at once	code	expect screen = hvsc
 SPEC-022 SPEC-148 with an update's download stalled on the long worker, Enter on an absent tune makes its request at once, and the tune plays while the download still waits	code	expect screen = hvsc
 SPEC-022 the scripts of the thread rules, run in the ThreadSanitizer build, pass and give no report	code	structure_threads_index.script: the script stopped at: expect screen = hvsc
-SPEC-109 the mini player on the browser, Search and Settings shows the state, the title and the elapsed time while a tune plays or is paused, and the failed mark with the file's name when it cannot be played	code	expect screen = search
 SPEC-076 the volume keys set the system volume to the nearest multiple of 5 % above or below, Mute toggles the mute, and the notice MSG_VOLUME shows the new level or "Muted"	code	expect notice.id = MSG_VOLUME
