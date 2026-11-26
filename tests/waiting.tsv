@@ -654,7 +654,6 @@ SPEC-022 SPEC-148 with an update's download stalled on the long worker, Enter on
 SPEC-010 the 12-pixel font has a glyph for each of the 218 printable Windows-1252 characters	code	not built yet
 SPEC-010 the 14-pixel font has a glyph for each of the 218 printable Windows-1252 characters	code	not built yet
 SPEC-010 two runs of the script that shows every printable Windows-1252 character give the same pixels, and each tune's title is drawn	code	the script stopped at: expect screen = browser
-SPEC-020 in the program's build, `platform` is where the engine, miniaudio and libcurl are used: a file of it can include each	code	no file of platform is built with a path to miniaudio.h
 SPEC-003 ten seconds of a fixture rendered by the app equal the sidplayfp program's WAV made with --delay=0, and the app starts no sidplayfp program to get them	code	the script stopped at: expect screen = browser
 SPEC-002 the program needs no libsidplayfp library when it starts, and --version prints libsidplayfp 3.1.2	code	'libsidplayfp 3.1.2' not found in
 SPEC-022 a test build makes the audio callback abort if it allocates or takes a lock	code	not built yet
