@@ -2,8 +2,6 @@
 #
 # The program: LVGL, then the `ui` and `platform` layers, then the program itself (SPEC-020).
 #
-# What is here is a stub (docs/test-framework-tasks.md, TF-005): the least that lets every level of
-# tests run. Phase 5 replaces it with the app.
 
 # --- LVGL ---------------------------------------------------------------------------------------------
 spz_fetch_lvgl(SPZ_LVGL_DIR)
@@ -55,11 +53,16 @@ target_compile_definitions(spz_platform PRIVATE SPZ_DISPLAY_WINDOW=${_spz_use_sd
 target_compile_options(spz_platform PRIVATE ${SPZ_WARNINGS})
 
 # --- the program ---------------------------------------------------------------------------------------
+# The app's frame (SPEC-022, SPEC-090): its threads, the stack of screens, and the list of screens.
+find_package(Threads REQUIRED)
 add_executable(sidplayzero
     app/main.cpp
-    app/stub_app.cpp
+    app/start.cpp
+    app/app.cpp
+    app/workers.cpp
+    app/screens.cpp
 )
-target_link_libraries(sidplayzero PRIVATE spz_ui spz_platform)
+target_link_libraries(sidplayzero PRIVATE spz_ui spz_platform Threads::Threads)
 target_compile_options(sidplayzero PRIVATE ${SPZ_WARNINGS})
 if(SIDPLAYZERO_TEST_HOOKS)
     # The hooks the simulator tests drive the program by (SPEC-253). Never in a package.

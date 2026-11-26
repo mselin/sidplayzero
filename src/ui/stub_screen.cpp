@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// STUB (TF-005): see stub_screen.h.
+// See stub_screen.h.
 #include "ui/stub_screen.h"
 
 #include "ui/describe.h"
+#include "ui/draw.h"
 
 namespace spz::ui {
 
@@ -12,14 +13,7 @@ const int kActionCentres[5] = {49, 105, 161, 217, 273};   // SPEC-091
 const char* const kActionIds[5] = {"action4", "action5", "action6", "action7", "action8"};
 
 lv_obj_t* label(lv_obj_t* parent, const char* id, const char* text, int x, int y, int width) {
-    lv_obj_t* object = lv_label_create(parent);
-    lv_label_set_long_mode(object, LV_LABEL_LONG_MODE_DOTS);
-    lv_obj_set_pos(object, x, y);
-    lv_obj_set_width(object, width);
-    lv_obj_set_height(object, 16);
-    lv_label_set_text(object, text);
-    name_box(object, id);
-    return object;
+    return make_label(parent, id, text, x, y, width, 16);
 }
 
 }  // namespace

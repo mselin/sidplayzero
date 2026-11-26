@@ -63,7 +63,7 @@ SPEC-048 a root that has HVSC's documents and no tune yet holds entries: what HV
 SPEC-048 a root that holds no entry gives the empty screen, and a tune put into the root makes the browser appear within 5 s	code	expect screen = browser
 SPEC-048 started with an empty home folder, the empty screen says no collection was found, names the root and has the one row "Get HVSC"; Enter opens the notice panel	code	expect panel.id = notice-panel
 SPEC-048 with a panel open over the empty screen, a tune put into the root makes the browser appear when the panel is closed, and not before	code	expect panel.id = notice-panel
-SPEC-048 with help open over the empty screen, a tune put into the root makes the browser appear when help is closed, and not before	code	expect place = help
+SPEC-048 with help open over the empty screen, a tune put into the root makes the browser appear when help is closed, and not before	code	expect screen = browser
 SPEC-049 in a folder with one present and one absent tune the second row has the mark "absent", and "fetching" while the fake HttpClient holds its request	code	expect screen = browser
 SPEC-095 the browser's keys 6, 7 and 8 are "Lists", "Fav" and "Add"; "Fav" and "Add" have no label, and do nothing, when a folder is highlighted	code	expect screen = browser
 SPEC-095 the browser's keys: Up and Down move, Enter or Right opens a folder or plays a tune, Left goes to the parent, "Playing" has a label only when the player has a current entry, and "Search" opens Search	code	expect screen = browser
@@ -296,7 +296,6 @@ SPEC-107 help over the HVSC screen has exactly the lines the rule gives from the
 SPEC-107 help over the Playlist screen has exactly the lines the rule gives [parts: playlists]	code	: the keys did not lead to the place playlist
 SPEC-107 help over the Playlists screen has exactly the lines the rule gives [parts: playlists]	code	: the keys did not lead to the place playlists
 SPEC-107 help over the Search field has its rows and the `always` rows, and none of `lists` or `screens`	code	: the keys did not lead to the place search-field
-SPEC-107 help over the empty screen has exactly the lines the rule gives from the key map	code	: fn+H did not open help over empty
 SPEC-107 help over the filter panel has exactly the lines the rule gives [parts: filters]	code	: the keys did not lead to the place filter
 SPEC-107 help over the notice panel has its row, the `lists` rows and the `always` rows	code	: the keys did not lead to the place notice-panel
 SPEC-107 help over the pick-playlist, more-playlist and import panels has exactly the lines the rule gives [parts: playlists]	code	: the keys did not lead to the place pick-playlist

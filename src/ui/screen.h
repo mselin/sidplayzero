@@ -1,0 +1,139 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// A screen of the app (SPEC-090), and what it may ask of the app's frame.
+//
+// HOW TO ADD A SCREEN (for the areas that build the browser, now playing, Search, the playlists and HVSC)
+//
+// 1. Write a class derived from ui::Screen, in src/ui/NAME_screen.{h,cpp}. Give it:
+//    - name(): its name in the screen description and the stack (SPEC-254): "browser", "playing", ...
+//    - place(): the place of docs/keymap.tsv whose keys apply while it is on top. It is name() unless the
+//      screen has two halves (Search: "search-field" while its field is in use, "search-results" else).
+//    - title(), position(): the left of the top line (SPEC-091). position() is "n/total" or "".
+//    - draw(content): make its LVGL objects in `content`, the content band (320×120, its top at y = 16).
+//      Use ui::make_label() (ui/draw.h) for every piece of text: it names the box, cuts the text to fit and
+//      marks it as cut, as SPEC-098 and the screen description want. A list uses ui::RowList (ui/rows.h),
+//      which draws rows of 20 pixels, moves its highlight with the `lists` keys and describes itself.
+//      The frame calls draw() after any change that you announce with shell()->redraw(); it throws away
+//      the objects of the time before, so keep the screen's state in members and never in LVGL objects.
+//    - on_action(event): what a key does there. `event.action` is the key map's word for the key in the
+//      screen's place ("open_or_play", "up" ...). Return true when the screen did something with it. The
+//      frame first deals with what is the same on every screen (help, ESC, held ESC, TAB, P, the screen
+//      keys of SPEC-090's table, brightness, the screenshot) and with the actions that other areas have
+//      registered with Shell::on_action() (play or pause, the volume ...); the screen gets the rest.
+//      A short ESC that would close the bottom screen comes to that screen as "back" (the browser's
+//      "parent folder").
+//    - describe(d): fill in the fields of SPEC-254 that are the screen's own: `rows`, `list`, `detail`,
+//      `lines`, `fields`, `voices`, `job` and the like. The frame fills `screen`, `stack`, `place`,
+//      `title`, `position`, `actions`, `typing`, `panel`, `help`, `notice`, `text` and `boxes`.
+//    - actions(): the five labels over the keys 4 to 8. The key map's, unless the screen takes one away
+//      while its action cannot be used (SPEC-095: "Playing" with no current entry).
+//    - ready(): false while a part of `core` the screen cannot do without is still a stub (it throws
+//      spz::NotBuilt). A key that would open a screen that is not ready does nothing.
+// 2. Add one line for it to src/app/screens.cpp. Nothing else needs to change: the key map already has
+//    its keys, and opening it by its key (key 5 in the browser, "open_search") is the frame's work.
+// 3. Panels are ui::Panel (ui/panel.h): open one with shell()->open_panel(). Notices: shell()->notice().
+//    Work that may take longer than 50 ms goes to a worker (shell()->quick(), fetch_worker(), long_worker()),
+//    and its result comes back with shell()->ui()->post(), which runs it on the UI thread.
+// 4. Everything here runs on the UI thread.
+#pragma once
+
+#include <array>
+#include <functional>
+#include <map>
+#include <memory>
+#include <string>
+#include <vector>
+
+#include "lvgl.h"
+#include "spz/clock.h"
+#include "spz/executor.h"
+#include "spz/files.h"
+#include "spz/json.h"
+#include "spz/key_input.h"
+#include "spz/keymap.h"
+
+namespace spz {
+class SettingsFile;
+class NoticeGate;
+class Backlight;
+}  // namespace spz
+
+namespace spz::ui {
+
+class Panel;
+
+// The objects of `core` and `platform` the screens share, set by the app's wiring (src/app). A pointer is
+// null while what it points at is not built.
+struct Services {
+    Files* files = nullptr;
+    SettingsFile* settings = nullptr;     // SPEC-130
+    NoticeGate* notice_gate = nullptr;    // SPEC-152
+    Backlight* backlight = nullptr;       // SPEC-104
+    std::string home;                     // the home folder
+    std::string collection;               // the collection root (SPEC-040), as a full path
+    bool collection_from_variable = false;   // the root comes from HVSC_BASE (SPEC-040)
+    std::vector<std::string> libraries;   // "libsidplayfp 3.1.2", "libresidfp 1.3.0": read from the libraries
+};
+
+// What a screen or a panel may ask of the app's frame.
+class Shell {
+public:
+    virtual ~Shell() = default;
+
+    virtual Clock* clock() = 0;
+    // SPEC-022: the UI thread's queue, and the workers.
+    virtual Executor* ui() = 0;
+    virtual Executor* quick() = 0;
+    virtual Executor* fetch_worker() = 0;
+    virtual Executor* long_worker() = 0;
+    virtual Executor* render() = 0;
+    virtual Services& services() = 0;
+
+    // SPEC-113: raises a notice of SPEC-116, its words filled in by spz::message_words().
+    virtual void notice(const std::string& id, const std::map<std::string, std::string>& about = {}) = 0;
+    // SPEC-090: opens a screen by its name; if it is in the stack already, returns to it. False if there is
+    // no such screen in this build, or it is not ready.
+    virtual bool open(const std::string& screen) = 0;
+    // SPEC-048: which of the two the bottom of the stack is, "browser" or "empty" (the browser's area decides).
+    virtual void set_bottom(const std::string& screen) = 0;
+    // A short ESC, or "Back": closes the top screen.
+    virtual void close_top() = 0;
+    // SPEC-114: one panel at a time. Opening one replaces any that is open.
+    virtual void open_panel(std::unique_ptr<Panel> panel) = 0;
+    virtual void close_panel() = 0;
+    virtual Panel* panel() = 0;
+    // The state of a screen or a panel changed: draw everything again before the next frame.
+    virtual void redraw() = 0;
+    // For the areas whose actions are the same on every screen (the player's "play_pause", the volume's
+    // "volume_up" ...): `handler` is called for every key whose action is `action`, wherever it is pressed.
+    virtual void on_action(const std::string& action, std::function<void(const KeyEvent&)> handler) = 0;
+};
+
+class Screen {
+public:
+    explicit Screen(Shell* shell) : shell_(shell) {}
+    virtual ~Screen() = default;
+    Screen(const Screen&) = delete;
+    Screen& operator=(const Screen&) = delete;
+
+    virtual std::string name() const = 0;
+    virtual std::string place() const { return name(); }
+    virtual bool ready() { return true; }
+    virtual std::string title() const = 0;
+    virtual std::string position() const { return ""; }
+    virtual std::array<std::string, 5> actions() const { return action_labels(place()); }
+    // Whether text is typed into the screen itself (the Search field), not into a panel.
+    virtual bool typing() const { return false; }
+    virtual void draw(lv_obj_t* content) = 0;
+    virtual bool on_action(const KeyEvent& event) = 0;
+    virtual void describe(Json* description) const { (void)description; }
+    // It has come on top of the stack: opened, or returned to.
+    virtual void shown() {}
+
+protected:
+    Shell* shell() const { return shell_; }
+
+private:
+    Shell* shell_;
+};
+
+}  // namespace spz::ui

@@ -16,10 +16,9 @@ const int kContentBottom = 135;
 // A description with every field of SPEC-254, each null, for a screen to fill in.
 Json blank_description();
 
-// Gives a drawn label the name it has in the description's `boxes`.
-void name_box(lv_obj_t* label, const char* id);
-
-// Fills in `text` and `boxes` from the labels that are drawn on the active screen, in reading order.
+// Fills in `text` and `boxes` from the labels that are drawn on the active screen, in reading order. A
+// label made by make_label() (ui/draw.h) gives its name, the width its whole text needs, and whether it
+// was cut to fit.
 void describe_drawn(Json* description);
 
 }  // namespace spz::ui
