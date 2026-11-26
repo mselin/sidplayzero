@@ -1,0 +1,89 @@
+
+7-Zip 23.01 (x64) : Copyright (c) 1999-2023 Igor Pavlov : 2023-06-20
+ 64-bit locale=C.UTF-8 Threads:4 OPEN_MAX:1024
+
+Scanning the drive for archives:
+1 file, 247 bytes (1 KiB)
+
+Listing archive: /tmp/x/good.7z
+
+--
+Path = /tmp/x/good.7z
+Type = 7z
+Physical Size = 247
+Headers Size = 234
+Method = LZMA2:12
+Solid = +
+Blocks = 1
+
+----------
+Path = C64Music
+Size = 0
+Packed Size = 0
+Modified = 2026-11-25 21:19:44.7512123
+Attributes = D drwxr-xr-x
+CRC = 
+Encrypted = -
+Method = 
+Block = 
+
+Path = C64Music/DOCUMENTS
+Size = 0
+Packed Size = 0
+Modified = 2026-11-25 21:19:44
+Attributes = D_ drwxr-xr-x
+CRC = 
+Encrypted = -
+Method = 
+Block = 
+
+Path = C64Music/DOCUMENTS/Songlengths.md5
+Size = 5131488
+Packed Size = 13
+Modified = 2026-11-25 21:19:44
+Attributes = A -rw-r--r--
+CRC = 788EE22F
+Encrypted = -
+Method = LZMA2:12
+Block = 0
+
+Path = C64Music/MUSICIANS/A/a name = with an equals sign.sid
+Size = 5
+Packed Size = 
+Modified = 2026-11-25 21:19:44
+Attributes = A_ -rw-r--r--
+CRC = 2C87716A
+Encrypted = -
+Method = LZMA2:12
+Block = 0
+
+Path = C64Music/out.sid
+Size = 13
+Packed Size = 
+Modified = 2026-11-25 21:19:44
+Attributes = A lrwxrwxrwx
+CRC = 1B2C3D4E
+Encrypted = -
+Method = LZMA2:12
+Block = 0
+
+Path = C64Music/pipe
+Size = 0
+Packed Size = 0
+Modified = 2026-11-25 21:19:44
+Attributes = A prw-r--r--
+CRC = 
+Encrypted = -
+Method = 
+Block = 
+
+Path = ../evil.sid
+Size = 2
+Packed Size = 
+Modified = 2026-11-25 21:19:44
+Attributes = A -rw-r--r--
+CRC = 1B2C3D4E
+Encrypted = -
+Method = LZMA2:12
+Block = 0
+

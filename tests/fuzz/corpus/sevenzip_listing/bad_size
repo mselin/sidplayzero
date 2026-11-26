@@ -1,0 +1,11 @@
+Listing archive: a.7z
+
+--
+Path = a.7z
+Type = 7z
+
+----------
+Path = C64Music/a.sid
+Size = 18446744073709551616
+Attributes = A -rw-r--r--
+
