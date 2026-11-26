@@ -57,6 +57,7 @@ import json
 import os
 import shutil
 import signal
+import re
 import subprocess
 import sys
 import tempfile
@@ -387,7 +388,8 @@ class RealUnpacker(SevenZipCase):
         self.assertNotEqual(listed.status, 70, listed.output.strip())
         tool("unpacker", "unpack", awkward, into, env=env)
         self.assertTrue(log.exists(), "the stand-in for 7z was not run")
-        calls = [call.split("\n") for call in log.read_text().split("7z\n") if call]
+        # Each call starts with the program's name on a line of its own; the archive's name also ends in "7z".
+        calls = [call.split("\n") for call in re.split(r"(?m)^7z\n", log.read_text()) if call]
         self.assertEqual(len(calls), 2, log.read_text())
         list_arguments = [line[2:] for line in calls[0] if line.startswith("  ")]
         unpack_arguments = [line[2:] for line in calls[1] if line.startswith("  ")]

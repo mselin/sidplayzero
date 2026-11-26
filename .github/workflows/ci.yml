@@ -42,7 +42,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Install what the level needs
-        run: sudo apt-get update -q && sudo apt-get install -y -q ninja-build
+        run: sudo apt-get update -q && sudo apt-get install -y -q ninja-build libcurl4-openssl-dev
       - name: Let the sanitizers map their memory
         run: sudo sysctl -w vm.mmap_rnd_bits=28
       - name: tools/test unit
@@ -61,7 +61,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Install what the level needs
-        run: sudo apt-get update -q && sudo apt-get install -y -q ninja-build libsdl2-dev xvfb
+        run: sudo apt-get update -q && sudo apt-get install -y -q ninja-build libsdl2-dev xvfb libcurl4-openssl-dev
       - name: tools/test simulator
         run: tools/test simulator
       - name: The level notices a failing test
@@ -85,7 +85,7 @@ jobs:
       - name: Install what the levels need
         run: >
           sudo apt-get update -q && sudo apt-get install -y -q
-          ninja-build libsdl2-dev xvfb 7zip pkg-config clang libclang-rt-dev
+          ninja-build libsdl2-dev xvfb 7zip pkg-config clang libclang-rt-dev libcurl4-openssl-dev
       - name: Let the sanitizers map their memory
         run: sudo sysctl -w vm.mmap_rnd_bits=28
       - name: Pinned downloads

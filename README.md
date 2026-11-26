@@ -83,8 +83,8 @@ the app ships none.
 
 ## Building it
 
-What builds today is the stub. On Debian or Ubuntu you need `cmake` 3.31 or newer, `ninja-build`, `g++`,
-`git` and `libsdl2-dev`.
+The app is being written; what builds today is the app as far as it goes. On Debian or Ubuntu you need
+`cmake` 3.31 or newer, `ninja-build`, `g++`, `make`, `git`, `libsdl2-dev` and `libcurl4-openssl-dev`.
 
 For a desktop, in a window of the device's size:
 

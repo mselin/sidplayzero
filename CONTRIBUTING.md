@@ -60,12 +60,12 @@ tools/test package
 `tools/test host` runs the unit, integration, fuzz and package levels in turn. `tools/test device` builds the
 package and says what to copy to a CardputerZero and what to run there.
 
-| Level | What it runs | Needs, on Debian or Ubuntu, besides `cmake` 3.31 or newer, `ninja-build`, `g++`, `python3` and `git` |
+| Level | What it runs | Needs, on Debian or Ubuntu, besides `cmake` 3.31 or newer, `ninja-build`, `g++`, `python3`, `git`, `make` and `libcurl4-openssl-dev` |
 |---|---|---|
 | unit | `core` against fakes, in three builds; the framework's own tests; the repository's checks | Nothing more |
 | simulator | The program drawing its screens with no display, driven by scripts | `libsdl2-dev`, `xvfb` |
-| integration | The pinned engine and reference player, the real program, a local server, a real `7z`, ThreadSanitizer | `libsdl2-dev`, `xvfb`, `7zip`, `pkg-config`, `make`, `curl`, `openssl` |
-| fuzz | The fuzz targets, 15 s each | `clang`, `libclang-rt-dev` |
+| integration | The pinned engine and reference player, the real program, a local server, a real `7z`, ThreadSanitizer | `libsdl2-dev`, `xvfb`, `7zip`, `pkg-config`, `curl`, `openssl` |
+| fuzz | The fuzz targets, 15 s each, the engine's among them | `clang`, `libclang-rt-dev` |
 | package | The `.deb` for the device and every check on it, with an install in an emulated Debian arm64 container | `g++-aarch64-linux-gnu`, `qemu-user-static` (`qemu-user-binfmt` on newer releases), `docker`, `pkg-config`, `make`, `curl` |
 
 Each level has a test that is built to fail, left out of a normal run. `tools/test prove` runs each level

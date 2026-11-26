@@ -11,7 +11,6 @@ SPEC-260 SPEC-241 the key step with every key right writes key_codes_wrong = non
 SPEC-260 in the key step a key is only recorded: TAB opens no Settings, and a held ESC still leaves	code	expect screen = selftest
 SPEC-260 the benchmark step plays the set on the ordinary screens while the key script presses keys, then ends on the self-test screen with its keys written	code	the notice MSG_SELFTEST did not show
 SPEC-260 with the request none, two starts and exits leave two start_ms and two exit_ms lines and no step's keys	code	selftest.results was not written
-SPEC-203 every good fixture, cut at every length from 0 to its size, goes to the real backend under AddressSanitizer with no report	code	not built yet
 SPEC-223 SPEC-255 the manifest has three to six screenshots of exactly 320×170, each one of the approved images	images	needs three to six approved images
 SPEC-223 the store's own check, at its pinned commit, reports no error on what the manifest publishes	images	screenshots is required
 SPEC-040 with HVSC_BASE set, the Settings row for the collection shows its value with "(from HVSC_BASE)", and Enter on the row changes nothing	code	expect screen = browser
@@ -55,7 +54,7 @@ SPEC-241 each value in the measurements file has the form of its key	code	'start
 SPEC-241 no value in the measurements file holds the name of the user or of the machine	code	'user_groups' not found in {'app_version': '0.1.0'} : the measurements file has no user_groups; it holds: ['app_version']
 SPEC-241 the measurements file says what the conditions for the complete download found [parts: download-all]	code	'memory_check_mib' not found in {'app_version': '0.1.0'} : the measurements file has no memory_check_mib; it holds: ['app_version']
 SPEC-202 killed with SIGKILL at a random moment in its first four seconds and started again, 50 times: every start reaches the browser, and the folder and entry restored were highlighted in the 10 s before the kill	code	expect screen = browser
-SPEC-132 the real program is killed with SIGKILL at 20 random moments while a script makes it save, and after each kill every kept file loads	code	not built yet
+SPEC-132 the real program is killed with SIGKILL at 20 random moments while a script makes it save, and after each kill every kept file loads	code	expect screen = browser
 SPEC-200 a second copy of the real program, started while the first runs, says that SidPlayZero is already running, exits with status 1 and touches nothing; the first carries on	code	2 != 1 : the second copy's exit status
 SPEC-201 the same with SIGINT	code	expect screen = browser
 SPEC-201 playing a fixture tune and sent SIGTERM, the real program ends with status 0 within 1 s, state.ini names the tune, and no child process is left	code	expect screen = browser
@@ -192,21 +191,6 @@ SPEC-154 the state reader drops a path that does not end in .sid, though the fil
 SPEC-154 the state reader drops a path that does not start with a slash	code	the app, started with current_path = 'MUSICIANS/H/Hubbard_Rob/Commando.sid', ended with status 1 at: expect screen = browser (found: empty)
 SPEC-154 the state reader drops a path that would lead out of the collection	code	the app, started with current_path = '/../C64Music/MUSICIANS/H/Hubbard_Rob/Commando.sid', ended with status 1 at: expect screen = browser (found: empty)
 SPEC-154 the state reader accepts a path with a space and an accent: the user's own tune is the current entry again	code	the app, started with current_path = '/My Rips/Cool Söng.sid', ended with status 1 at: expect screen = browser (found: empty)
-SPEC-150 SPEC-144 with url_archive pointed at the local server, the server's log is the complete list of requests the download makes: the archive of the release set up [parts: download-all]	code	not built yet
-SPEC-144 SPEC-007 with a real 7z and an archive of the fixture collection, the complete download ends with the fixture tree under the root and every tune present [parts: download-all]	code	not built yet
-SPEC-144 after a kill in step 6, with everything unpacked and nothing moved, the next start cleans up: the root is as it was, and the staging folder and the marker are gone [parts: download-all]	code	not built yet
-SPEC-144 the program killed during step 7 and started again ends with the same tree as an uninterrupted run: the old release's own files gone, the planted file still there [parts: download-all]	code	not built yet
-SPEC-144 a file the test planted in the root survives step 7, and a file only the old release had is removed [parts: download-all]	code	not built yet
-SPEC-144 stopping at each of steps 3 to 6, with the real 7z, leaves the root's contents unchanged and no staging folder [parts: download-all]	code	not built yet
-SPEC-150 SPEC-151 SPEC-140 with url_files pointed at the local server, the server's log is the complete list of requests a set-up makes: the five documents	code	not built yet
-SPEC-007 the real Unpacker starts 7z with an argument list and no shell: a name full of a shell's characters arrives as one argument [parts: download-all]	code	not built yet
-SPEC-149 SPEC-007 the app's reader of the real 7z's listing gives every entry of a good archive, and the check passes it [parts: download-all]	code	not built yet
-SPEC-149 an archive with an absolute path is refused by the real 7z path, and nothing appears at that path [parts: download-all]	code	not built yet
-SPEC-149 an archive with a .. part is refused by the real 7z path, and nothing appears beside the staging folder [parts: download-all]	code	not built yet
-SPEC-149 an archive with a link that points outside is refused by the real 7z path [parts: download-all]	code	not built yet
-SPEC-149 an archive whose entries add up to more than 2 GiB is refused by the real 7z path [parts: download-all]	code	not built yet
-SPEC-149 an archive with more than 200,000 entries is refused by the real 7z path [parts: download-all]	code	not built yet
-SPEC-149 an archive with a second top-level folder is refused by the real 7z path [parts: download-all]	code	not built yet
 SPEC-172 SPEC-171 Add from the now-playing screen's More panel adds the playing subtune, Add in the browser adds the tune without a number, an entry that is already there gives MSG_ALREADY_THERE, and Fav and Add act on a search result	code	expect screen = browser
 SPEC-171 Fav marks a tune and unmarks it, marks subtune 3 while it plays, the star shows in the browser, Fav there adds a second entry, and a restart keeps the stars and the file	code	expect screen = browser
 SPEC-173 SPEC-069 a playlist of present, missing, present shows the missing entry with its mark, plays the first and the third, still holds three entries, and gives MSG_ENTRY_MISSING when the missing one is chosen	code	expect screen = browser
@@ -226,7 +210,6 @@ SPEC-010 the 14-pixel font has a glyph for each of the 218 printable Windows-125
 SPEC-010 two runs of the script that shows every printable Windows-1252 character give the same pixels, and each tune's title is drawn	code	the script stopped at: expect screen = browser
 SPEC-003 ten seconds of a fixture rendered by the app equal the sidplayfp program's WAV made with --delay=0, and the app starts no sidplayfp program to get them	code	the script stopped at: expect screen = browser
 SPEC-002 the program needs no libsidplayfp library when it starts, and --version prints libsidplayfp 3.1.2	code	'libsidplayfp 3.1.2' not found in
-SPEC-022 a test build makes the audio callback abort if it allocates or takes a lock	code	not built yet
 SPEC-022 the program plays a fixture tune with the real engine through that guarded audio callback, and it does not abort	code	the script stopped at: expect screen = browser
 SPEC-022 the scripts of the thread rules, run in the ThreadSanitizer build, pass and give no report	code	the script stopped at: expect screen = browser
 SPEC-103 the packaged program gives the version of the package's control file and of app-builder.json, with the two libraries, as the About screen's first lines	code	does not print libsidplayfp 3.1.2
