@@ -156,7 +156,7 @@ bool PlayingScreen::read_voices() {
     // SPEC-080: the chosen chip's registers, read only while a tune plays, so that the bars stand still
     // while it is paused.
     const Services& s = shell()->services();
-    if (!part_built("bars") || !s.player || !s.sound) return false;
+    if (!s.player || !s.sound) return false;
     const PlayerStatus status = s.player->status();
     if (status.state != PlayerState::Playing || !s.sound->can().registers) return false;
     std::uint8_t registers[Engine::kRegisters] = {};
@@ -354,16 +354,16 @@ void PlayingScreen::describe(Json* description) const {
     Json lines = Json::array();
     for (const std::string& line : this->lines()) lines.push(line);
     description->set("lines", lines);
-    if (part_built("bars")) {
-        Json voices = Json::array();
-        for (const Voice& v : voices_) {
-            Json voice = Json::object();
-            voice.set("height", v.height);
-            voice.set("lit", v.lit);
-            voices.push(voice);
-        }
-        description->set("voices", voices);
+    // SPEC-080: what the bars show. The registers are read in every build; the bars are drawn only with
+    // the part `bars` (see draw()).
+    Json voices = Json::array();
+    for (const Voice& v : voices_) {
+        Json voice = Json::object();
+        voice.set("height", v.height);
+        voice.set("lit", v.lit);
+        voices.push(voice);
     }
+    description->set("voices", voices);
 }
 
 }  // namespace spz::ui

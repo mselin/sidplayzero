@@ -232,8 +232,8 @@ void Composition::hvsc_at_start() {
 }
 
 void Composition::cleanup_at_start() {
-    // SPEC-202: temporary files and old partial downloads, on the long worker; and, with the part
-    // `download-all`, what SPEC-145's conditions find, for the measurements (SPEC-241).
+    // SPEC-202: temporary files and old partial downloads, on the long worker; and what SPEC-145's conditions
+    // find, which every run writes to its measurements (SPEC-241, FIND-024).
     Files* files = seams_.files;
     Clock* clock = seams_.clock;
     const Folders folders = folders_;
@@ -242,7 +242,7 @@ void Composition::cleanup_at_start() {
     Memory* memory = seams_.memory;
     const Listing* listing = listing_.get();
     const std::string root = root_.path;
-    const bool offer = part_built("download-all") && unpacker && memory;
+    const bool offer = unpacker && memory;   // SPEC-241 (FIND-024): written at every run
     app()->long_worker()->post([files, clock, folders, metrics, unpacker, memory, listing, root, offer] {
         clean_up_at_start(files, clock, folders);
         if (!offer) return;
@@ -251,7 +251,7 @@ void Composition::cleanup_at_start() {
         metrics->set_number("memory_check_mib", static_cast<std::int64_t>(found.memory_mib));
         metrics->set("unpacker", found.unpacker ? "yes" : "no");
         metrics->set_number("card_free_mib", static_cast<std::int64_t>(found.free_mib));
-        metrics->set("download_everything_offered", found.offered ? "yes" : "no");
+        metrics->set("download_everything_offered", found.offered && part_built("download-all") ? "yes" : "no");
     });
 }
 

@@ -422,7 +422,7 @@ void Composition::measure_engines() {
                 if (player_) player_->set_speed_factors(kept);
                 return;
             }
-            seams_.clock->call_after(3000, [this, files, cache, rate] {
+            after(3000, [this, files, cache, rate] {
                 if (running()) measure_engines_now(files, cache, rate);
             });
         });

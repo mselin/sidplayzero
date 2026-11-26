@@ -89,7 +89,7 @@ void Composition::watch_empty_root() {
     // its place as soon as the root has an entry and no panel or help is open.
     if (watching_root_) return;
     watching_root_ = true;
-    seams_.clock->call_after(kRootWatchMs, [this] {
+    after(kRootWatchMs, [this] {
         watching_root_ = false;
         if (!running() || app()->bottom() != "empty") return;
         Collection* collection = collection_.get();

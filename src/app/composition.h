@@ -193,6 +193,10 @@ private:
     // workers (the App stops them before it goes), so a job may hold `this`.
     void on_ui(std::function<void()> fn);
     bool running() const { return running_.load(); }
+    // Runs `fn` on the UI thread once `ms` of the clock have passed, unless the app has begun to stop: a
+    // timer of the composition's own, which stop() cancels.
+    void after(Millis ms, std::function<void()> fn);
+    std::vector<Clock::TimerId> timers_;
 
     App* app_;
     Seams seams_;

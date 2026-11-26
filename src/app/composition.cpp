@@ -38,6 +38,12 @@ void Composition::on_ui(std::function<void()> fn) {
     });
 }
 
+void Composition::after(Millis ms, std::function<void()> fn) {
+    timers_.push_back(seams_.clock->call_after(ms, [this, fn] {
+        if (running()) fn();
+    }));
+}
+
 Composition::~Composition() {
     running_ = false;
     // The player first: it is the backend's listener, and the backend goes with the sound.
@@ -57,6 +63,8 @@ void Composition::stop() {
     if (player_) player_->stop();
     if (sound_) sound_->stop_render_thread();
     running_ = false;
+    for (const Clock::TimerId timer : timers_) seams_.clock->cancel(timer);
+    timers_.clear();
     // Put the screen's brightness back if the app had turned it off (SPEC-207).
     if (screen_off_) screen_off_->at_exit();
     // Write state.ini (SPEC-132).

@@ -3,6 +3,7 @@
 
 #include <exception>
 
+#include "spz/hvsc_setup.h"
 #include "spz/notice_gate.h"
 #include "ui/draw.h"
 
@@ -26,16 +27,18 @@ void EmptyScreen::draw(lv_obj_t* content) {
 bool EmptyScreen::on_action(const KeyEvent& event) {
     if (rows_.on_action(event.action)) return true;
     if (event.action != "get_hvsc") return false;
-    // SPEC-090: "Get HVSC" opens the HVSC screen, once SPEC-152's notice has been read and accepted. Both the
-    // gate and the HVSC screen belong to other areas; while either is not built, the key does nothing.
+    // SPEC-048, SPEC-090: "Get HVSC" starts SPEC-140 and opens the HVSC screen over this one, once SPEC-152's
+    // notice has been read and accepted.
     NoticeGate* gate = shell()->services().notice_gate;
+    HvscSetup* setup = shell()->services().setup;
     if (gate == nullptr) return true;
     Shell* frame = shell();
-    try {
-        gate->pass([frame] { frame->open("hvsc"); }, nullptr);
-    } catch (const std::exception&) {
-        // not built yet
-    }
+    gate->pass(
+        [frame, setup] {
+            frame->open("hvsc");
+            if (setup) setup->start();
+        },
+        nullptr);
     return true;
 }
 

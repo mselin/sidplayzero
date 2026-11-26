@@ -39,6 +39,7 @@ namespace fs = std::filesystem;
 
 const int kStatusExpectFailed = 1;
 const int kStatusScriptError = 2;
+const int kStatusAlreadyRunning = 1;
 const std::int64_t kStepMs = 10;                         // `advance` moves the fake clock in steps of this
 const std::chrono::seconds kSettleLimit(10);
 
@@ -182,7 +183,9 @@ public:
 private:
     // ---- the app's life ----------------------------------------------------------------------------
     void start_app() {
-        if (!lock_.take()) throw Stop{kStatusScriptError, "SidPlayZero is already running in this home folder", "", ""};
+        // SPEC-200, step 1: another SidPlayZero holds the lock: it says so and ends with status 1, as the
+        // program does without a script.
+        if (!lock_.take()) throw Stop{kStatusAlreadyRunning, "SidPlayZero is already running", "", ""};
         files_.stopping = false;
         app::Seams seams;
         seams.clock = clock_;
@@ -253,7 +256,12 @@ private:
 
     // ---- time ----------------------------------------------------------------------------------------
     void run_ui_once() {
-        if (g_signals > 0) throw Stop{0, "told to leave by a signal", "", ""};
+        if (g_signals > 0) {
+            // SPEC-201: the exit begins; a second signal during it ends the process at once.
+            signal(SIGTERM, SIG_DFL);
+            signal(SIGINT, SIG_DFL);
+            throw Stop{0, "told to leave by a signal", "", ""};
+        }
         if (clock_ == &real_clock_) real_clock_.run_due();
         if (app_) app_->pump();
         lv_timer_handler();
