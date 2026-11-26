@@ -429,22 +429,8 @@ SPEC-149 an archive is refused for any one entry that could land outside the col
 SPEC-149 an archive is refused with more than 200,000 entries, or with sizes that add up to more than 2 GiB [parts: download-all]	code	not built yet
 SPEC-149 the reader of 7z's listing gives each entry's path, size and kind [parts: download-all]	code	not built yet
 SPEC-149 text that is not a listing of 7z is not read as one [parts: download-all]	code	not built yet
-SPEC-152 SPEC-148 with the notice not accepted, Check for a newer release opens the panel and makes no request; Enter makes it [parts: releases]	code	not built yet
 SPEC-152 SPEC-144 with the notice not accepted, Download everything opens the panel and makes no request; Enter makes it [parts: download-all]	code	not built yet
-SPEC-151 SPEC-148 nothing checks for releases unless the user asks [parts: releases]	code	not built yet
 SPEC-151 SPEC-144 the complete download asks for nothing until its row is chosen, not even at start [parts: download-all]	code	not built yet
-SPEC-148 with release 84 set up and a server offering 85, the check reports 85 and changes nothing [parts: releases]	code	not built yet
-SPEC-148 a check that finds the same release, or a lower one, says that this is the newest [parts: releases]	code	not built yet
-SPEC-148 a check whose file cannot be fetched, or names no release, says that it could not check [parts: releases]	code	not built yet
-SPEC-148 after updating, the listing is release 85's, and a tune 85 moved is present at its new path with no request [parts: releases]	code	not built yet
-SPEC-148 after updating, a tune whose bytes changed is requested once when it is played [parts: releases]	code	not built yet
-SPEC-148 a changed tune that the user had replaced with other bytes is not requested [parts: releases]	code	not built yet
-SPEC-148 if the fetch of a changed tune fails, the file on the device is played [parts: releases]	code	not built yet
-SPEC-148 a tune whose path and MD5 the new listing does not have stays where it is, as a tune of the user's own [parts: releases]	code	not built yet
-SPEC-148 what an update found changed is still known after the app has started again [parts: releases]	code	not built yet
-SPEC-148 SPEC-140 an update that fails leaves the root, the tunes and the listing as they were, and the notice names the step [parts: releases]	code	not built yet
-SPEC-146 SPEC-148 an update needs 16 MiB as a set-up does: with 15 MiB free no request is made [parts: releases]	code	not built yet
-SPEC-148 SPEC-140 one job at a time: an update does not begin while another job runs [parts: releases]	code	not built yet
 SPEC-140 SPEC-113 when the set-up ends on the HVSC screen with help open, the notice shows and the browser opens once help is closed	code	expect job.kind = setup
 SPEC-148 SPEC-102 a check that cannot fetch the file says so, and adds no row	code	expect rows[0].text = "Check for a newer release"
 SPEC-102 SPEC-147 key 4, Back, closes the HVSC screen and leaves the job running; coming back shows its progress again	code	expect job.kind = setup
