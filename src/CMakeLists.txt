@@ -43,16 +43,37 @@ target_link_libraries(spz_ui PUBLIC spz_core lvgl)
 target_compile_options(spz_ui PRIVATE ${SPZ_WARNINGS})
 
 # --- platform: the outside world -----------------------------------------------------------------------
-add_library(spz_platform STATIC
-    platform/display.cpp
-    platform/keyboard.cpp
-    platform/real_clock.cpp
-    platform/real_files.cpp
-)
+# The real seams (SPEC-021): the engine (cmake/engine.cmake), sound through miniaudio (SPEC-005), HTTP
+# through the system's libcurl (SPEC-006), the 7z runner, the volume, the backlight, the keyboard and the
+# display. An object library, so that every part of it is in the program whether or not the shell uses it
+# yet: the engine and the sound library are always built in (SPEC-002, SPEC-005).
+spz_fetch(miniaudio _spz_miniaudio_header)
+get_filename_component(_spz_miniaudio_dir "${_spz_miniaudio_header}" DIRECTORY)
+find_package(CURL REQUIRED)
+find_package(Threads REQUIRED)
+file(GLOB _platform_sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/platform/*.cpp")
+add_library(spz_platform OBJECT ${_platform_sources} platform/miniaudio_impl.c)
 target_include_directories(spz_platform PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
-target_link_libraries(spz_platform PUBLIC spz_core lvgl)
-target_compile_definitions(spz_platform PRIVATE SPZ_DISPLAY_WINDOW=${_spz_use_sdl} SPZ_DISPLAY_FRAMEBUFFER=${_spz_use_fbdev})
-target_compile_options(spz_platform PRIVATE ${SPZ_WARNINGS})
+target_include_directories(spz_platform SYSTEM PRIVATE "${_spz_miniaudio_dir}")
+target_link_libraries(spz_platform PUBLIC spz_core spz::engine_libraries lvgl CURL::libcurl Threads::Threads
+    ${CMAKE_DL_LIBS})
+add_dependencies(spz_platform spz_libsidplayfp)
+target_compile_definitions(spz_platform PRIVATE
+    SPZ_DISPLAY_WINDOW=${_spz_use_sdl} SPZ_DISPLAY_FRAMEBUFFER=${_spz_use_fbdev}
+    "SPZ_ENGINE_SANITIZER=\"${SIDPLAYZERO_SANITIZE}\""
+    # miniaudio: PulseAudio first, then ALSA, each loaded when the program runs; the null device for tests.
+    MA_ENABLE_ONLY_SPECIFIC_BACKENDS MA_ENABLE_PULSEAUDIO MA_ENABLE_ALSA MA_ENABLE_NULL
+    MA_NO_DECODING MA_NO_ENCODING MA_NO_GENERATION MA_NO_RESOURCE_MANAGER MA_NO_NODE_GRAPH MA_NO_ENGINE)
+# The guard of the audio callback (SPEC-022) is in a test build without a sanitizer: a sanitizer brings
+# allocators of its own.
+if(SIDPLAYZERO_TEST_HOOKS AND SIDPLAYZERO_SANITIZE STREQUAL "")
+    target_compile_definitions(spz_platform PRIVATE SPZ_AUDIO_GUARD=1)
+endif()
+if(SIDPLAYZERO_TEST_HOOKS)
+    target_compile_definitions(spz_platform PRIVATE SPZ_TEST_HOOKS=1)
+endif()
+set_source_files_properties(platform/miniaudio_impl.c PROPERTIES COMPILE_OPTIONS "-w")
+target_compile_options(spz_platform PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${SPZ_WARNINGS}>)
 
 # --- the program ---------------------------------------------------------------------------------------
 add_executable(sidplayzero
@@ -69,6 +90,7 @@ if(SIDPLAYZERO_TEST_HOOKS)
     # The integration tests' way into the `platform` layer (see app/hooks/tool_main.cpp).
     add_executable(spz_tool app/hooks/tool_main.cpp)
     target_link_libraries(spz_tool PRIVATE spz_platform)
+    target_compile_definitions(spz_tool PRIVATE SPZ_TEST_HOOKS=1)
     target_compile_options(spz_tool PRIVATE ${SPZ_WARNINGS})
 else()
     target_compile_definitions(sidplayzero PRIVATE SPZ_TEST_HOOKS=0)

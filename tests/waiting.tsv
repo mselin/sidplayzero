@@ -400,9 +400,6 @@ SPEC-115 a key whose part is not built changes nothing and has no line in help; 
 SPEC-115 a key whose part is not built does nothing and has no label; one whose part is built has both	code	not built yet
 SPEC-115 a part is built exactly when its build switch is on, and several joined by | when any of them is	code	not built yet
 SPEC-115 the keys of brightness, screenshot, too-slow and restart give their actions only when their parts are built	code	not built yet
-SPEC-110 with only a mouse and a touch screen in the list, the input set-up still creates no pointer	code	not built yet
-SPEC-110 against a made-up list with a mouse, a touch screen and two keyboards, the input set-up creates one keypad and nothing else	code	not built yet
-SPEC-110 SPEC-111 the CardputerZero's own keyboard is chosen before another device with letters, and the path in SIDPLAYZERO_KEYBOARD before both	code	not built yet
 SPEC-007 SPEC-144 with the fake Unpacker the complete download runs its steps in order and ends with the archive's tree under the root [parts: download-all]	code	not built yet
 SPEC-144 the staging folder is removed first if it exists, and nothing of it reaches the root [parts: download-all]	code	not built yet
 SPEC-144 in step 7 the listing in use is copied to listing.old first, and the DOCUMENTS folder is moved last [parts: download-all]	code	not built yet
@@ -562,17 +559,7 @@ SPEC-144 after a kill in step 6, with everything unpacked and nothing moved, the
 SPEC-144 the program killed during step 7 and started again ends with the same tree as an uninterrupted run: the old release's own files gone, the planted file still there [parts: download-all]	code	not built yet
 SPEC-144 a file the test planted in the root survives step 7, and a file only the old release had is removed [parts: download-all]	code	not built yet
 SPEC-144 stopping at each of steps 3 to 6, with the real 7z, leaves the root's contents unchanged and no staging folder [parts: download-all]	code	not built yet
-SPEC-150 an endless answer is cut at the limit and the download fails as too large	code	not built yet
-SPEC-150 SPEC-006 the real HttpClient fetches a file over HTTPS from a server whose certificate the test's authority signed	code	not built yet
 SPEC-150 SPEC-151 SPEC-140 with url_files pointed at the local server, the server's log is the complete list of requests a set-up makes: the five documents	code	not built yet
-SPEC-150 SPEC-069 the real HttpClient tells a file that is not there from a server that fails	code	not built yet
-SPEC-150 a redirect to http:// is refused: it is not followed, and nothing is written	code	not built yet
-SPEC-150 with a release build's rules http://127.0.0.1 is refused, and no request reaches the server	code	not built yet
-SPEC-150 with a release build's rules an authority named by a test is not trusted	code	not built yet
-SPEC-150 a self-signed certificate is refused, even with the test's authority trusted	code	not built yet
-SPEC-150 a test build also accepts http://127.0.0.1	code	not built yet
-SPEC-150 a server whose certificate no trusted authority signed is refused, and nothing is written	code	not built yet
-SPEC-150 the request as the server received it names the app and its version as its user agent, and carries no cookie	code	not built yet
 SPEC-007 the real Unpacker starts 7z with an argument list and no shell: a name full of a shell's characters arrives as one argument [parts: download-all]	code	not built yet
 SPEC-149 SPEC-007 the app's reader of the real 7z's listing gives every entry of a good archive, and the check passes it [parts: download-all]	code	not built yet
 SPEC-007 the real Unpacker unpacks a good archive into the folder it is given [parts: download-all]	code	not built yet
@@ -672,8 +659,6 @@ SPEC-010 two runs of the script that shows every printable Windows-1252 characte
 SPEC-020 in the program's build, `platform` is where the engine, miniaudio and libcurl are used: a file of it can include each	code	no file of platform is built with a path to miniaudio.h
 SPEC-002 the build fails if the checksum of libresidfp-1.3.0.tar.gz differs from its pin	code	the build went through with a wrong checksum
 SPEC-002 the build fails if the checksum of libsidplayfp-3.1.2.tar.gz differs from its pin	code	the build went through with a wrong checksum
-SPEC-003 the program calls the library itself: SidTune from memory, sidplayfp's config, load, play, mix, mute and filter, and neither its SidDatabase nor the sidplayfp program	code	the program has no symbol SidTune::SidTune(
-SPEC-002 the program holds the engine, and no symbol of the exSID backend	code	the engine is not built in
 SPEC-003 ten seconds of a fixture rendered by the app equal the sidplayfp program's WAV made with --delay=0, and the app starts no sidplayfp program to get them	code	the script stopped at: expect screen = browser
 SPEC-002 the program needs no libsidplayfp library when it starts, and --version prints libsidplayfp 3.1.2	code	'libsidplayfp 3.1.2' not found in
 SPEC-022 a test build makes the audio callback abort if it allocates or takes a lock	code	not built yet
@@ -927,9 +912,3 @@ SPEC-074 with voice 1 muted from the first sample, ten seconds of a fixture equa
 SPEC-074 with the filter off, ten seconds of a fixture equal the sidplayfp program's WAV made with -nf [parts: voices]	code	its script ended with status 1 at: expect screen = browser
 SPEC-077 with sid_model = 8580, ten seconds of a fixture marked 6581 equal the sidplayfp program's WAV made with -mnf [parts: force]	code	its script ended with status 1 at: expect screen = browser
 SPEC-077 with clock = ntsc, ten seconds of a fixture marked PAL equal the sidplayfp program's WAV made with -vnf [parts: force]	code	its script ended with status 1 at: expect screen = browser
-SPEC-076 the real SystemVolume reads the level and the mute with `pactl get-sink-volume @DEFAULT_SINK@` and `pactl get-sink-mute @DEFAULT_SINK@`	code	not built yet
-SPEC-076 the real SystemVolume reads a muted sink as muted	code	not built yet
-SPEC-076 the real SystemVolume sets the level with `pactl set-sink-volume @DEFAULT_SINK@ N%`, as an argument list and without a shell	code	not built yet
-SPEC-076 the real SystemVolume toggles the mute with `pactl set-sink-mute @DEFAULT_SINK@ toggle`	code	not built yet
-SPEC-076 if pactl fails, the real SystemVolume says it could not, for reading, setting and muting	code	not built yet
-SPEC-076 if pactl is missing, the real SystemVolume says it could not, and nothing else is run in its place	code	not built yet
