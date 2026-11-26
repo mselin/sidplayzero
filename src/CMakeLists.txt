@@ -34,6 +34,15 @@ if(_spz_use_sdl)
 endif()
 
 # --- ui: screens and drawing. May use core and LVGL; not the engine, not the sound library ---------------
+# The fonts of SPEC-010: C sources made ahead of time by tools/make_fonts.py (cmake/fonts.cmake) and kept in
+# the repository. A library of their own, which LVGL links too, because the 12-pixel one is LVGL's default
+# font (lv_conf.h): every program that has LVGL has them. Built like the rest of `ui`.
+add_library(spz_fonts STATIC ui/fonts/dejavu_sans_12.c ui/fonts/dejavu_sans_14.c)
+target_include_directories(spz_fonts PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+target_link_libraries(spz_fonts PRIVATE spz_core lvgl)
+target_compile_options(spz_fonts PRIVATE ${SPZ_WARNINGS})
+target_link_libraries(lvgl PUBLIC spz_fonts)
+
 file(GLOB _ui_sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/ui/*.cpp")
 add_library(spz_ui STATIC ${_ui_sources})
 target_include_directories(spz_ui PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
