@@ -188,7 +188,8 @@ FileStatus SimFiles::block_size(const std::string& path, std::uint64_t* out) {
 }
 bool SimFiles::can_write(const std::string& folder) {
     std::lock_guard<std::mutex> lock(mutex_);
-    return files_->can_write(folder);
+    // `files.root_writable no`: the folder that holds the collection root, the one folder asked, cannot be written.
+    return root_writable.load() && files_->can_write(folder);
 }
 
 // ---- SimHttp ---------------------------------------------------------------------------------------------------
@@ -288,7 +289,7 @@ bool SimFakes::set(const std::string& name, const std::string& value, std::strin
         else if (name == "memory.swap_free_mib") memory.swap_free = std::stoull(value);
         else if (name == "files.free_mib") files.set_free_bytes(std::stoull(value) * 1024 * 1024);
         else if (name == "files.list_delay_ms") list_delay_ms = std::stoll(value);
-        else if (name == "files.root_writable") { if (!truth(value)) files.make_read_only(value); }
+        else if (name == "files.root_writable") root_writable = truth(value);
         else if (name == "volume.level") volume.level = std::stoi(value);
         else if (name == "volume.works") volume.works = truth(value);
         else if (name == "backlight.level") backlight.level = std::stoi(value);

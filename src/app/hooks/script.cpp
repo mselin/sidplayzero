@@ -144,6 +144,7 @@ public:
         std::string why;
         if (!fakes_.load(options_.fakes, home_, &why)) return fail_plain(kStatusScriptError, why);
         files_.list_delay_ms = fakes_.list_delay_ms;
+        files_.root_writable = fakes_.root_writable;
 
         g_clock = clock_;
         lv_init();
@@ -488,6 +489,7 @@ private:
             std::lock_guard<std::mutex> lock(files_.lock());
             if (!fakes_.set(name, trim(rest), &why)) throw Stop{kStatusScriptError, why, "", ""};
             files_.list_delay_ms = fakes_.list_delay_ms;
+            files_.root_writable = fakes_.root_writable;
         }
     }
 
