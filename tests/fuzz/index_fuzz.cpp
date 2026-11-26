@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // test: SPEC-205 fuzz: the reader of the search index, index.bin
 //
 // The bytes are given to read_index() as an index file (SPEC-160). Whatever they are, it must end, must
