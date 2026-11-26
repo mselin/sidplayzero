@@ -1,0 +1,9 @@
+/A/First.sid
+COMMENT: naïve
+(#1)
+  TITLE: One
+(#2)
+  TITLE: Two
+
+/A/Second.sid
+  TITLE: Last

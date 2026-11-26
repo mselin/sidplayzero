@@ -1,0 +1,5 @@
+# SidPlayZero: how fast each engine renders on this device (SPEC-072)
+version = 1.0.0
+sample_rate = 48000
+accurate = 17.25
+light = 141.5

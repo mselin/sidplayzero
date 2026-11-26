@@ -10,8 +10,11 @@
 // copies from the ring buffer and counts. Events reach the listener as jobs posted to the UI thread.
 #pragma once
 
+#include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -86,10 +89,69 @@ public:
     std::size_t buffered() const;
 
 private:
+    // The audio callback (SPEC-070): copies from the ring buffer, fills the rest with silence, and counts.
+    // It takes no lock, allocates nothing and does not wait.
+    void pull(std::int16_t* out, std::size_t frames);
+    // Stops the callback from touching the buffer, and waits until a callback under way has returned.
+    void quiet_callback();
+    // Lets the callback play again if everything says it may.
+    void update_active();
+    // Opens the stream at rate_. False if no device opens.
+    bool open_stream();
+    void close_stream();
+    // Throws away what is in the buffer. The callback must be quiet.
+    void clear_buffer();
+    std::uint64_t left_to_render() const;      // frames of the subtune not rendered yet
+    void apply_controls();                      // mutes and filters, to the engine, on the render thread
+    // SPEC-078: the device was lost; and the attempts to open it again, on the UI thread.
+    void device_was_lost();
+    void try_reopen();
+    // Gives an event to the listener as a job on the UI thread.
+    void post(void (SoundBackendListener::*event)());
+
     Engine* engine_ = nullptr;
     AudioSink* sink_ = nullptr;
     Clock* clock_ = nullptr;
     Executor* ui_ = nullptr;
+    SoundBackendListener* listener_ = nullptr;
+    std::shared_ptr<bool> alive_;               // jobs and timers posted by this backend look here first
+
+    // What the player's thread and the render thread share, under mutex_.
+    mutable std::mutex mutex_;
+    bool loaded_ = false, started_ = false, paused_ = false, skip_ = false;
+    unsigned rate_ = 48000;
+    std::uint64_t length_ = 0;                  // 0: never ends
+    std::uint64_t rendered_ = 0;                // frames of the subtune the engine has produced, skipped ones too
+    bool end_told_ = false;
+    std::int64_t skip_off_ms_ = -1;             // when skipping last ended; -1 if it never has
+    bool muted_[3][3] = {};
+    bool filter_on_[3] = {true, true, true};
+    bool controls_changed_ = false;
+    int chips_ = 1;
+    std::vector<std::int16_t> chunk_;           // what the engine renders into
+
+    // The stream, on the player's thread.
+    bool open_ = false;
+    unsigned open_rate_ = 0;
+    bool gone_ = false;
+    int tries_ = 0;
+    Clock::TimerId reopen_timer_ = 0;
+    bool reopening_ = false;
+
+    // What the audio callback reads and writes.
+    std::vector<std::int16_t> ring_;
+    std::atomic<std::uint64_t> written_{0};     // frames written into the ring, ever
+    std::atomic<std::uint64_t> read_{0};        // frames taken from it, ever
+    std::atomic<bool> active_{false};           // loaded, started, not paused, the stream open and not lost
+    std::atomic<bool> busy_{false};             // a callback is under way
+    std::atomic<bool> output_started_{false};   // the subtune's first frame has been given to the sink
+    std::atomic<bool> all_rendered_{false};     // the subtune's last frame is in the ring
+    std::atomic<std::uint64_t> end_at_{0};      // with all_rendered_: written_ after the subtune's last frame
+    std::atomic<std::uint64_t> played_{0};      // frames of the subtune given to the sink
+    std::atomic<std::uint64_t> skipped_{0};     // frames of the subtune passed over while skipping
+    std::atomic<std::uint64_t> underruns_{0};
+    std::atomic<bool> counting_{true};          // underruns are counted now (not while skipping or just after)
+    std::atomic<bool> lost_{false};             // the device is lost: rendering waits
 };
 
 }  // namespace spz

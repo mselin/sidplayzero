@@ -1,0 +1,23 @@
+##############################################################################
+#  A fixture in the form of HVSC's STIL.txt, written by tools/fixture_makers/play.py.
+##############################################################################
+
+/LENGTHS/Three_Lengths.sid
+COMMENT: A note for the whole file, with café in it.
+(#1)
+  TITLE: First Song
+ ARTIST: Somebody
+(#2)
+COMMENT: The second subtune's note runs over
+         two lines.
+(#3)
+  TITLE: Third Song
+
+/QUEUE/A_One.sid
+  TITLE: Queue One
+COMMENT: Only a part for the file.
+
+/QUEUE/B_Three.sid
+(#2)
+COMMENT: Only a part for subtune 2.
+
