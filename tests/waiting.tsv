@@ -13,7 +13,6 @@ SPEC-260 the benchmark step plays the set on the ordinary screens while the key 
 SPEC-260 with the request none, two starts and exits leave two start_ms and two exit_ms lines and no step's keys	code	selftest.results was not written
 SPEC-223 SPEC-255 the manifest has three to six screenshots of exactly 320×170, each one of the approved images	images	needs three to six approved images
 SPEC-223 the store's own check, at its pinned commit, reports no error on what the manifest publishes	images	screenshots is required
-SPEC-095 the browser's keys 6, 7 and 8 are "Lists", "Fav" and "Add"; "Fav" and "Add" have no label, and do nothing, when a folder is highlighted	code	expect panel.id = pick-playlist
 SPEC-095 the browser's keys: Up and Down move, Enter or Right opens a folder or plays a tune, Left goes to the parent, "Playing" has a label only when the player has a current entry, and "Search" opens Search	code	expect screen = search
 SPEC-100 SPEC-161 while the index is being built, Search shows "Indexing n %" and searches what has been indexed so far	code	expect screen = search
 SPEC-100 SPEC-165 a query that matches nothing says "No results", and nothing is asked of HVSC's site; ESC closes Search from the list and from the field	code	expect screen = search
@@ -23,7 +22,7 @@ SPEC-164 the filter panel has four lines, each changed with Left and Right; Ente
 SPEC-201 leaving while a download is held open cuts it short, and the app still ends with status 0	code	expect job.kind = setup
 SPEC-201 the same with a fake download held open: the download is cut short, and nothing of it is in the collection	code	line: expect screen = hvsc
 SPEC-090 "Get HVSC" on the empty screen opens the HVSC screen over it	code	expect screen = hvsc
-SPEC-090 Playlists and Playlist open by their keys, playing an entry opens now playing, and from the deepest stack five presses of ESC reach the browser	code	expect screen = playlists
+SPEC-090 Playlists and Playlist open by their keys, playing an entry opens now playing, and from the deepest stack five presses of ESC reach the browser	code	expect stack = ["browser","playlists","playlist","playing","settings","hvsc"]
 SPEC-090 SPEC-110 every screen that is always built opens by its keys alone, and the stack is as the item says after each	code	expect screen = search
 SPEC-090 SPEC-114 with a panel and help open over the fifth screen, six short presses of ESC reach the browser	code	expect place = search-results
 SPEC-090 a key for a screen that is already in the stack returns to it and closes those above; TAB in HVSC and in About gives the stack Settings had, and TAB in Settings changes nothing	code	expect stack = ["browser","playing","settings","hvsc"]
@@ -35,10 +34,9 @@ SPEC-092 SPEC-104 the brightness keys act on every screen, in a panel and in the
 SPEC-092 SPEC-108 Print Screen acts on every screen, in a panel and in the text prompt	code	expect screen = hvsc
 SPEC-092 on the HVSC screen each key of `always`, of `lists` and of `screens` has its effect	code	expect screen = hvsc
 SPEC-092 on the result list of Search each key of `always`, of `lists` and of `screens` has its effect	code	expect place = search-results
-SPEC-092 on the two playlist screens and in a list panel the keys of `always`, of `lists` and of `screens` have their effect	code	expect panel.id = pick-playlist
+SPEC-092 on the two playlist screens and in a list panel the keys of `always`, of `lists` and of `screens` have their effect	code	expect notice.text = Muted
 SPEC-092 with a confirm panel open, TAB, Space, P and L leave the screen description unchanged	code	: the keys did not lead to the place confirm
 SPEC-093 SPEC-095 on the browser the keys 4 and 5 trigger the actions whose labels are above them	code	expect screen = search
-SPEC-093 SPEC-095 on the browser the keys 6, 7 and 8 trigger Lists, Fav and Add	code	expect panel.id = pick-playlist
 SPEC-093 SPEC-101 SPEC-103 in Settings, HVSC and About the keys with a label do what it says, and 6, 7, 9 and Q do nothing	code	expect screen = hvsc
 SPEC-098 for every box of every screen, the text is no wider than the box or the box is marked as clipped	code	: the keys did not lead to the place search-results
 SPEC-099 Backspace removes the character before the cursor and Delete the one after it, and Left, Right, Home and End move the cursor	code	expect place = search-field
@@ -50,18 +48,14 @@ SPEC-107 SPEC-115 help over the results of Search has exactly the lines the rule
 SPEC-107 help over a confirm panel has exactly the lines the rule gives, so none for TAB, Space, P or L	code	: the keys did not lead to the place confirm
 SPEC-107 help over a confirm panel lists its row, then the `lists` rows, then the `always` rows, and has no line for TAB, Space, P or L	code	expect screen = hvsc
 SPEC-107 help over the HVSC screen has exactly the lines the rule gives from the key map	code	: the keys did not lead to the place hvsc
-SPEC-107 help over the Playlist screen has exactly the lines the rule gives [parts: playlists]	code	: the keys did not lead to the place playlist
-SPEC-107 help over the Playlists screen has exactly the lines the rule gives [parts: playlists]	code	: the keys did not lead to the place playlists
 SPEC-107 help over the Search field has its rows and the `always` rows, and none of `lists` or `screens`	code	: the keys did not lead to the place search-field
 SPEC-107 help over the filter panel has exactly the lines the rule gives [parts: filters]	code	: the keys did not lead to the place filter
 SPEC-107 help over the notice panel has its row, the `lists` rows and the `always` rows	code	: the keys did not lead to the place notice-panel
-SPEC-107 help over the pick-playlist, more-playlist and import panels has exactly the lines the rule gives [parts: playlists]	code	: the keys did not lead to the place pick-playlist
 SPEC-113 SPEC-114 a download that finishes while a text prompt is open leaves the prompt and its text as they were, and is told by a notice	code	expect screen = hvsc
 SPEC-113 a notice takes no keys: a key pressed while one shows has its usual effect	code	expect place = search-field
 SPEC-114 SPEC-092 the confirm panel opens on "Stop", Enter is yes and ESC is no, and the keys 4 to 8, TAB, Space, P and L do nothing while it is open	code	expect screen = hvsc
 SPEC-114 SPEC-152 the notice panel opens on the first thing that would use the network, ESC cancels and Enter accepts, and the keys 4 to 8 do nothing while it is open	code	expect job.kind = setup
 SPEC-114 the filter panel opens on "Filter" in the results of Search, ESC cancels it, and the keys 4 to 8 do nothing while it is open	code	expect place = search-results
-SPEC-114 the panels of the part playlists open by their keys with their identifiers, ESC closes each, and the keys 4 to 8 do nothing while one is open	code	expect panel.id = pick-playlist
 SPEC-115 SPEC-091 on every screen the action bar has the key map's label for each key whose part is built, and none for a key whose part is not	code	: the keys did not lead to the place search-results
 SPEC-115 a key whose part is not built changes nothing and has no line in help; a key whose part is built has its line	code	: the keys did not lead to the place search-results
 SPEC-140 SPEC-113 when the set-up ends on the HVSC screen with help open, the notice shows and the browser opens once help is closed	code	expect job.kind = setup
@@ -70,17 +64,14 @@ SPEC-102 SPEC-147 key 4, Back, closes the HVSC screen and leaves the job running
 SPEC-147 SPEC-102 with a download held open, the HVSC screen shows the job in step 3; ESC returns to Settings, the job mark goes on reporting, and a notice tells the end	code	expect screen = hvsc
 SPEC-147 SPEC-114 Stop asks "Stop the download?" in a confirm panel: ESC lets the job go on, Enter stops it, and nothing of it is left	code	expect job.kind = setup
 SPEC-151 SPEC-200 a session that starts, browses, searches, plays present tunes and changes settings makes no request: any request would fail this run	code	expect screen = search
-SPEC-151 a session that makes a tune a favourite, makes, plays, renames and deletes a playlist, and steps what happens when a song ends, makes no request	code	expect panel.id = pick-playlist
 SPEC-152 SPEC-148 with the notice not accepted, Check for a newer release opens the notice panel and makes no request; ESC makes none; Enter makes the request	code	expect rows[0].text = "Check for a newer release"
 SPEC-152 SPEC-144 with the notice not accepted, Download everything opens the notice panel and makes no request; ESC makes none; Enter starts the download	code	expect rows matches "Download everything"
-SPEC-152 SPEC-174 with the notice not accepted, Fetch missing opens the notice panel and makes no request; ESC makes none; Enter fetches the playlist's absent entries	code	expect screen = playlists
 SPEC-152 SPEC-140 Get HVSC on the HVSC screen opens the notice panel and makes no request; ESC makes none; Enter makes the five	code	expect rows[0].text = Get HVSC
 SPEC-145 with no 7z on the device the row is absent and the text says to install the 7zip package	code	expect screen = hvsc
 SPEC-145 SPEC-144 the conditions are checked again when the row is chosen: with the memory gone by then, nothing is downloaded and the text explains	code	expect rows matches "Download everything"
 SPEC-145 with 449 MiB of memory and swap the row is absent and the text gives the number; with 450 MiB it is offered	code	expect screen = hvsc
 SPEC-145 with 699 MiB free on the card the row is absent and the text gives both figures	code	expect screen = hvsc
 SPEC-145 when the folder that holds the collection cannot be written the row is absent and the text says so	code	expect screen = hvsc
-SPEC-154 a tune of the user's own at /My Rips/Cool Söng.sid becomes a favourite and is still in Favourites after a restart	code	expect screen = playlists
 SPEC-102 SPEC-144 a complete download cut short while moving files leaves Finish the download in place of Download everything, whatever the memory; finishing ends with the whole collection	code	expect screen = hvsc
 SPEC-102 with HVSC not set up the HVSC screen's rows are Get HVSC and Rebuild the index, the first highlighted, and opening it asks nothing of the network	code	expect screen = hvsc
 SPEC-102 SPEC-140 with a song length file and no hv_sids.txt, HVSC is set up and its release is not known	code	expect screen = hvsc
@@ -91,17 +82,11 @@ SPEC-102 with a newer release found and room to unpack, the rows are Check for a
 SPEC-102 with HVSC set up, its release known and room to unpack, the rows are Check for a newer release, Download everything and Rebuild the index	code	expect screen = hvsc
 SPEC-140 with a download failing, the root is unchanged and the notice says that HVSC could not be set up; the row can be chosen again	code	expect screen = hvsc
 SPEC-102 SPEC-140 from Settings, with HVSC not set up, the three keys 5, Enter, Enter end with the notice MSG_HVSC_READY	code	expect screen = hvsc
-SPEC-172 SPEC-171 Add from the now-playing screen's More panel adds the playing subtune, Add in the browser adds the tune without a number, an entry that is already there gives MSG_ALREADY_THERE, and Fav and Add act on a search result	code	expect panel.id = pick-playlist
-SPEC-171 Fav marks a tune and unmarks it, marks subtune 3 while it plays, the star shows in the browser, Fav there adds a second entry, and a restart keeps the stars and the file	code	expect screen = playlists
-SPEC-173 SPEC-069 a playlist of present, missing, present shows the missing entry with its mark, plays the first and the third, still holds three entries, and gives MSG_ENTRY_MISSING when the missing one is chosen	code	expect screen = playlists
-SPEC-172 a second playlist with the same name in other case is refused with MSG_NAME_TAKEN, and so is the name Favourites	code	expect screen = playlists
-SPEC-114 SPEC-172 SPEC-175 the panels of the playlists part open on their keys, name themselves, keep the keys 4 to 8 from acting, and close with ESC and Enter: pick-playlist, more-playlist and import, and the text panel after an import	code	expect panel.id = pick-playlist
-SPEC-172 SPEC-170 a playlist is made, three tunes are added, the third is moved to the top, the three play in the new order, and the playlist is renamed and deleted, its file following every step	code	expect screen = playlists
+SPEC-172 SPEC-171 Add from the now-playing screen's More panel adds the playing subtune, Add in the browser adds the tune without a number, an entry that is already there gives MSG_ALREADY_THERE, and Fav and Add act on a search result	code	expect screen = search
 SPEC-022 with the index build held by slow files on the long worker, Enter on an absent tune makes its request at once	code	expect screen = hvsc
 SPEC-022 SPEC-148 with an update's download stalled on the long worker, Enter on an absent tune makes its request at once, and the tune plays while the download still waits	code	expect screen = hvsc
 SPEC-010 the 12-pixel font has a glyph for each of the 218 printable Windows-1252 characters	code	not built yet
 SPEC-010 the 14-pixel font has a glyph for each of the 218 printable Windows-1252 characters	code	not built yet
 SPEC-022 the scripts of the thread rules, run in the ThreadSanitizer build, pass and give no report	code	structure_threads_index.script: the script stopped at: expect screen = hvsc
 SPEC-109 the mini player on the browser, Search and Settings shows the state, the title and the elapsed time while a tune plays or is paused, and the failed mark with the file's name when it cannot be played	code	expect screen = search
-SPEC-069 a playlist entry that is missing shows MSG_ENTRY_MISSING when a key chooses it, and is passed over at once, without the message, when playback reaches it by itself	code	expect screen = playlists
 SPEC-076 the volume keys set the system volume to the nearest multiple of 5 % above or below, Mute toggles the mute, and the notice MSG_VOLUME shows the new level or "Muted"	code	expect notice.id = MSG_VOLUME

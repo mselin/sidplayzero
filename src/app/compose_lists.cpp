@@ -1,12 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // The composition, playlists and favourites (SPEC-170 to SPEC-179), part `playlists`: the resolver of
 // entries, the playlists and Favourites, and "Fetch missing" (SPEC-174) with its PlaylistTuneFetcher on the
-// fetcher of SPEC-141. The screens and panels of the part come with its area.
+// fetcher of SPEC-141. The screens and panels of the part are src/ui/playlists_screen.*, playlist_screen.*
+// and lists_panels.*. The playlists are touched only on the UI thread once the screens have them (the
+// browser's "Fav" does the same), so no lock is needed; what reads a file for long (an import, an export)
+// works on a copy, or on what it has read, on the quick worker.
+#include <cstdint>
 #include <map>
 #include <vector>
 
 #include "app/composition.h"
 #include "spz/keymap.h"
+#include "ui/lists_panels.h"
 
 namespace spz::app {
 
@@ -41,15 +46,32 @@ struct Composition::ListsFetcher : PlaylistTuneFetcher, FetchListener {
     std::map<std::string, std::vector<Done>> waiting;
 };
 
-// What "Fetch missing" tells: its progress is the job mark's, its end a notice.
+// What "Fetch missing" tells. It is a job (SPEC-140, SPEC-147): it takes `jobs_` while it runs, so that the
+// job mark shows its progress, files done of files to fetch; its end is a notice. The Playlist screen draws
+// again as each tune arrives.
 struct Composition::ListsEvents : FetchMissingListener {
     explicit ListsEvents(Composition* owner) : parts(owner) {}
-    void fetch_missing_progress(const FetchMissingState&) override { parts->app()->redraw(); }
-    void fetch_missing_ended(const ListsResult& notice) override {
-        if (!notice.message.empty()) parts->app()->notice(notice.message, notice.about);
+    void fetch_missing_progress(const FetchMissingState& state) override {
+        if (state.running && !job_taken) job_taken = parts->jobs_.begin(JobKind::Fetch);
+        if (job_taken) {
+            parts->jobs_.progress(1, static_cast<std::uint64_t>(state.done), static_cast<std::uint64_t>(state.total));
+        }
+        ++parts->services().lists_changes;
         parts->app()->redraw();
     }
+    void fetch_missing_ended(const ListsResult& notice) override {
+        if (job_taken) parts->jobs_.end();
+        job_taken = false;
+        if (!notice.message.empty()) parts->app()->notice(notice.message, notice.about);
+        ++parts->services().lists_changes;
+        parts->app()->redraw();
+    }
+    // SPEC-147: "Stop", asked of the running job, ends "Fetch missing" after the file in flight.
+    void watch_stop() {
+        if (job_taken && parts->jobs_.stop_asked() && parts->fetch_missing_) parts->fetch_missing_->stop();
+    }
     Composition* parts;
+    bool job_taken = false;
 };
 
 void Composition::make_lists() {
@@ -62,21 +84,33 @@ void Composition::make_lists() {
     lists_events_.reset(new ListsEvents(this));
     fetch_missing_.reset(new FetchMissing(seams_.clock, seams_.files, root_.path, resolver_.get(), lists_fetcher_.get(),
                                           gate_.get(), lists_events_.get()));
+
+    ui::Services& s = services();
+    s.import_folder = folders_.imports;
+    s.export_folder = folders_.exports;
+    // SPEC-172: "Add" in the browser, Search and the now-playing "More" panel asks which playlist.
+    App* a = app();
+    s.add_to_playlist = [a](const Entry& entry) { ui::open_pick_playlist(a, entry); };
+    ListsEvents* events = lists_events_.get();
+    a->every(100, [events] { events->watch_stop(); });
 }
 
 void Composition::lists_at_start() {
-    // The playlists are read on the quick worker, once the listing is ready; the screens have them once
-    // they are read.
+    // The playlists are read on the quick worker, once the listing is ready. The screens get them only after
+    // the player's start has read them on the same worker (SPEC-131: a queue made again from a playlist;
+    // play_at_start() posts its work right after this call): until then nothing else touches them.
     if (!playlists_) return;
     Playlists* playlists = playlists_.get();
-    app()->quick()->post([this, playlists] {
-        playlists->load();
-        on_ui([this] {
-            ui::Services& s = services();
-            s.playlists = playlists_.get();
-            s.favourites = favourites_.get();
-            s.fetch_missing = fetch_missing_.get();
-            app()->redraw();
+    app()->quick()->post([playlists] { playlists->load(); });
+    on_ui([this] {
+        app()->quick()->post([this] {
+            on_ui([this] {
+                ui::Services& s = services();
+                s.playlists = playlists_.get();
+                s.favourites = favourites_.get();
+                s.fetch_missing = fetch_missing_.get();
+                app()->redraw();
+            });
         });
     });
 }

@@ -310,6 +310,10 @@ private:
             if (sink_.is_open()) sink_.pull(static_cast<std::size_t>(sink_.sample_rate() * step / 1000));
             run_ui_once();
             if (app_ && app_->leaving()) break;
+            // What this step started on a worker (the next tune read, a missing entry passed over) is done
+            // before the fake clock moves on, so that a busy machine does not let the clock run ahead of it
+            // (SPEC-253: two runs of one script give the same result). A thread a fake holds counts as settled.
+            if (app_ && !app_->settled()) settle();
         }
         settle();
     }

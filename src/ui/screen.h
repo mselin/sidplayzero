@@ -141,6 +141,12 @@ struct Services {
     // "Add" on a tune (the browser, Search, now playing): asks which playlist (`pick-playlist`) and adds
     // it there. Null while the part's panel is not built.
     std::function<void(const Entry& entry)> add_to_playlist;
+    std::string import_folder;            // SPEC-134, SPEC-175: the `import` folder
+    std::string export_folder;            // SPEC-134, SPEC-179: the `export` folder
+    std::string open_playlist;            // the playlist the Playlist screen shows: Enter in Playlists sets it
+    // Counts changes to the playlists that come by themselves (a tune of "Fetch missing" arrived): a screen
+    // that shows them draws again when it changes.
+    int lists_changes = 0;
 };
 
 // What a screen or a panel may ask of the app's frame.
