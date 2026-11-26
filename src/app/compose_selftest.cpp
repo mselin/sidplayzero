@@ -411,7 +411,7 @@ struct Composition::SelfTest : ui::SelfTestView {
                 metrics->set("speed_factor_light", decimal(factors.light, 2));
             }
             p->on_ui([p, factors] {
-                if (factors.measured && p->player_) p->player_->set_speed_factors(factors);
+                if (factors.measured) p->set_speed_factors(factors);
                 if (p->selftest_) {
                     p->selftest_->say({"Engines: reSIDfp " + decimal(factors.accurate, 2) + ", sidlite " +
                                            decimal(factors.light, 2) + " seconds a second.",
@@ -448,7 +448,7 @@ struct Composition::SelfTest : ui::SelfTestView {
         // Which tunes of the set are on the device is asked of Files on the quick worker (SPEC-022).
         Composition* p = parts;
         Files* files = p->seams_.files;
-        const std::string root = p->root_.path;
+        const std::string root = p->scope_->root.path;
         p->app()->quick()->post([p, files, root] {
             std::vector<bool> present;
             for (const char* path : kBenchmarkSet) {
@@ -491,7 +491,7 @@ struct Composition::SelfTest : ui::SelfTestView {
     // One tick while the set is fetched: each tune is played once through the player, which fetches it as
     // SPEC-141 does any tune, and stopped as soon as it sounds.
     void fetch_tick() {
-        Player* player = parts->player_.get();
+        Player* player = parts->scope_->player.get();
         if (!player) {
             start_playing();
             return;
@@ -544,7 +544,7 @@ struct Composition::SelfTest : ui::SelfTestView {
     }
 
     void play(std::size_t index, Millis now) {
-        Player* player = parts->player_.get();
+        Player* player = parts->scope_->player.get();
         if (!player || set.empty()) return;
         playing = index % set.size();
         player->play(set, playing);
@@ -562,7 +562,7 @@ struct Composition::SelfTest : ui::SelfTestView {
     }
 
     void play_tick(Millis now) {
-        Player* player = parts->player_.get();
+        Player* player = parts->scope_->player.get();
         if (!player || set.empty()) return;
         const PlayerStatus st = player->status();
         if (st.state == PlayerState::Playing && !tune_sounding) {
@@ -581,7 +581,7 @@ struct Composition::SelfTest : ui::SelfTestView {
 
     // ---- the key script --------------------------------------------------------------------------------------
     App* app() const { return parts->app(); }
-    BrowserModel* browser() const { return parts->browser_.get(); }
+    BrowserModel* browser() const { return parts->scope_->browser.get(); }
 
     void press(int code) {
         app()->key(code, true);
@@ -937,7 +937,7 @@ struct Composition::SelfTest : ui::SelfTestView {
         // Then the index is built again while a tune plays (SPEC-260, SPEC-161).
         phase = Phase::Indexing;
         indexing_began = now;
-        Index* index = p->index_.get();
+        Index* index = p->scope_->index.get();
         if (!index) {
             finish();
             return;
@@ -984,7 +984,7 @@ struct Composition::SelfTest : ui::SelfTestView {
         m.set_number("peak_memory_kb", peak_memory_kb());
         p->device_measurements();
         phase = Phase::Done;
-        if (p->player_) p->player_->stop();
+        if (p->scope_->player) p->scope_->player->stop();
         std::vector<std::string> lines = {"Benchmark: the set played for " + std::to_string(benchmark_ms / 1000) + " s.",
                                           "Underruns: " + m.value("underrun_frames") + ", processor: " +
                                               m.value("cpu_percent") + " %"};
@@ -1062,7 +1062,7 @@ struct Composition::SelfTest : ui::SelfTestView {
         if (job.kind == JobKind::Setup) {
             if (setup_began < 0) setup_began = now;
         } else if (setup_began >= 0) {
-            if (parts->listing_ && parts->listing_->is_open()) {
+            if (parts->scope_->listing && parts->scope_->listing->is_open()) {
                 parts->metrics_.set("hvsc_setup_s", decimal(static_cast<double>(now - setup_began) / 1000.0, 1));
             }
             setup_began = -1;
@@ -1167,7 +1167,7 @@ void Composition::device_measurements() {
         metrics_.set("audio_format", "s16 stereo");
     }
     ListedTune commando;
-    if (listing_ && listing_->is_open() && listing_->by_path(kCommando, &commando)) {
+    if (scope_->listing && scope_->listing->is_open() && scope_->listing->by_path(kCommando, &commando)) {
         std::string lengths;
         for (std::size_t i = 0; i < commando.lengths.size() && i < 2; ++i) {
             lengths += (lengths.empty() ? "" : " ") + length_text(commando.lengths[i]);

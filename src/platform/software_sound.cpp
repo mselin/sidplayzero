@@ -3,17 +3,20 @@
 
 #include <chrono>
 
+#include "platform/guarded.h"
+
 #include "spz/software_backend.h"
 
 namespace spz::platform {
 
 struct SoftwareSound::Impl {
     SoftwareBackend backend;
-    Impl(Engine* engine, AudioSink* sink, Clock* clock, Executor* ui) : backend(engine, sink, clock, ui) {}
+    Impl(Engine* engine, AudioSink* sink, Clock* clock, Executor* ui, Executor* worker)
+        : backend(engine, sink, clock, ui, worker) {}
 };
 
-SoftwareSound::SoftwareSound(Engine* engine, AudioSink* sink, Clock* clock, Executor* ui)
-    : impl_(new Impl(engine, sink, clock, ui)) {}
+SoftwareSound::SoftwareSound(Engine* engine, AudioSink* sink, Clock* clock, Executor* ui, Executor* worker)
+    : impl_(new Impl(engine, sink, clock, ui, worker)) {}
 
 SoftwareSound::~SoftwareSound() { stop_render_thread(); }
 
@@ -36,7 +39,9 @@ void SoftwareSound::start_render_thread() {
     if (running_.exchange(true)) return;
     thread_ = std::thread([this] {
         while (running_.load()) {
-            if (!timed_step()) std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            // A turn that throws is as one that rendered nothing: the loop, and the sound, go on (SPEC-022).
+            const bool rendered = run_guarded_or("a turn of the render loop", false, [this] { return timed_step(); });
+            if (!rendered) std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
     });
 }

@@ -134,6 +134,20 @@ struct FetchState : std::enable_shared_from_this<FetchState> {
     }
 
     void pump() {
+        // Whatever comes, the pump is never left marked as posted, nor a fetch as in flight: that would stop
+        // every fetch after it (A8).
+        struct Ended {
+            explicit Ended(FetchState* of) : s(of) {}
+            ~Ended() {
+                if (clean) return;
+                std::lock_guard<std::mutex> lock(s->mutex);
+                s->pump_posted = false;
+                s->flying = false;
+                if (s->play == Play::Flying) s->play = Play::None;
+            }
+            FetchState* s;
+            bool clean = false;
+        } ended(this);
         for (;;) {
             std::string path;
             {
@@ -156,13 +170,21 @@ struct FetchState : std::enable_shared_from_this<FetchState> {
                     playlist.pop_front();
                 } else {
                     pump_posted = false;
+                    ended.clean = true;
                     return;
                 }
                 flying = true;
                 fly_path = path;
                 fly_cancel = false;
             }
-            const Outcome outcome = fetch(path);
+            // A fetch that throws (a seam that fails in a way it does not report) has failed, and is told so.
+            Outcome outcome;
+            try {
+                outcome = fetch(path);
+            } catch (...) {
+                outcome = Outcome();
+                outcome.message = "MSG_CANNOT_WRITE";
+            }
             finished(path, outcome);
         }
     }

@@ -155,7 +155,7 @@ private:
     mutable std::mutex mutex_;              // guards what follows: a search may run while a build does
     IndexHeader header_;
     std::vector<IndexRecord> records_;      // in order of path (path_comes_before)
-    bool complete_ = false;
+    std::atomic<bool> complete_{false};      // written under mutex_, read without it: complete() never waits for a search (SPEC-162 holds mutex_ up to 2 s)
     bool loaded_ = false;                   // load() has been tried
     bool have_file_ = false;                // and found an index that fits this build's format
 

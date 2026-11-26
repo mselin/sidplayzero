@@ -34,8 +34,7 @@ private:
 // which go ahead of everything waiting: on the fetch worker, the tune that is to be played (SPEC-022).
 class Worker : public Executor {
 public:
-    // With `finish_on_exit`, the jobs that wait when it is destroyed still run (the quick worker's saves).
-    explicit Worker(std::string name, bool finish_on_exit = false);
+    explicit Worker(std::string name);
     // stop(), if it has not been called.
     ~Worker() override;
     Worker(const Worker&) = delete;
@@ -43,9 +42,14 @@ public:
 
     void post(std::function<void()> job) override;
     void post_first(std::function<void()> job);
+    // The executor of the jobs that must not be lost at exit: they are posted to this worker, in their
+    // order among the others, and stop() still runs those that wait (the quick worker's saves of the
+    // settings and the state, SPEC-201). Every other job that waits at exit is dropped.
+    Executor* kept() { return &kept_; }
 
-    // Lets the job that runs finish, drops those that wait (or runs them, as above), and joins the thread.
-    // Later posts are dropped.
+    // Lets the job that runs finish, drops those that wait (but runs the kept ones), and joins the
+    // thread. Later posts are dropped. Called on the worker's own thread (by a job of its own), it only
+    // asks the thread to end after that job: a thread cannot wait for itself.
     void stop();
 
     // No job waits and none runs.
@@ -57,13 +61,23 @@ public:
     std::thread::id id() const { return id_; }
 
 private:
+    struct Job {
+        std::function<void()> run;
+        bool kept = false;
+    };
+    struct Kept : Executor {
+        explicit Kept(Worker* of) : worker(of) {}
+        void post(std::function<void()> job) override { worker->add(Job{std::move(job), true}, false); }
+        Worker* worker;
+    };
+    void add(Job job, bool first);
     void loop();
 
     std::string name_;
+    Kept kept_{this};
     mutable std::mutex mutex_;
     std::condition_variable wake_;
-    std::deque<std::function<void()>> jobs_;
-    bool finish_on_exit_ = false;
+    std::deque<Job> jobs_;
     bool running_ = false;
     bool stopping_ = false;
     std::thread thread_;

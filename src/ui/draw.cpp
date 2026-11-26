@@ -2,6 +2,7 @@
 #include "ui/draw.h"
 
 #include <cstdint>
+#include <memory>
 #include <vector>
 
 #include "ui/app_fonts.h"
@@ -66,7 +67,8 @@ int text_width(const std::string& text, const lv_font_t* font) {
 lv_obj_t* make_label(lv_obj_t* parent, const std::string& id, const std::string& text, int x, int y, int w, int h,
                      const LabelStyle& style) {
     const lv_font_t* font = style.font ? style.font : text_font();
-    Owned* owned = new Owned();
+    // Held here until the label takes it over: a throw before that (an allocation of the text) frees it.
+    std::unique_ptr<Owned> owned(new Owned());
     owned->record.id = id;
     owned->record.full_text = text;
     owned->record.full_width = text_width(text, font);
@@ -85,7 +87,7 @@ lv_obj_t* make_label(lv_obj_t* parent, const std::string& id, const std::string&
         const int pad = (h - static_cast<int>(lv_font_get_line_height(font))) / 2;
         if (pad > 0) lv_obj_set_style_pad_top(label, pad, LV_PART_MAIN);
         lv_label_set_text(label, text.c_str());
-        lv_obj_set_user_data(label, owned);
+        lv_obj_set_user_data(label, owned.release());
         lv_obj_add_event_cb(label, forget, LV_EVENT_DELETE, nullptr);
         return label;
     }
@@ -129,7 +131,7 @@ lv_obj_t* make_label(lv_obj_t* parent, const std::string& id, const std::string&
     const int pad = (h - static_cast<int>(lv_font_get_line_height(font))) / 2;
     if (pad > 0) lv_obj_set_style_pad_top(label, pad, LV_PART_MAIN);
     lv_label_set_text(label, shown.c_str());
-    lv_obj_set_user_data(label, owned);
+    lv_obj_set_user_data(label, owned.release());
     lv_obj_add_event_cb(label, forget, LV_EVENT_DELETE, nullptr);
     return label;
 }

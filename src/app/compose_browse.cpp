@@ -18,10 +18,10 @@ const Millis kRootWatchMs = 5000;   // SPEC-048: how often the empty screen look
 // The model's news: what the state file remembers (SPEC-131), the screen's drawing, and at start the
 // empty screen in the browser's place (SPEC-048).
 struct Composition::BrowserEvents : BrowserListener {
-    explicit BrowserEvents(Composition* owner) : parts(owner) {}
+    BrowserEvents(Composition* owner, RootScope* of) : parts(owner), scope(of) {}
     void browser_changed() override {
-        BrowserModel* model = parts->browser_.get();
-        if (!model) return;
+        BrowserModel* model = scope->browser.get();
+        if (!model || !scope->live) return;
         const int highlight = model->highlight();
         std::string entry;
         if (highlight >= 0) entry = model->row(highlight).name;
@@ -44,42 +44,49 @@ struct Composition::BrowserEvents : BrowserListener {
     }
     void browser_notice(const std::string& id) override {
         // At start, a root that is not there is the empty screen's business, not a notice's.
-        BrowserModel* model = parts->browser_.get();
+        BrowserModel* model = scope->browser.get();
+        if (!scope->live) return;
         if (!parts->first_listing_seen_ && model && model->folder() == "/") return;
         parts->app()->notice(id);
     }
     Composition* parts;
+    RootScope* scope;
 };
 
-void Composition::find_root() {
+CollectionRoot Composition::find_root() const {
     const char* base = std::getenv("HVSC_BASE");
-    root_ = find_collection_root(base ? base : "", settings_->settings().collection, services().home);
-    while (root_.path.size() > 1 && root_.path.back() == '/') root_.path.pop_back();
-    services().collection = root_.path;
-    services().collection_from_variable = root_.from_hvsc_base;
+    CollectionRoot root = find_collection_root(base ? base : "", settings_->settings().collection, services().home);
+    while (root.path.size() > 1 && root.path.back() == '/') root.path.pop_back();
+    return root;
 }
 
 void Composition::make_browse() {
-    collection_.reset(new Collection(seams_.files, root_.path, listing_.get()));
-    browser_events_.reset(new BrowserEvents(this));
-    browser_.reset(new BrowserModel(collection_.get(), app()->quick(), app()->ui(), seams_.clock));
-    browser_->set_listener(browser_events_.get());
+    // Everything of the browser depends on the root: make_browse_scope().
+}
+
+void Composition::make_browse_scope(RootScope* scope) {
+    scope->collection.reset(new Collection(seams_.files, scope->root.path, scope->listing.get()));
+    scope->browser_events.reset(new BrowserEvents(this, scope));
+    scope->browser.reset(new BrowserModel(scope->collection.get(), app()->quick(), app()->ui(), seams_.clock));
+    scope->browser->set_listener(scope->browser_events.get());
     // SPEC-091: six rows, or five and the detail line.
-    browser_->set_rows_on_screen(part_built("detail") ? 5 : 6);
-    services().tree = collection_.get();
-    services().browser = browser_.get();
+    scope->browser->set_rows_on_screen(part_built("detail") ? 5 : 6);
+    services().collection = scope->root.path;
+    services().collection_from_variable = scope->root.from_hvsc_base;
+    services().tree = scope->collection.get();
+    services().browser = scope->browser.get();
 }
 
 void Composition::browse_at_start() {
     // SPEC-131: the remembered folder, or its nearest parent that is there, found on the quick worker.
     const State state = state_->state();
     Files* files = seams_.files;
-    const std::string root = root_.path;
-    const Listing* listing = listing_.get();
+    const std::string root = scope_->root.path;
+    const Listing* listing = scope_->listing.get();
     app()->quick()->post([this, state, files, root, listing] {
         const BrowserPlace place = browser_place_at_start(state, files, root, listing);
         on_ui([this, place] {
-            if (browser_) browser_->show(place.folder, place.entry);
+            if (scope_->browser) scope_->browser->show(place.folder, place.entry);
         });
     });
 }
@@ -92,7 +99,7 @@ void Composition::watch_empty_root() {
     after(kRootWatchMs, [this] {
         watching_root_ = false;
         if (!running() || app()->bottom() != "empty") return;
-        Collection* collection = collection_.get();
+        Collection* collection = scope_->collection.get();
         app()->quick()->post([this, collection] {
             const bool entries = collection->has_entries();
             on_ui([this, entries] {
@@ -103,7 +110,7 @@ void Composition::watch_empty_root() {
                 }
                 app()->when_no_overlay([this] {
                     if (!running() || app()->bottom() != "empty") return;
-                    if (browser_) browser_->show("/");
+                    if (scope_->browser) scope_->browser->show("/");
                     app()->set_bottom("browser");
                 });
             });
@@ -113,36 +120,49 @@ void Composition::watch_empty_root() {
 
 void Composition::refresh_browser() {
     // A new model, which keeps no folder listed before, at the folder and entry the old one had.
+    RootScope* scope = scope_.get();
     std::string folder = "/", entry;
-    if (browser_) {
-        folder = browser_->folder();
-        if (browser_->highlight() >= 0) entry = browser_->row(browser_->highlight()).name;
+    if (scope->browser) {
+        folder = scope->browser->folder();
+        if (scope->browser->highlight() >= 0) entry = scope->browser->row(scope->browser->highlight()).name;
     }
-    browser_.reset(new BrowserModel(collection_.get(), app()->quick(), app()->ui(), seams_.clock));
-    browser_->set_listener(browser_events_.get());
-    browser_->set_rows_on_screen(part_built("detail") ? 5 : 6);
-    services().browser = browser_.get();
-    browser_->show(folder, entry);
+    scope->browser.reset(new BrowserModel(scope->collection.get(), app()->quick(), app()->ui(), seams_.clock));
+    scope->browser->set_listener(scope->browser_events.get());
+    scope->browser->set_rows_on_screen(part_built("detail") ? 5 : 6);
+    services().browser = scope->browser.get();
+    scope->browser->show(folder, entry);
     app()->redraw();
 }
 
 void Composition::collection_changed() {
-    // SPEC-040: with HVSC_BASE unset, the setting names the root. The collection and the browser follow at
-    // once, at the new root's top; and so does the player, whose entries are paths under the root.
-    const std::string before = root_.path;
-    find_root();
-    if (root_.path == before) return;
-    retired_collections_.push_back(std::move(collection_));
-    retired_listings_.push_back(std::move(listing_));
-    // The new root's own listing, if it has one, is for HVSC to set up there; until then it has none.
-    listing_.reset(new Listing());
-    services().listing = listing_.get();
-    collection_.reset(new Collection(seams_.files, root_.path, listing_.get()));
-    services().tree = collection_.get();
-    browser_.reset();
-    refresh_browser();
-    remake_player();
-    search_root_changed();
+    // SPEC-040: with HVSC_BASE unset, the setting names the root. Everything that depends on the root follows
+    // at once: a new scope is made for the new root, and the old one is retired whole. The browser shows the
+    // new root's top at once, and again when its listing is ready.
+    const CollectionRoot root = find_root();
+    if (root.path == scope_->root.path) return;
+    retire(scope_.get());
+    retired_scopes_.push_back(std::move(scope_));
+    scope_ = make_scope(root);
+    scope_->browser->show("/");
+    app()->redraw();
+    RootScope* scope = scope_.get();
+    Files* files = seams_.files;
+    Listing* listing = scope->listing.get();
+    const std::string listing_path = listing_file();
+    const std::string database = database_file(scope);
+    const std::string cache = folders_.cache;
+    // The new root's listing, opened or built on the long worker as at start (SPEC-142); then the browser,
+    // the index and the playlists take it up.
+    app()->long_worker()->post([this, scope, files, listing, listing_path, database, cache] {
+        const bool unreadable = !open_listing(files, listing, listing_path, database, cache);
+        on_ui([this, scope, unreadable] {
+            if (!scope->live) return;
+            if (unreadable) app()->notice("MSG_LENGTHS_UNREADABLE");
+            refresh_browser();
+            build_index(IndexReason::Start);
+            lists_at_start();
+        });
+    });
 }
 
 }  // namespace spz::app

@@ -43,6 +43,11 @@ std::int64_t SimClock::wall_time_s() const {
     return wall_start_s_ + now_ / 1000;
 }
 
+std::int64_t SimClock::wall_time_ms() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return wall_start_s_ * 1000 + now_;
+}
+
 void SimClock::sleep_ms(std::int64_t) {}   // a sleep returns at once: time is the script's
 
 Clock::TimerId SimClock::call_after(std::int64_t ms, std::function<void()> fn) {

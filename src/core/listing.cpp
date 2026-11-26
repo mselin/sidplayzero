@@ -418,19 +418,31 @@ ListingBuild Listing::build(Files* files, const std::string& database, const std
     return result;
 }
 
-bool Listing::open(Files* files, const std::string& listing_file, const std::string& database) {
-    map_.reset();
+Listing::Listing(const Listing& other) : map_(other.snapshot()) {}
+
+Listing& Listing::operator=(const Listing& other) {
+    if (this != &other) std::atomic_store(&map_, other.snapshot());
+    return *this;
+}
+
+std::shared_ptr<const Listing::Map> Listing::snapshot() const { return std::atomic_load(&map_); }
+
+namespace {
+
+// The map of a listing file; null if it cannot be used.
+std::shared_ptr<const Listing::Map> read_map(Files* files, const std::string& listing_file, const std::string& database) {
+    using Map = Listing::Map;
     auto map = std::make_shared<Map>();
-    if (files->map(listing_file, kListingFileLimit, &map->file) != FileStatus::Ok) return false;
+    if (files->map(listing_file, kListingFileLimit, &map->file) != FileStatus::Ok) return nullptr;
     const std::size_t size = map->file.size();
-    if (size < kHeaderSize || std::memcmp(map->file.data(), kMagic, sizeof kMagic) != 0) return false;
+    if (size < kHeaderSize || std::memcmp(map->file.data(), kMagic, sizeof kMagic) != 0) return nullptr;
     const std::uint8_t* h = map->file.data();
     if (!database.empty()) {
         FileInfo info;
-        if (files->info(database, &info) != FileStatus::Ok) return false;
+        if (files->info(database, &info) != FileStatus::Ok) return nullptr;
         if (get_u64(h + 8) != info.size || static_cast<std::int64_t>(get_u64(h + 16)) != info.modified_s ||
             static_cast<std::int32_t>(get_u32(h + 24)) != info.modified_ns) {
-            return false;
+            return nullptr;
         }
     }
     map->tunes = get_u32(h + 28);
@@ -441,7 +453,7 @@ bool Listing::open(Files* files, const std::string& listing_file, const std::str
     const std::uint64_t T = map->tunes, F = map->folders;
     const std::uint64_t total = kHeaderSize + T * kTuneRecord + F * kFolderRecord + 4 * static_cast<std::uint64_t>(map->children) +
                                 4 * static_cast<std::uint64_t>(map->lengths) + 4 * T + 4 * F + 4 * T + map->text_size;
-    if (F == 0 || total != size || get_u64(h + 48) != size) return false;
+    if (F == 0 || total != size || get_u64(h + 48) != size) return nullptr;
     map->tunes_at = kHeaderSize;
     map->folders_at = map->tunes_at + static_cast<std::size_t>(T) * kTuneRecord;
     map->children_at = map->folders_at + static_cast<std::size_t>(F) * kFolderRecord;
@@ -450,32 +462,49 @@ bool Listing::open(Files* files, const std::string& listing_file, const std::str
     map->folders_by_path_at = map->by_path_at + 4 * static_cast<std::size_t>(T);
     map->by_md5_at = map->folders_by_path_at + 4 * static_cast<std::size_t>(F);
     map->text_at = map->by_md5_at + 4 * static_cast<std::size_t>(T);
-    map_ = std::move(map);
-    return true;
+    return map;
 }
 
-bool Listing::is_open() const { return map_ != nullptr; }
+}  // namespace
 
-int Listing::tune_count() const { return map_ ? static_cast<int>(map_->tunes) : 0; }
+bool Listing::open(Files* files, const std::string& listing_file, const std::string& database) {
+    // The new map is made aside and put in place in one step: a reader on another thread holds the map it
+    // took for as long as it reads, so it never sees one half made or one taken away under it (SPEC-022).
+    const std::shared_ptr<const Map> map = read_map(files, listing_file, database);
+    std::atomic_store(&map_, map);
+    return map != nullptr;
+}
 
-int Listing::folder_count() const { return map_ ? static_cast<int>(map_->folders) - 1 : 0; }
+bool Listing::is_open() const { return snapshot() != nullptr; }
+
+int Listing::tune_count() const {
+    const std::shared_ptr<const Map> map = snapshot();
+    return map ? static_cast<int>(map->tunes) : 0;
+}
+
+int Listing::folder_count() const {
+    const std::shared_ptr<const Map> map = snapshot();
+    return map ? static_cast<int>(map->folders) - 1 : 0;
+}
 
 bool Listing::by_path(const std::string& path, ListedTune* out) const {
-    if (!map_) return false;
-    const Map& m = *map_;
+    const std::shared_ptr<const Map> map = snapshot();
+    if (!map) return false;
+    const Map& m = *map;
     const std::uint32_t id = m.find(m.by_path_at, m.tunes, path, [&m](std::uint32_t t, std::string* p) { return m.tune_path(t, p); });
     return id != UINT32_MAX && m.tune(id, out);
 }
 
 bool Listing::by_md5(const std::string& md5, ListedTune* out) const {
-    if (!map_ || md5.size() != 32) return false;
+    const std::shared_ptr<const Map> map = snapshot();
+    if (!map || md5.size() != 32) return false;
     std::uint8_t wanted[16];
     for (int i = 0; i < 16; ++i) {
         const int high = hex_value(md5[2 * i]), low = hex_value(md5[2 * i + 1]);
         if (high < 0 || low < 0) return false;
         wanted[i] = static_cast<std::uint8_t>(high * 16 + low);
     }
-    const Map& m = *map_;
+    const Map& m = *map;
     auto md5_of = [&m](std::uint32_t t) -> const std::uint8_t* {
         return t < m.tunes ? m.at(m.tunes_at + t * kTuneRecord + 16) : nullptr;
     };
@@ -494,8 +523,9 @@ bool Listing::by_md5(const std::string& md5, ListedTune* out) const {
 }
 
 bool Listing::folder(const std::string& path, std::vector<std::string>* folders, std::vector<std::string>* tunes) const {
-    if (!map_) return false;
-    const Map& m = *map_;
+    const std::shared_ptr<const Map> map = snapshot();
+    if (!map) return false;
+    const Map& m = *map;
     std::uint32_t id = 0;
     if (path != "/") {
         if (path.empty() || path[0] != '/' || path.back() == '/') return false;
@@ -527,12 +557,13 @@ bool Listing::folder(const std::string& path, std::vector<std::string>* folders,
 
 std::vector<ListedTune> Listing::tunes(int first, int count) const {
     std::vector<ListedTune> out;
-    if (!map_ || count <= 0) return out;
+    const std::shared_ptr<const Map> map = snapshot();
+    if (!map || count <= 0) return out;
     const std::int64_t from = std::max(first, 0);
-    const std::int64_t to = std::min<std::int64_t>(static_cast<std::int64_t>(first) + count, map_->tunes);
+    const std::int64_t to = std::min<std::int64_t>(static_cast<std::int64_t>(first) + count, map->tunes);
     for (std::int64_t t = from; t < to; ++t) {
         ListedTune tune;
-        if (!map_->tune(static_cast<std::uint32_t>(t), &tune)) break;
+        if (!map->tune(static_cast<std::uint32_t>(t), &tune)) break;
         out.push_back(std::move(tune));
     }
     return out;

@@ -6,6 +6,8 @@
 #include <thread>
 #include <utility>
 
+#include "platform/guarded.h"
+
 namespace spz::platform {
 
 std::int64_t RealClock::now_ms() const {
@@ -14,6 +16,10 @@ std::int64_t RealClock::now_ms() const {
 
 std::int64_t RealClock::wall_time_s() const {
     return std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+}
+
+std::int64_t RealClock::wall_time_ms() const {
+    return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 }
 
 void RealClock::sleep_ms(std::int64_t ms) {
@@ -45,7 +51,8 @@ void RealClock::run_due() {
             fn = std::move(next->fn);
             timers_.erase(next);
         }
-        fn();
+        // A timer that throws does not take the UI loop with it: the next one still runs (SPEC-022).
+        run_guarded("a timer", fn);
     }
 }
 

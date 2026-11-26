@@ -21,7 +21,8 @@ namespace spz::platform {
 
 class SoftwareSound {
 public:
-    SoftwareSound(Engine* engine, AudioSink* sink, Clock* clock, Executor* ui);
+    // `worker`, if given, is where the device is opened again after it was lost (SoftwareBackend).
+    SoftwareSound(Engine* engine, AudioSink* sink, Clock* clock, Executor* ui, Executor* worker = nullptr);
     // Stops the render thread first, if it runs.
     ~SoftwareSound();
     SoftwareSound(const SoftwareSound&) = delete;

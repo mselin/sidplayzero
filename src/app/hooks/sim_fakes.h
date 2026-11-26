@@ -25,6 +25,7 @@ class SimClock : public Clock {
 public:
     std::int64_t now_ms() const override;
     std::int64_t wall_time_s() const override;
+    std::int64_t wall_time_ms() const override;
     void sleep_ms(std::int64_t ms) override;
     TimerId call_after(std::int64_t ms, std::function<void()> fn) override;
     void cancel(TimerId id) override;

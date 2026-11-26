@@ -72,7 +72,7 @@ struct Composition::PlayerEvents : PlayerListener {
         parts->app()->notice(id, about);
     }
     void changed() override {
-        Player* player = parts->player_.get();
+        Player* player = parts->scope_->player.get();
         if (!player) return;
         const PlayerStatus status = player->status();
         // SPEC-131: the current entry and its place in the queue are remembered.
@@ -87,7 +87,7 @@ struct Composition::PlayerEvents : PlayerListener {
         if (parts->screen_off_ && part_built("screen-off") && parts->screen_off_->available()) {
             parts->screen_off_->set_playing(playing);
         }
-        if (parts->index_) parts->index_->set_playing(playing);
+        if (parts->scope_->index) parts->scope_->index->set_playing(playing);
         parts->app()->redraw();
     }
     Composition* parts;
@@ -96,7 +96,7 @@ struct Composition::PlayerEvents : PlayerListener {
 // ---- the player's TuneFetcher, on the fetcher of SPEC-141 -----------------------------------------------------
 
 struct Composition::PlayerFetcher : TuneFetcher, FetchListener {
-    explicit PlayerFetcher(Composition* owner) : parts(owner) {}
+    PlayerFetcher(Composition* owner, RootScope* of) : parts(owner), scope(of) {}
 
     UnattendedFetch unattended(Millis* wait_ms) override {
         *wait_ms = 0;
@@ -113,13 +113,13 @@ struct Composition::PlayerFetcher : TuneFetcher, FetchListener {
         play_path = path;
         play_done = std::move(done);
         // The player waits the 700 ms of a step itself: what it asks for now is wanted now.
-        const FetchAnswer answer = parts->fetcher_->request(path, attended ? FetchWhy::Chosen : FetchWhy::Unattended);
+        const FetchAnswer answer = scope->fetcher->request(path, attended ? FetchWhy::Chosen : FetchWhy::Unattended);
         switch (answer) {
             case FetchAnswer::Present: answer_play(path, true, ""); break;
             case FetchAnswer::Fetching:
             case FetchAnswer::Waiting:
             case FetchAnswer::AskingNotice: break;
-            case FetchAnswer::Failed: answer_play(path, false, parts->fetcher_->ahead_failure(path)); break;
+            case FetchAnswer::Failed: answer_play(path, false, scope->fetcher->ahead_failure(path)); break;
             case FetchAnswer::NoticeNeeded:
             case FetchAnswer::Resting:
             case FetchAnswer::OverLimit: answer_play(path, false, "MSG_FETCH_NETWORK"); break;
@@ -129,7 +129,7 @@ struct Composition::PlayerFetcher : TuneFetcher, FetchListener {
     void fetch_ahead(const std::string& path, Done done) override {
         ahead_path = path;
         ahead_done = std::move(done);
-        const FetchAnswer answer = parts->fetcher_->request(path, FetchWhy::Ahead);
+        const FetchAnswer answer = scope->fetcher->request(path, FetchWhy::Ahead);
         if (answer == FetchAnswer::Present) {
             answer_ahead(path, true, "");
         } else if (answer != FetchAnswer::Fetching) {
@@ -140,7 +140,7 @@ struct Composition::PlayerFetcher : TuneFetcher, FetchListener {
     }
 
     void cancel() override {
-        parts->fetcher_->cancel_play();
+        scope->fetcher->cancel_play();
         play_path.clear();
         play_done = nullptr;
         ahead_path.clear();
@@ -161,7 +161,7 @@ struct Composition::PlayerFetcher : TuneFetcher, FetchListener {
         if (path != play_path) return;
         play_path.clear();
         play_done = nullptr;
-        if (parts->player_) parts->player_->stop();
+        if (scope->player) scope->player->stop();
     }
 
     void answered(const std::string& path, FetchWhy why, bool fetched, const std::string& message) {
@@ -194,6 +194,7 @@ struct Composition::PlayerFetcher : TuneFetcher, FetchListener {
     }
 
     Composition* parts;
+    RootScope* scope;                     // its fetcher and its player are the scope's own
     std::string play_path, ahead_path;
     Done play_done, ahead_done;
     Millis rest_until = -1;
@@ -239,31 +240,29 @@ void Composition::make_play() {
     if (seams_.backend) {
         backend_ = seams_.backend;
     } else if (seams_.engine && seams_.sink) {
-        sound_.reset(new platform::SoftwareSound(seams_.engine, seams_.sink, seams_.clock, app()->ui()));
+        // The device is opened again on the quick worker after it was lost (SPEC-078, SPEC-022).
+        sound_.reset(new platform::SoftwareSound(seams_.engine, seams_.sink, seams_.clock, app()->ui(), app()->quick()));
         backend_ = sound_->backend();
         if (seams_.render_thread) sound_->start_render_thread();
     }
     player_events_.reset(new PlayerEvents(this));
-    player_fetcher_.reset(new PlayerFetcher(this));
-    route_fetches_to_player(player_fetcher_.get());
-    make_player();
 
     ui::Services& s = services();
     s.sound = backend_;
     s.play =[this](const std::vector<Entry>& queue, std::size_t chosen, const std::string& kind,
                     const std::string& source) {
-        if (!player_ || queue.empty()) return;
-        player_->play(queue, chosen);
-        state_->set_queue(kind, source, static_cast<int>(player_->place()) + 1);
+        if (!scope_->player || queue.empty()) return;
+        scope_->player->play(queue, chosen);
+        state_->set_queue(kind, source, static_cast<int>(scope_->player->place()) + 1);
         app()->open("playing");
     };
 
     // SPEC-092: what the keys of `always` and `screens` do for the player, wherever they are pressed.
     App* a = app();
-    a->on_action("play_pause", [this](const KeyEvent&) { if (player_) player_->play_pause(); });
-    a->on_action("next_tune", [this](const KeyEvent&) { if (player_) player_->next_tune(); });
-    a->on_action("previous_tune", [this](const KeyEvent&) { if (player_) player_->previous_tune(); });
-    a->on_action("use_light_engine", [this](const KeyEvent&) { if (player_) player_->use_light_engine(); });
+    a->on_action("play_pause", [this](const KeyEvent&) { if (scope_->player) scope_->player->play_pause(); });
+    a->on_action("next_tune", [this](const KeyEvent&) { if (scope_->player) scope_->player->next_tune(); });
+    a->on_action("previous_tune", [this](const KeyEvent&) { if (scope_->player) scope_->player->previous_tune(); });
+    a->on_action("use_light_engine", [this](const KeyEvent&) { if (scope_->player) scope_->player->use_light_engine(); });
     // SPEC-076: the volume, through SystemVolume on the quick worker.
     const auto volume = [this](VolumeKey key) {
         SystemVolume* system = seams_.volume;
@@ -284,7 +283,7 @@ void Composition::make_play() {
     // SPEC-254: `player` on every screen; `mini` with the part `mini` (SPEC-109).
     a->add_describer([this](Json* d) {
         Json player = Json::object();
-        const PlayerStatus st = player_ ? player_->status() : PlayerStatus();
+        const PlayerStatus st = scope_->player ? scope_->player->status() : PlayerStatus();
         player.set("state", state_word(st.state));
         player.set("message", st.message.empty() ? Json() : Json(st.message));
         player.set("path", st.has_entry ? Json(st.entry.path) : Json());
@@ -328,8 +327,8 @@ void Composition::make_play() {
     });
     if (part_built("mini")) {
         a->add_top_right([this]() -> std::string {
-            if (!player_) return "";
-            const PlayerStatus st = player_->status();
+            if (!scope_->player) return "";
+            const PlayerStatus st = scope_->player->status();
             if (!st.has_entry) return "";
             std::string text = state_mark(st.state);
             text += " ";
@@ -342,8 +341,8 @@ void Composition::make_play() {
         // The elapsed time changes by itself: the top line is drawn again when its second changes.
         auto shown = std::make_shared<std::string>();
         a->every(100, [this, shown] {
-            if (!player_) return;
-            const PlayerStatus st = player_->status();
+            if (!scope_->player) return;
+            const PlayerStatus st = scope_->player->status();
             const std::string now = std::string(state_word(st.state)) + " " + time_text(st.elapsed_ms);
             if (now != *shown) {
                 *shown = now;
@@ -353,57 +352,61 @@ void Composition::make_play() {
     }
 }
 
-void Composition::make_player() {
+void Composition::make_player(RootScope* scope) {
+    scope->player_fetcher.reset(new PlayerFetcher(this, scope));
+    route_fetches_to_player(scope, scope->player_fetcher.get());
     PlayerSeams seams;
     seams.backend = backend_;
     seams.clock = seams_.clock;
     seams.files = seams_.files;
     seams.worker = app()->quick();
     seams.ui = app()->ui();
-    seams.fetcher = player_fetcher_.get();
+    seams.fetcher = scope->player_fetcher.get();
     seams.listener = player_events_.get();
     PlayerOptions options;
-    options.root = root_.path;
+    options.root = scope->root.path;
     options.has_seed = seams_.has_seed;
     options.seed = seams_.seed;
     if (!backend_) return;
-    player_.reset(new Player(seams, options, &settings_->settings()));
-    player_->set_listing(listing_.get());
-    services().player = player_.get();
+    scope->player.reset(new Player(seams, options, &settings_->settings()));
+    scope->player->set_listing(scope->listing.get());
+    scope->player->set_roms(roms_);
+    if (speed_factors_.measured) scope->player->set_speed_factors(speed_factors_);
+    services().player = scope->player.get();
 }
 
-void Composition::remake_player() {
-    if (player_) {
-        player_->stop();
-        retired_players_.push_back(std::move(player_));
-    }
-    make_player();
-    if (player_) player_->set_listing(listing_.get());
-    app()->redraw();
+void Composition::set_roms(const Roms& roms) {
+    roms_ = roms;
+    if (scope_ && scope_->player) scope_->player->set_roms(roms);
+}
+
+void Composition::set_speed_factors(const SpeedFactors& factors) {
+    speed_factors_ = factors;
+    if (scope_ && scope_->player) scope_->player->set_speed_factors(factors);
 }
 
 void Composition::play_at_start() {
     // SPEC-131: the current entry, Idle, with its queue made again from its source, on the quick worker;
     // then SPEC-135 (part `resume`): the entry plays from its beginning if it is on the device.
-    if (!player_) return;
+    if (!scope_->player) return;
     const State state = state_->state();
     const Settings settings = settings_->settings();
     Files* files = seams_.files;
-    const std::string root = root_.path;
-    auto sources = std::make_shared<StartSources>(collection_.get(), playlists_.get());
+    const std::string root = scope_->root.path;
+    auto sources = std::make_shared<StartSources>(scope_->collection.get(), scope_->playlists.get());
     app()->quick()->post([this, state, settings, files, root, sources] {
         if (!restore_player(state, sources.get(), sources.get())) return;
         if (part_built("resume")) resume_at_start(settings, state, files, root, sources.get());
         on_ui([this, sources] {
-            if (!player_ || !sources->restored) return;
+            if (!scope_->player || !sources->restored) return;
             std::vector<Entry> queue = sources->entries;
             std::size_t place = sources->at > 0 ? static_cast<std::size_t>(sources->at - 1) : 0;
             if (queue.empty() || place >= queue.size() || queue[place].path != sources->now.path) {
                 queue = {sources->now};
                 place = 0;
             }
-            player_->restore(queue, place);
-            if (sources->play) player_->play_pause();
+            scope_->player->restore(queue, place);
+            if (sources->play) scope_->player->play_pause();
         });
     });
 }
@@ -411,7 +414,7 @@ void Composition::play_at_start() {
 void Composition::measure_engines() {
     // SPEC-072: once the browser has shown for 3 s, if the factors are not there for this version and rate,
     // the long worker measures the two engines.
-    if (!seams_.make_engine || !player_) return;
+    if (!seams_.make_engine || !scope_->player) return;
     Files* files = seams_.files;
     const std::string cache = folders_.cache;
     const int rate = settings_->settings().sample_rate;
@@ -419,7 +422,7 @@ void Composition::measure_engines() {
         const SpeedFactors kept = load_speed_factors(files, cache, app_version(), rate);
         on_ui([this, kept, files, cache, rate] {
             if (kept.measured) {
-                if (player_) player_->set_speed_factors(kept);
+                set_speed_factors(kept);
                 return;
             }
             after(3000, [this, files, cache, rate] {
@@ -445,9 +448,7 @@ void Composition::measure_engines_now(Files* files, const std::string& cache, in
             save_speed_factors(files, cache, factors, app_version(), rate);
             metrics_.set("speed_factor_accurate", std::to_string(factors.accurate));
             metrics_.set("speed_factor_light", std::to_string(factors.light));
-            on_ui([this, factors] {
-                if (player_) player_->set_speed_factors(factors);
-            });
+            on_ui([this, factors] { set_speed_factors(factors); });
         });
     }
 }

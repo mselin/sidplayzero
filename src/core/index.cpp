@@ -630,8 +630,9 @@ void Index::set_playing(bool playing) { playing_ = playing; }
 int Index::percent() const { return percent_; }
 
 bool Index::complete() const {
-    std::lock_guard<std::mutex> lock(mutex_);
-    return complete_;
+    // Asked on the UI thread every 33 ms by the Search and HVSC screens: it must not wait for a search,
+    // which holds mutex_ for up to 2 s (SPEC-022, SPEC-162).
+    return complete_.load();
 }
 
 void Index::refresh_folder(const std::string& folder) {

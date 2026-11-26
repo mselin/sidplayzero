@@ -17,9 +17,9 @@ namespace spz::app {
 
 // SPEC-174: "Fetch missing" asks the fetcher for one tune at a time, as a playlist's file.
 struct Composition::ListsFetcher : PlaylistTuneFetcher, FetchListener {
-    explicit ListsFetcher(Composition* owner) : parts(owner) {}
+    ListsFetcher(Composition* owner, RootScope* of) : parts(owner), scope(of) {}
     void fetch_for_playlist(const std::string& hvsc_path, Done done) override {
-        const FetchAnswer answer = parts->fetcher_->request(hvsc_path, FetchWhy::Playlist);
+        const FetchAnswer answer = scope->fetcher->request(hvsc_path, FetchWhy::Playlist);
         if (answer == FetchAnswer::Present) {
             parts->on_ui([done] { done(""); });
         } else if (answer == FetchAnswer::Fetching || answer == FetchAnswer::Waiting ||
@@ -43,16 +43,18 @@ struct Composition::ListsFetcher : PlaylistTuneFetcher, FetchListener {
         for (Done& done : dones) done(failure);
     }
     Composition* parts;
+    RootScope* scope;
     std::map<std::string, std::vector<Done>> waiting;
 };
 
 // What "Fetch missing" tells. It is a job (SPEC-140, SPEC-147): it takes `jobs_` while it runs, so that the
 // job mark shows its progress, files done of files to fetch; its end is a notice. The Playlist screen draws
-// again as each tune arrives.
+// again as each tune arrives. The job is ended however it ends, also for a root that is no longer the root;
+// what a retired root's "Fetch missing" says is not shown.
 struct Composition::ListsEvents : FetchMissingListener {
-    explicit ListsEvents(Composition* owner) : parts(owner) {}
+    ListsEvents(Composition* owner, RootScope* of) : parts(owner), scope(of) {}
     void fetch_missing_progress(const FetchMissingState& state) override {
-        if (state.running && !job_taken) job_taken = parts->jobs_.begin(JobKind::Fetch);
+        if (state.running && !job_taken && scope->live) job_taken = parts->jobs_.begin(JobKind::Fetch);
         if (job_taken) {
             parts->jobs_.progress(1, static_cast<std::uint64_t>(state.done), static_cast<std::uint64_t>(state.total));
         }
@@ -62,53 +64,68 @@ struct Composition::ListsEvents : FetchMissingListener {
     void fetch_missing_ended(const ListsResult& notice) override {
         if (job_taken) parts->jobs_.end();
         job_taken = false;
+        if (!scope->live) return;
         if (!notice.message.empty()) parts->app()->notice(notice.message, notice.about);
         ++parts->services().lists_changes;
         parts->app()->redraw();
     }
     // SPEC-147: "Stop", asked of the running job, ends "Fetch missing" after the file in flight.
     void watch_stop() {
-        if (job_taken && parts->jobs_.stop_asked() && parts->fetch_missing_) parts->fetch_missing_->stop();
+        if (job_taken && parts->jobs_.stop_asked() && scope->fetch_missing) scope->fetch_missing->stop();
     }
     Composition* parts;
+    RootScope* scope;
     bool job_taken = false;
 };
 
 void Composition::make_lists() {
     if (!part_built("playlists")) return;
-    resolver_.reset(new EntryResolver(seams_.files, root_.path, listing_.get(), own_tunes_.get()));
-    playlists_.reset(new Playlists(seams_.files, folders_.playlists, resolver_.get()));
-    favourites_.reset(new Favourites(playlists_.get()));
-    lists_fetcher_.reset(new ListsFetcher(this));
-    route_fetches_to_lists(lists_fetcher_.get());
-    lists_events_.reset(new ListsEvents(this));
-    fetch_missing_.reset(new FetchMissing(seams_.clock, seams_.files, root_.path, resolver_.get(), lists_fetcher_.get(),
-                                          gate_.get(), lists_events_.get()));
-
     ui::Services& s = services();
     s.import_folder = folders_.imports;
     s.export_folder = folders_.exports;
     // SPEC-172: "Add" in the browser, Search and the now-playing "More" panel asks which playlist.
     App* a = app();
     s.add_to_playlist = [a](const Entry& entry) { ui::open_pick_playlist(a, entry); };
-    ListsEvents* events = lists_events_.get();
-    a->every(100, [events] { events->watch_stop(); });
+    a->every(100, [this] {
+        if (scope_ && scope_->lists_events) scope_->lists_events->watch_stop();
+    });
+}
+
+void Composition::make_lists_scope(RootScope* scope) {
+    // The resolver finds a playlist's entries under the root (SPEC-173), and so the playlists, Favourites
+    // and "Fetch missing" are the root's too. The screens get them once they are read (lists_at_start()).
+    ui::Services& s = services();
+    s.playlists = nullptr;
+    s.favourites = nullptr;
+    s.fetch_missing = nullptr;
+    if (!part_built("playlists")) return;
+    scope->resolver.reset(
+        new EntryResolver(seams_.files, scope->root.path, scope->listing.get(), scope->own_tunes.get()));
+    scope->playlists.reset(new Playlists(seams_.files, folders_.playlists, scope->resolver.get()));
+    scope->favourites.reset(new Favourites(scope->playlists.get()));
+    scope->lists_fetcher.reset(new ListsFetcher(this, scope));
+    route_fetches_to_lists(scope, scope->lists_fetcher.get());
+    scope->lists_events.reset(new ListsEvents(this, scope));
+    scope->fetch_missing.reset(new FetchMissing(seams_.clock, seams_.files, scope->root.path, scope->resolver.get(),
+                                                scope->lists_fetcher.get(), gate_.get(), scope->lists_events.get()));
 }
 
 void Composition::lists_at_start() {
     // The playlists are read on the quick worker, once the listing is ready. The screens get them only after
     // the player's start has read them on the same worker (SPEC-131: a queue made again from a playlist;
     // play_at_start() posts its work right after this call): until then nothing else touches them.
-    if (!playlists_) return;
-    Playlists* playlists = playlists_.get();
+    RootScope* scope = scope_.get();
+    if (!scope->playlists) return;
+    Playlists* playlists = scope->playlists.get();
     app()->quick()->post([playlists] { playlists->load(); });
-    on_ui([this] {
-        app()->quick()->post([this] {
-            on_ui([this] {
+    on_ui([this, scope] {
+        app()->quick()->post([this, scope] {
+            on_ui([this, scope] {
+                if (!scope->live) return;
                 ui::Services& s = services();
-                s.playlists = playlists_.get();
-                s.favourites = favourites_.get();
-                s.fetch_missing = fetch_missing_.get();
+                s.playlists = scope->playlists.get();
+                s.favourites = scope->favourites.get();
+                s.fetch_missing = scope->fetch_missing.get();
                 app()->redraw();
             });
         });

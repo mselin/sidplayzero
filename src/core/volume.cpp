@@ -31,14 +31,10 @@ VolumeOutcome press_volume_key(SystemVolume* volume, VolumeKey key) {
     if (level > 100) level = 100;
 
     if (key == VolumeKey::Mute) {
+        // What the toggle led to is known without asking again: one question fewer on the quick worker,
+        // whose job must stay within SPEC-022's 2 s (A12).
         if (!volume->toggle_mute()) return failed();
-        int now = level;
-        bool now_muted = !muted;
-        if (!volume->get(&now, &now_muted)) {     // the toggle was done; say what it should have led to
-            now = level;
-            now_muted = !muted;
-        }
-        return shown(now, now_muted);
+        return shown(level, !muted);
     }
 
     // The nearest multiple of 5 % above or below, never past 100 % or 0 %.

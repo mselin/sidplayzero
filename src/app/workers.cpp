@@ -3,9 +3,9 @@
 
 #include <pthread.h>
 
-#include <cstdio>
-#include <exception>
 #include <utility>
+
+#include "platform/guarded.h"
 
 namespace spz::app {
 
@@ -23,7 +23,8 @@ void UiQueue::run_all() {
             job = std::move(jobs_.front());
             jobs_.pop_front();
         }
-        job();
+        // A message that fails must not take the UI thread with it: the next one still runs.
+        platform::run_guarded("a message on the UI thread", job);
     }
 }
 
@@ -32,42 +33,46 @@ bool UiQueue::empty() const {
     return jobs_.empty();
 }
 
-Worker::Worker(std::string name, bool finish_on_exit) : name_(std::move(name)), finish_on_exit_(finish_on_exit) {
+Worker::Worker(std::string name) : name_(std::move(name)) {
     thread_ = std::thread([this] { loop(); });
     id_ = thread_.get_id();
 }
 
-Worker::~Worker() { stop(); }
+Worker::~Worker() {
+    stop();
+    // Destroyed by a job of its own: the thread ends after that job, on its own.
+    if (thread_.joinable()) thread_.detach();
+}
 
 void Worker::stop() {
-    std::deque<std::function<void()>> dropped;
+    std::deque<Job> dropped;
     {
         std::lock_guard<std::mutex> lock(mutex_);
         stopping_ = true;
-        if (!finish_on_exit_) dropped.swap(jobs_);
+        // SPEC-201: what waits is dropped, but for the kept jobs (the saves), which still run.
+        std::deque<Job> kept;
+        for (Job& job : jobs_) (job.kept ? kept : dropped).push_back(std::move(job));
+        jobs_.swap(kept);
     }
     wake_.notify_all();
+    if (std::this_thread::get_id() == id_) return;   // a thread cannot join itself
     if (thread_.joinable()) thread_.join();
     // What the dropped jobs hold goes here, on the thread that stops the worker, not under its lock.
 }
 
-void Worker::post(std::function<void()> job) {
+void Worker::add(Job job, bool first) {
     {
         std::lock_guard<std::mutex> lock(mutex_);
         if (stopping_) return;
-        jobs_.push_back(std::move(job));
+        if (first) jobs_.push_front(std::move(job));
+        else jobs_.push_back(std::move(job));
     }
     wake_.notify_one();
 }
 
-void Worker::post_first(std::function<void()> job) {
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
-        if (stopping_) return;
-        jobs_.push_front(std::move(job));
-    }
-    wake_.notify_one();
-}
+void Worker::post(std::function<void()> job) { add(Job{std::move(job), false}, false); }
+
+void Worker::post_first(std::function<void()> job) { add(Job{std::move(job), false}, true); }
 
 bool Worker::idle() const {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -85,16 +90,14 @@ void Worker::loop() {
     for (;;) {
         wake_.wait(lock, [this] { return stopping_ || !jobs_.empty(); });
         if (jobs_.empty()) return;              // stopping, with nothing left to do
-        std::function<void()> job = std::move(jobs_.front());
+        std::function<void()> job = std::move(jobs_.front().run);
         jobs_.pop_front();
         running_ = true;
         lock.unlock();
-        try {
-            job();
-        } catch (const std::exception& error) {
-            // A job that fails must not take the thread with it: the next job still runs.
-            std::fprintf(stderr, "sidplayzero: a job on the %s worker failed: %s\n", name_.c_str(), error.what());
-        }
+        // A job that fails, whatever it throws, must not take the thread with it: the next job still runs.
+        const std::string where = "a job on the " + name_ + " worker";
+        platform::run_guarded(where.c_str(), job);
+        job = nullptr;                          // what it held goes before the next job, not under the lock
         lock.lock();
         running_ = false;
     }
