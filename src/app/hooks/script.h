@@ -4,7 +4,6 @@
 #pragma once
 
 #include <cstdint>
-#include <functional>
 #include <string>
 
 namespace spz::hooks {
@@ -25,9 +24,5 @@ struct Options {
 // Runs a script and returns the program's exit status: 0 if every line did what it should, 1 if an
 // `expect` did not hold, 2 if the script could not be read or run.
 int run_script(const Options& options);
-
-// Part of "settled" (SPEC-253): the script goes on only while every check registered here says true.
-// A worker registers one that says whether it is idle or waiting on the fake clock.
-void add_idle_check(std::function<bool()> idle);
 
 }  // namespace spz::hooks

@@ -69,13 +69,9 @@ std::string hvsc_copyright_section(const std::string& file) {
 AboutScreen::AboutScreen(Shell* shell) : Screen(shell), lines_(about_lines(shell->services().libraries)) {}
 
 bool AboutScreen::ready() {
-    if (shell()->services().libraries.empty()) return false;     // the engine of `platform` is not built yet
-    try {
-        (void)hvsc_notice_text();
-        return true;
-    } catch (const std::exception&) {
-        return false;                                            // SPEC-152's notice is not built yet
-    }
+    // SPEC-103's second line names the libraries of the engine: a program that has no engine to name them
+    // has no About screen.
+    return !shell()->services().libraries.empty();
 }
 
 void AboutScreen::draw(lv_obj_t* content) {

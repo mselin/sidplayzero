@@ -20,12 +20,11 @@ set(SPZ_ENGINE_PREFIX "${CMAKE_BINARY_DIR}/engine")
 file(MAKE_DIRECTORY "${SPZ_ENGINE_PREFIX}/include")
 
 # The flags the engine is compiled with: those of this build's type, and the options every source of this
-# build gets (the sanitizers and -ffile-prefix-map, from the top CMakeLists.txt).
+# build gets (the sanitizers and -ffile-prefix-map): the top CMakeLists.txt's SPZ_COMPILE_OPTIONS and
+# SPZ_LINK_OPTIONS, the lists it gives add_compile_options() and add_link_options().
 string(TOUPPER "${CMAKE_BUILD_TYPE}" _spz_type)
-get_directory_property(_spz_options COMPILE_OPTIONS)
-get_directory_property(_spz_link_options LINK_OPTIONS)
-list(JOIN _spz_options " " _spz_options_text)
-list(JOIN _spz_link_options " " _spz_link_text)
+list(JOIN SPZ_COMPILE_OPTIONS " " _spz_options_text)
+list(JOIN SPZ_LINK_OPTIONS " " _spz_link_text)
 set(_spz_cflags "${CMAKE_C_FLAGS} ${CMAKE_C_FLAGS_${_spz_type}} ${_spz_options_text}")
 set(_spz_cxxflags "${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${_spz_type}} ${_spz_options_text}")
 set(_spz_ldflags "${CMAKE_EXE_LINKER_FLAGS} ${_spz_link_text}")
@@ -58,6 +57,9 @@ if("usbsid" IN_LIST SPZ_PARTS)
     set(_spz_usbsid "--with-usbsid")
 endif()
 
+# The engine's make runs inside this build's own (Ninja's), which keeps the other cores busy meanwhile: it
+# starts a job only while the machine's load is under the number of cores, so that the two together do not
+# run several times as many jobs as there are cores.
 cmake_host_system_information(RESULT _spz_cores QUERY NUMBER_OF_LOGICAL_CORES)
 find_program(SPZ_MAKE NAMES make gmake REQUIRED)
 
@@ -76,7 +78,7 @@ ExternalProject_Add(spz_libresidfp
     CONFIGURE_COMMAND ${CMAKE_COMMAND} -E env ${_spz_environment}
         <SOURCE_DIR>/configure --prefix=<INSTALL_DIR> --quiet --enable-static --disable-shared
         ${_spz_host_arguments}
-    BUILD_COMMAND ${SPZ_MAKE} -j${_spz_cores}
+    BUILD_COMMAND ${SPZ_MAKE} -j${_spz_cores} -l${_spz_cores}
     INSTALL_COMMAND ${SPZ_MAKE} install
     BUILD_BYPRODUCTS "${SPZ_ENGINE_PREFIX}/lib/libresidfp.a"
     LOG_CONFIGURE ON LOG_BUILD ON LOG_INSTALL ON LOG_OUTPUT_ON_FAILURE ON)
@@ -91,7 +93,7 @@ ExternalProject_Add(spz_libsidplayfp
     CONFIGURE_COMMAND ${CMAKE_COMMAND} -E env ${_spz_environment}
         <SOURCE_DIR>/configure --prefix=<INSTALL_DIR> --quiet --enable-static --disable-shared
         --without-exsid ${_spz_usbsid} ${_spz_host_arguments}
-    BUILD_COMMAND ${SPZ_MAKE} -j${_spz_cores}
+    BUILD_COMMAND ${SPZ_MAKE} -j${_spz_cores} -l${_spz_cores}
     INSTALL_COMMAND ${SPZ_MAKE} install
     BUILD_BYPRODUCTS "${SPZ_ENGINE_PREFIX}/lib/libsidplayfp.a"
     LOG_CONFIGURE ON LOG_BUILD ON LOG_INSTALL ON LOG_OUTPUT_ON_FAILURE ON)

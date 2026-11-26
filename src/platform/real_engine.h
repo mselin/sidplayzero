@@ -8,10 +8,12 @@
 // (SPEC-075). reSIDfp's filter is set as the `sidplayfp` program sets it with an empty home folder, so
 // that the two render the same (SPEC-071).
 //
-// Threads: load() and render() are called on the render thread (or, in tests, by the test). set_muted(),
-// set_filter(), registers() and chips() may be called on any thread at the same time: a mute or a filter
-// is taken up at the start of the next render() (within one render chunk, SPEC-074), and registers() gives
-// the values as they were at the end of the last render().
+// Threads: load() and render() are called by one thread at a time, never together: in the app, load() on
+// the quick worker (the player's load job, through the software backend, which keeps render() waiting
+// meanwhile) and render() on the render thread; in the tools and tests, by whoever holds the engine.
+// set_muted(), set_filter(), registers() and chips() may be called on any thread at the same time: a mute
+// or a filter is taken up at the start of the next render() (within one render chunk, SPEC-074), and
+// registers() gives the values as they were at the end of the last render().
 #pragma once
 
 #include <memory>
@@ -27,8 +29,9 @@ public:
     RealEngine(const RealEngine&) = delete;
     RealEngine& operator=(const RealEngine&) = delete;
 
-    // Fails with "MSG_ENGINE_REFUSED" when the library refuses the tune, and with "MSG_NEEDS_BASIC" when
-    // the tune needs the BASIC ROM and the settings have none (SPEC-068).
+    // Fails with "MSG_INVALID_SID" when the tune does not pass check_tune() (SPEC-203: the engine checks
+    // it itself, whoever calls), with "MSG_ENGINE_REFUSED" when the library refuses it, and with
+    // "MSG_NEEDS_BASIC" when the tune needs the BASIC ROM and the settings have none (SPEC-068).
     bool load(const std::vector<std::uint8_t>& tune, int subtune, const EngineSettings& settings,
               std::string* why) override;
     // Always gives `frames` frames once a tune is loaded, unless the library reports an error; 0 if none is.

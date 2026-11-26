@@ -5,8 +5,7 @@
 //   spz_tool COMMAND [ARGUMENT ...]
 //
 // Each test that uses a command says, where it uses it, what the command takes and what it prints. Every
-// command prints `key = value` lines. A command that reaches a part of `core` that is not built yet says
-// so and ends with status 70, and the test that asked fails with "not built yet".
+// command prints `key = value` lines. No command, or one not listed here, is a usage error (status 2).
 //
 //   spz_tool listing DATABASE [--path HVSC_PATH]                       tests/integration/test_hvsc.py, SPEC-142
 //   spz_tool fetch URL TO [--limit BYTES] [--resume-from BYTE] [--ca FILE] [--release-rules]  test_hvsc.py, SPEC-150
@@ -50,7 +49,6 @@
 #include "spz/hvsc_setup.h"
 #include "spz/job.h"
 #include "spz/listing.h"
-#include "spz/not_built.h"
 #include "spz/notice_gate.h"
 #include "spz/safe_file.h"
 #include "spz/settings.h"
@@ -61,13 +59,6 @@
 namespace {
 
 using spz::platform::RealFiles;
-
-int not_built(int argc, char** argv) {
-    std::printf("not built yet: spz_tool");
-    for (int i = 1; i < argc; ++i) std::printf(" %s", argv[i]);
-    std::printf("\n");
-    return 70;
-}
 
 int usage(const char* text) {
     std::fprintf(stderr, "usage: spz_tool %s\n", text);
@@ -1000,16 +991,10 @@ int dispatch(const std::string& command, const std::vector<std::string>& args) {
 }  // namespace
 
 int main(int argc, char** argv) {
-    if (argc < 2) return not_built(argc, argv);
+    if (argc < 2) return usage("COMMAND [ARGUMENT ...]");
     const std::string command = argv[1];
     const std::vector<std::string> args(argv + 2, argv + argc);
-    try {
-        const int status = dispatch(command, args);
-        std::fflush(stdout);
-        return status < 0 ? not_built(argc, argv) : status;
-    } catch (const spz::NotBuilt& e) {
-        std::printf("%s\n", e.what());
-        std::fflush(stdout);
-        return 70;
-    }
+    const int status = dispatch(command, args);
+    std::fflush(stdout);
+    return status < 0 ? usage(("COMMAND [ARGUMENT ...]: there is no command " + command).c_str()) : status;
 }

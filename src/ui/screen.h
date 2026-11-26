@@ -26,8 +26,9 @@
 //      `title`, `position`, `actions`, `typing`, `panel`, `help`, `notice`, `text` and `boxes`.
 //    - actions(): the five labels over the keys 4 to 8. The key map's, unless the screen takes one away
 //      while its action cannot be used (SPEC-095: "Playing" with no current entry).
-//    - ready(): false while a part of `core` the screen cannot do without is still a stub (it throws
-//      spz::NotBuilt). A key that would open a screen that is not ready does nothing.
+//    - ready(): false while what the screen cannot do without is not there (the composition has not set
+//      it in Services, or this build has no such part). A key that would open a screen that is not ready
+//      does nothing.
 // 2. Add one line for it to src/app/screens.cpp. Nothing else needs to change: the key map already has
 //    its keys, and opening it by its key (key 5 in the browser, "open_search") is the frame's work.
 // 3. Panels are ui::Panel (ui/panel.h): open one with shell()->open_panel(). Notices: shell()->notice().

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // See stub_screen.h.
-#include "ui/stub_screen.h"
+#include "stub_screen.h"
 
 #include "ui/describe.h"
 #include "ui/draw.h"
@@ -33,7 +33,7 @@ StubScreen::StubScreen(const std::string& root) : root_(root) {
     lv_obj_t* bar = lv_obj_create(screen);
     lv_obj_remove_style_all(bar);
     lv_obj_set_pos(bar, 0, 58);
-    lv_obj_set_size(bar, kScreenWidth, 20);
+    lv_obj_set_size(bar, kWidth, 20);
     lv_obj_set_style_bg_color(bar, lv_color_hex(0x2E5AAC), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(bar, LV_OPA_COVER, LV_PART_MAIN);
     lv_obj_remove_flag(bar, LV_OBJ_FLAG_SCROLLABLE);

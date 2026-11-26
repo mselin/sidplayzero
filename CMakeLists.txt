@@ -38,29 +38,37 @@ endif()
 include(cmake/fetch.cmake)
 include(cmake/parts.cmake)
 
+# The options every source of this build is compiled and linked with, ours and the engine's alike
+# (cmake/engine.cmake builds the engine with these lists, so they are complete here, before it is included).
+#
 # No path of the machine that builds ends up in the program (SPEC-001, SPEC-225). The pinned downloads may
 # lie elsewhere when .cache is a link: they are named from .cache too.
-add_compile_options("-ffile-prefix-map=${CMAKE_SOURCE_DIR}=.")
+set(SPZ_COMPILE_OPTIONS "-ffile-prefix-map=${CMAKE_SOURCE_DIR}=.")
+set(SPZ_LINK_OPTIONS "")
 get_filename_component(_spz_cache_real "${SPZ_CACHE_DIR}" REALPATH)
 if(NOT _spz_cache_real STREQUAL "${SPZ_CACHE_DIR}")
-    add_compile_options("-ffile-prefix-map=${_spz_cache_real}=.cache")
+    list(APPEND SPZ_COMPILE_OPTIONS "-ffile-prefix-map=${_spz_cache_real}=.cache")
 endif()
 
-set(SPZ_WARNINGS -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wno-sign-conversion)
-
 if(SIDPLAYZERO_SANITIZE STREQUAL "address")
-    add_compile_options(-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g)
-    add_link_options(-fsanitize=address,undefined)
+    list(APPEND SPZ_COMPILE_OPTIONS -fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g)
+    list(APPEND SPZ_LINK_OPTIONS -fsanitize=address,undefined)
 elseif(SIDPLAYZERO_SANITIZE STREQUAL "thread")
-    add_compile_options(-fsanitize=thread -fno-omit-frame-pointer -g)
-    add_link_options(-fsanitize=thread)
+    list(APPEND SPZ_COMPILE_OPTIONS -fsanitize=thread -fno-omit-frame-pointer -g)
+    list(APPEND SPZ_LINK_OPTIONS -fsanitize=thread)
 elseif(SIDPLAYZERO_SANITIZE STREQUAL "fuzzer")
     # Everything a fuzz target links is built for libFuzzer and with both sanitizers (SPEC-205).
-    add_compile_options(-fsanitize=fuzzer-no-link,address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g)
-    add_link_options(-fsanitize=address,undefined)
+    list(APPEND SPZ_COMPILE_OPTIONS -fsanitize=fuzzer-no-link,address,undefined -fno-sanitize-recover=undefined
+        -fno-omit-frame-pointer -g)
+    list(APPEND SPZ_LINK_OPTIONS -fsanitize=address,undefined)
 elseif(NOT SIDPLAYZERO_SANITIZE STREQUAL "")
     message(FATAL_ERROR "SIDPLAYZERO_SANITIZE must be empty, 'address', 'thread' or 'fuzzer'")
 endif()
+add_compile_options(${SPZ_COMPILE_OPTIONS})
+add_link_options(${SPZ_LINK_OPTIONS})
+
+# The warnings our own sources are compiled with (not LVGL's, the engine's or miniaudio's).
+set(SPZ_WARNINGS -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wno-sign-conversion)
 
 add_subdirectory(src/core)
 

@@ -14,16 +14,7 @@ namespace spz::ui {
 
 SettingsScreen::SettingsScreen(Shell* shell) : Screen(shell), table_(settings_rows()) {}
 
-bool SettingsScreen::ready() {
-    SettingsFile* file = shell()->services().settings;
-    if (file == nullptr) return false;
-    try {
-        (void)setting_text(file->settings(), "engine");
-        return true;
-    } catch (const std::exception&) {
-        return false;                   // SPEC-130's settings are not built yet
-    }
-}
+bool SettingsScreen::ready() { return shell()->services().settings != nullptr; }
 
 bool SettingsScreen::backlight_unavailable(const SettingsRow& row) const {
     if (row.key != "screen_off_after") return false;

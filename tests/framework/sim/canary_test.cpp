@@ -11,7 +11,7 @@
 #include "lvgl.h"
 #include "ui/describe.h"
 #include "ui/png.h"
-#include "ui/stub_screen.h"
+#include "stub_screen.h"
 
 TEST_CASE("TF-046 canary: a C++ test can ask LVGL what a script cannot: whether a font has a glyph") {
     lv_font_glyph_dsc_t glyph;

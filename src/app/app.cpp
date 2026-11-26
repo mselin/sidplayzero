@@ -360,7 +360,7 @@ void App::on_key(const KeyEvent& event) {
         }
         top()->on_action(event);
     } catch (const std::exception& error) {
-        // A part of `core` that is not built yet (Phase 5) or that failed: the key does nothing more.
+        // What the key asked for failed: it does nothing more, and the app goes on.
         std::fprintf(stderr, "sidplayzero: the key %s (%s) failed: %s\n", event.key.c_str(), a.c_str(), error.what());
     }
 }

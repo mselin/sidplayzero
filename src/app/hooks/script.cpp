@@ -43,11 +43,6 @@ const int kStatusAlreadyRunning = 1;
 const std::int64_t kStepMs = 10;                         // `advance` moves the fake clock in steps of this
 const std::chrono::seconds kSettleLimit(10);
 
-std::vector<std::function<bool()>>& idle_checks() {
-    static std::vector<std::function<bool()>> checks;
-    return checks;
-}
-
 Clock* g_clock = nullptr;
 std::uint32_t tick() { return static_cast<std::uint32_t>(g_clock->now_ms()); }
 
@@ -275,8 +270,7 @@ private:
         for (;;) {
             run_ui_once();
             lv_refr_now(nullptr);
-            bool idle = !app_ || app_->settled();
-            for (const auto& check : idle_checks()) idle = idle && check();
+            const bool idle = !app_ || app_->settled();
             // A thread that a fake holds back may have just been told to give up (a request cancelled): it
             // notices within 10 ms. So settled-while-held must still hold a little later.
             if (idle && (!holds_.any() || confirming)) return;
@@ -599,8 +593,6 @@ private:
 };
 
 }  // namespace
-
-void add_idle_check(std::function<bool()> idle) { idle_checks().push_back(std::move(idle)); }
 
 int run_script(const Options& options) {
     Session session(options);
