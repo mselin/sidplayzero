@@ -16,4 +16,8 @@ foreach(_source IN LISTS _fuzz_sources)
     target_link_libraries(${_name} PRIVATE spz_core)
     target_compile_options(${_name} PRIVATE ${SPZ_WARNINGS})
     target_link_options(${_name} PRIVATE -fsanitize=fuzzer)
+    if(_name STREQUAL "engine_fuzz")
+        # The one target that reaches the engine: libsidplayfp, built with these sanitizers (cmake/engine.cmake).
+        target_link_libraries(${_name} PRIVATE spz_engine)
+    endif()
 endforeach()

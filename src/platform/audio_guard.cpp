@@ -15,9 +15,9 @@
 #include <cstring>
 #endif
 
-namespace spz::platform {
-
 #if SPZ_AUDIO_GUARD
+
+namespace spz::platform {
 
 namespace {
 

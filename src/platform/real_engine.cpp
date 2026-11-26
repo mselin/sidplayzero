@@ -115,6 +115,14 @@ bool RealEngine::load(const std::vector<std::uint8_t>& tune, int subtune, const 
     d.pending_at = 0;
 
     if (tune.empty() || tune.size() > 0xffffffffu) return refuse("MSG_ENGINE_REFUSED");
+    // libsidplayfp 3.1.2 reads two bytes at the start of the tune's C64 data, after the load address when
+    // the header has none, before it checks that they are there (SidTuneBase::acceptSidTune). A tune with
+    // less data than that is refused here, before the library reads past its end (SPEC-203's oracle).
+    if (tune.size() >= 10) {
+        const std::size_t data_offset = (static_cast<std::size_t>(tune[6]) << 8) | tune[7];
+        const bool load_address_in_data = tune[8] == 0 && tune[9] == 0;
+        if (tune.size() < data_offset + 2 + (load_address_in_data ? 2 : 0)) return refuse("MSG_ENGINE_REFUSED");
+    }
     d.tune.reset(new SidTune(tune.data(), static_cast<uint_least32_t>(tune.size())));
     if (!d.tune->getStatus()) return refuse("MSG_ENGINE_REFUSED");
     d.tune->selectSong(subtune > 0 ? static_cast<unsigned>(subtune) : 0u);
