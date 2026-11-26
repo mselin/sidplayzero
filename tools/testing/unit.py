@@ -84,11 +84,18 @@ class _Collector(unittest.TestResult):
     def _name(test):
         return test.shortDescription() or test.id()
 
+    def _message(self, test, err):
+        """The traceback's last line, as before, and the exception's own first line, which says which check
+        failed when an assertion's message (a program's output, say) runs over several lines."""
+        last = self._exc_info_to_string(err, test).strip().split("\n")[-1]
+        first = f"{err[0].__name__}: " + (str(err[1]).strip().split("\n") or [""])[0]
+        return last if first in last or last in first else f"{last} [{first[:300]}]"
+
     def addFailure(self, test, err):
-        self.outcomes.append((self._name(test), FAILED, self._exc_info_to_string(err, test).strip().split("\n")[-1]))
+        self.outcomes.append((self._name(test), FAILED, self._message(test, err)))
 
     def addError(self, test, err):
-        self.outcomes.append((self._name(test), FAILED, self._exc_info_to_string(err, test).strip().split("\n")[-1]))
+        self.outcomes.append((self._name(test), FAILED, self._message(test, err)))
 
     def addSkip(self, test, reason):
         self.outcomes.append((self._name(test), SKIPPED, reason))
