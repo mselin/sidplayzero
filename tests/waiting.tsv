@@ -665,9 +665,6 @@ SPEC-022 the program plays a fixture tune with the real engine through that guar
 SPEC-022 the scripts of the thread rules, run in the ThreadSanitizer build, pass and give no report	code	the script stopped at: expect screen = browser
 SPEC-103 the packaged program gives the version of the package's control file and of app-builder.json, with the two libraries, as the About screen's first lines	code	does not print libsidplayfp 3.1.2
 SPEC-002 the packaged program, run under emulation, prints libsidplayfp 3.1.2 by --version, and holds nothing of the exSID backend	code	does not print libsidplayfp 3.1.2
-SPEC-011 no file under a "GPL version 2 only" notice is among the sources compiled into the package's program	code	the engine is not built in
-SPEC-011 the installed notices file names each component that is built in, each with its licence's text, beside the installed LICENSE	code	the notices file lacks
-SPEC-005 readelf -d lists neither libpulse nor libasound, and the program holds their names, to load them when it runs	code	miniaudio is not built in
 SPEC-141 SPEC-060 with a 30-second present tune followed by an absent one, the fetch-ahead goes out when 10 s remain and not before	code	not built yet
 SPEC-141 a song shorter than 10 s has its absent next entry fetched ahead from its start	code	not built yet
 SPEC-141 nothing is fetched ahead when the next entry is on the device, or when there is none	code	not built yet

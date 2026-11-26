@@ -165,8 +165,8 @@ struct Transfer {
             return 1;
         }
         if (*self->progress && self->opened) {
-            std::uint64_t total = self->range_total ? self->range_total : self->content_length;
-            if (total && !self->resumed && self->range_total == 0) total = self->content_length;
+            // The whole file's size: from Content-Range for the rest of a file, else from Content-Length.
+            const std::uint64_t total = self->resumed ? self->range_total : self->content_length;
             if (!(*self->progress)(self->offset() + self->written, total)) {
                 self->cancelled = true;
                 return 1;
