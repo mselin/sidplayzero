@@ -8,7 +8,12 @@
 // settings file, without the copy and without the notice.
 #pragma once
 
+#include <cstdint>
+#include <memory>
+#include <mutex>
 #include <string>
+#include <utility>
+#include <vector>
 
 #include "spz/clock.h"
 #include "spz/executor.h"
@@ -96,11 +101,26 @@ public:
     FileStatus last_save() const;
 
 private:
+    struct Saved;   // the writes of the file, which the quick worker and the caller of save_now() share
+    void changed();          // with mutex_ held
+    void timer_fired();
+    std::string file_text() const;   // with mutex_ held
+
     Files* files_;
     Clock* clock_;
     Executor* quick_;
     std::string path_;
     State state_;
+
+    mutable std::mutex mutex_;   // guards everything below and state_
+    bool fault_ = false;
+    std::uint64_t changes_ = 0;          // counts the changes since load(); each write records the count it holds
+    bool timer_set_ = false;
+    Clock::TimerId timer_ = 0;
+    // What the file is written back from: (key, line) for each line kept; a known key is written with
+    // what is remembered now, any other line as it was found.
+    std::vector<std::pair<std::string, std::string>> kept_;
+    std::shared_ptr<Saved> saved_;
 };
 
 }  // namespace spz

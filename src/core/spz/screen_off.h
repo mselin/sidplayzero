@@ -51,10 +51,19 @@ public:
     bool is_off() const;
 
 private:
+    void rearm();   // starts the seconds again, or stops counting them, as things now are
+
     Clock* clock_;
     Executor* quick_;
     Backlight* backlight_;
     StateFile* state_;
+    // All of these are the UI thread's.
+    bool available_ = false;
+    bool playing_ = false;
+    bool off_ = false;
+    int after_s_ = 0;
+    bool timer_set_ = false;
+    Clock::TimerId timer_ = 0;
 };
 
 }  // namespace spz

@@ -9,7 +9,10 @@
 // (spz/settings.h). In a build without a part (SPEC-115), that part's settings keep their defaults.
 #pragma once
 
+#include <memory>
+#include <set>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "spz/executor.h"
@@ -79,11 +82,23 @@ public:
     FileStatus last_save() const;
 
 private:
+    struct Saved;   // how the last save ended, shared with the save on the quick worker
+    std::string file_text() const;
+
     Files* files_;
     Executor* quick_;
     std::string path_;
     Settings settings_;
     std::string bad_copy_;
+    bool fault_ = false;
+    bool notice_ = false;
+    // What the file is written back from: (key, line) for each line kept; a known key is written with the
+    // value in force, any other line as it was found.
+    std::vector<std::pair<std::string, std::string>> kept_;
+    // Known keys whose lines are written as they were found: a value of a part this build leaves out
+    // (SPEC-115), which keeps its default here and is kept for a build that has the part.
+    std::set<std::string> as_found_;
+    std::shared_ptr<Saved> saved_;
 };
 
 }  // namespace spz

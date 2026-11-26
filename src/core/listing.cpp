@@ -31,6 +31,7 @@
 #include <unordered_map>
 
 #include "spz/paths.h"
+#include "spz/safe_file.h"
 
 namespace spz {
 
@@ -41,7 +42,6 @@ const std::size_t kHeaderSize = 64;
 const std::size_t kTuneRecord = 32;
 const std::size_t kFolderRecord = 32;
 const std::size_t kLineCut = 4096;        // SPEC-204
-const char kTempEnding[] = ".tmp-sidplayzero";   // SPEC-132
 
 // --- reading the database -------------------------------------------------------------------------------
 
@@ -276,22 +276,6 @@ Bytes make_file(const std::vector<Parsed>& tunes, const FileInfo& database) {
     return out;
 }
 
-// SPEC-132's safe write: a temporary file beside the target, synced, renamed over it, the folder synced.
-bool write_safely(Files* files, const std::string& target, const Bytes& bytes) {
-    const std::size_t slash = target.rfind('/');
-    const std::string folder = slash == std::string::npos ? "." : slash == 0 ? "/" : target.substr(0, slash);
-    const std::string name = slash == std::string::npos ? target : target.substr(slash + 1);
-    const std::string temporary = (slash == std::string::npos ? "" : target.substr(0, slash + 1)) + "." + name + kTempEnding;
-    if (files->make_folders(folder) != FileStatus::Ok) return false;
-    if (files->write(temporary, bytes) != FileStatus::Ok || files->sync(temporary) != FileStatus::Ok ||
-        files->rename(temporary, target) != FileStatus::Ok) {
-        files->remove(temporary);
-        return false;
-    }
-    files->sync(folder);
-    return true;
-}
-
 }  // namespace
 
 // --- the mapped file ---------------------------------------------------------------------------------------
@@ -430,7 +414,7 @@ ListingBuild Listing::build(Files* files, const std::string& database, const std
     result.tunes = static_cast<int>(parsed.size());
     result.folders = static_cast<int>(get_u32(file.data() + 32)) - 1;
     result.lengths = static_cast<int>(get_u32(file.data() + 36));
-    result.ok = write_safely(files, listing_file, file);
+    result.ok = safe_write(files, listing_file, file) == FileStatus::Ok;   // SPEC-132
     return result;
 }
 
