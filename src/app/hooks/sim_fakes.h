@@ -84,6 +84,7 @@ public:
     bool can_write(const std::string& folder) override;
 
     std::atomic<std::int64_t> list_delay_ms{0};
+    std::atomic<bool> root_writable{true};     // SPEC-253: `files.root_writable`
     // Set at exit: whatever waits for the clock gives up.
     std::atomic<bool> stopping{false};
     std::mutex& lock() { return mutex_; }
@@ -155,6 +156,7 @@ struct SimFakes {
     fake::SoundBackend backend;
     std::string folder;                  // the --fakes folder, "" if none
     std::int64_t list_delay_ms = 0;
+    bool root_writable = true;
     std::size_t samples_saved = 0;       // how much of the received samples `save-samples` has written out
 
     // Where a file a script names is: "fixtures/..." is under tests/fixtures (the SPZ_FIXTURES variable),

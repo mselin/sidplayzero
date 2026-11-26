@@ -3,7 +3,7 @@
  * DejaVu Sans at 14 pixels, a bitmap font for LVGL 9.5, made by tools/make_fonts.py from dejavu-fonts-ttf-2.37.tar.bz2
  * (SPEC-010). Do not edit: make it again with `cmake -P cmake/fonts.cmake`. The glyphs are DejaVu's, under
  * the Bitstream Vera licence; see packaging/THIRD-PARTY-NOTICES.md.
- * 220 glyphs, 4 bits a pixel, line height 17, baseline 4 from the bottom.
+ * 221 glyphs, 4 bits a pixel, line height 17, baseline 4 from the bottom.
  */
 
 #include "lvgl.h"
@@ -838,6 +838,9 @@ static LV_ATTRIBUTE_LARGE_CONST const uint8_t glyph_bitmap[] = {
     /* U+2122  */
     0x8c, 0xa5, 0xab, 0x18, 0xe0, 0x93, 0x0a, 0x4b, 0x6c, 0x09, 0x30, 0xa2, 0x10, 0xc0, 0x41, 0x04,
     0x10, 0x05,
+    /* U+2193  */
+    0x00, 0xb7, 0x00, 0x00, 0xb7, 0x00, 0x00, 0xb7, 0x00, 0x00, 0xb7, 0x00, 0x00, 0xb7, 0x00, 0x00,
+    0xb7, 0x00, 0x51, 0xb7, 0x23, 0xcb, 0xb9, 0xd8, 0x1c, 0xff, 0x90, 0x01, 0xda, 0x00,
     /* U+FFFD  */
     0x00, 0x00, 0x00, 0x59, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0xff, 0x90, 0x00, 0x00, 0x00, 0x00,
     0x5f, 0xff, 0xfa, 0x00, 0x00, 0x00, 0x05, 0xd4, 0x33, 0x28, 0xa0, 0x00, 0x00, 0x5f, 0xdb, 0xff,
@@ -1070,7 +1073,8 @@ static const lv_font_fmt_txt_glyph_dsc_t glyph_dsc[] = {
     {.bitmap_index = 8165, .adv_w = 96, .box_w = 4, .box_h = 7, .ofs_x = 1, .ofs_y = 1} /* U+203A */,
     {.bitmap_index = 8179, .adv_w = 144, .box_w = 8, .box_h = 10, .ofs_x = 0, .ofs_y = 0} /* U+20AC */,
     {.bitmap_index = 8219, .adv_w = 224, .box_w = 9, .box_h = 4, .ofs_x = 2, .ofs_y = 6} /* U+2122 */,
-    {.bitmap_index = 8237, .adv_w = 224, .box_w = 14, .box_h = 14, .ofs_x = 0, .ofs_y = -1} /* U+FFFD */,
+    {.bitmap_index = 8237, .adv_w = 192, .box_w = 6, .box_h = 10, .ofs_x = 3, .ofs_y = 0} /* U+2193 */,
+    {.bitmap_index = 8267, .adv_w = 224, .box_w = 14, .box_h = 14, .ofs_x = 0, .ofs_y = -1} /* U+FFFD */,
 };
 
 static const uint16_t unicode_list_2[] = {
@@ -1079,7 +1083,7 @@ static const uint16_t unicode_list_2[] = {
 };
 
 static const uint16_t unicode_list_6[] = {
-    0x0, 0xa, 0x13, 0x14, 0x86, 0xfc, 0xdfd7,
+    0x0, 0xa, 0x13, 0x14, 0x86, 0xfc, 0x16d, 0xdfd7,
 };
 
 /* Which glyph each character has. */
@@ -1097,7 +1101,7 @@ static const lv_font_fmt_txt_cmap_t cmaps[] = {
     {.range_start = 8224, .range_length = 3, .glyph_id_start = 211, .unicode_list = NULL,
      .glyph_id_ofs_list = NULL, .list_length = 0, .type = LV_FONT_FMT_TXT_CMAP_FORMAT0_TINY},
     {.range_start = 8230, .range_length = 57304, .glyph_id_start = 214, .unicode_list = unicode_list_6,
-     .glyph_id_ofs_list = NULL, .list_length = 7, .type = LV_FONT_FMT_TXT_CMAP_SPARSE_TINY},
+     .glyph_id_ofs_list = NULL, .list_length = 8, .type = LV_FONT_FMT_TXT_CMAP_SPARSE_TINY},
 };
 
 /* Kerning, from the font's kern table: pairs of glyph ids in order, and sixteenths of a pixel. */

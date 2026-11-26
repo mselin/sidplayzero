@@ -118,6 +118,7 @@ private:
     void with_workers_parked(std::function<void()> fn);
     std::string listing_file() const;
     std::string database_file() const;
+    void make_job_mark();             // SPEC-147: `job`, `mini.job` and the job mark on every screen
     struct GateRecord;                // NoticeRecord: notice_accepted in state.ini
     struct GatePanel;                 // NoticePanel: the `notice-panel` panel
     struct Notices;                   // NoticeSink: the app's notices

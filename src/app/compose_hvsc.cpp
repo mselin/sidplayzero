@@ -10,6 +10,7 @@
 #include "app/composition.h"
 #include "spz/keep_start.h"
 #include "spz/keymap.h"
+#include "ui/hvsc_screen.h"
 #include "ui/panel.h"
 
 namespace spz::app {
@@ -38,7 +39,10 @@ struct Composition::GatePanel : NoticePanel {
 // Where the jobs tell what happened (SPEC-113).
 struct Composition::Notices : NoticeSink {
     explicit Notices(App* frame) : app(frame) {}
-    void raise(const std::string& id, const std::map<std::string, std::string>& about) override { app->notice(id, about); }
+    void raise(const std::string& id, const std::map<std::string, std::string>& about) override {
+        app->notice(id, about);
+        app->redraw();
+    }
     App* app;
 };
 
@@ -49,19 +53,30 @@ struct Composition::HvscEvents : HvscListener, DownloadListener, PlaySwitch {
         // SPEC-140: the listing is new; if the HVSC screen or the empty screen shows, the browser opens at the
         // root, once no panel and no help is open (SPEC-113).
         parts->listing_changed();
+        changed();
         App* app = parts->app();
-        if (app->top_name() == "hvsc" || app->bottom() == "empty") {
+        const bool showing = app->top_name() == "hvsc" || app->top_name() == "empty";
+        if (showing || app->bottom() == "empty") {
+            // Elsewhere the screen is left alone; only the empty screen under it gives its place to the browser.
             Composition* p = parts;
-            app->when_no_overlay([p] {
+            app->when_no_overlay([p, showing] {
                 if (p->browser_) p->browser_->show("/");
                 p->app()->set_bottom("browser");
-                p->app()->open("browser");
+                if (showing) p->app()->open("browser");
             });
         }
     }
-    void hvsc_failed(int) override {}
-    void download_done() override { parts->listing_changed(); }
-    void download_failed(int) override {}
+    void hvsc_failed(int) override { changed(); }
+    void download_done() override {
+        parts->listing_changed();
+        changed();
+    }
+    void download_failed(int) override { changed(); }
+    // The HVSC screen looks at HVSC again (Services::hvsc_changes).
+    void changed() {
+        ++parts->services().hvsc_changes;
+        parts->app()->redraw();
+    }
     void playing_off() override {
         if (parts->player_) parts->player_->set_playing_off(true);
     }
@@ -196,6 +211,41 @@ void Composition::make_hvsc() {
     s.setup = setup_.get();
     s.releases = part_built("releases") ? releases_.get() : nullptr;
     s.download = part_built("download-all") ? download_.get() : nullptr;
+    s.unpacker = seams_.unpacker;
+    s.memory = seams_.memory;
+    make_job_mark();
+}
+
+void Composition::make_job_mark() {
+    // SPEC-147, SPEC-254: the running job's `job` in every description, and the job mark, an arrow and the
+    // job's percentage, at the start of the top line's right part and in `mini.job`, on every screen but
+    // the HVSC screen, which shows the job itself. It is always built.
+    App* a = app();
+    Jobs* jobs = &jobs_;
+    a->add_describer([a, jobs](Json* d) {
+        const JobState state = jobs->state();
+        d->set("job", ui::describe_job(state));
+        if (state.kind == JobKind::None || a->top_name() == "hvsc") return;
+        const Json* had = d->get("mini");
+        Json mini = had && !had->is_null() ? *had : Json::object();
+        mini.set("job", ui::job_mark(state));
+        d->set("mini", mini);
+    });
+    a->add_top_right([a, jobs]() -> std::string {
+        if (a->top_name() == "hvsc") return "";
+        return ui::job_mark(jobs->state());
+    });
+    // The job's progress changes by itself: everything is drawn again when what it shows changes.
+    auto shown = std::make_shared<std::string>();
+    a->every(100, [a, jobs, shown] {
+        const JobState state = jobs->state();
+        const std::string now = std::to_string(static_cast<int>(state.kind)) + " " + std::to_string(state.step) +
+                                " " + std::to_string(state.done) + " " + std::to_string(state.total) +
+                                (state.can_stop ? "" : " no stop");
+        if (now == *shown) return;
+        *shown = now;
+        a->redraw();
+    });
 }
 
 void Composition::hvsc_at_start() {

@@ -44,6 +44,7 @@
 #pragma once
 
 #include <array>
+#include <cstdint>
 #include <functional>
 #include <map>
 #include <memory>
@@ -80,6 +81,8 @@ class Favourites;
 class FetchMissing;
 class Metrics;
 class ScreenOff;
+class Unpacker;
+class Memory;
 struct Entry;
 }  // namespace spz
 
@@ -131,6 +134,11 @@ struct Services {
     HvscSetup* setup = nullptr;           // SPEC-140
     Releases* releases = nullptr;         // SPEC-148, part `releases`
     CompleteDownload* download = nullptr; // SPEC-144, part `download-all`
+    Unpacker* unpacker = nullptr;         // SPEC-145's conditions: a `7z` on the path
+    Memory* memory = nullptr;             // SPEC-145's conditions: memory and swap
+    // Counts the ends of set-ups, updates and complete downloads, however they ended: the HVSC screen
+    // looks at HVSC again when it changes.
+    std::uint64_t hvsc_changes = 0;
 
     // ---- search (SPEC-160 to SPEC-164): src/app/compose_search.cpp
     Index* index = nullptr;

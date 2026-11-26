@@ -42,7 +42,9 @@ void hide_under_notice(lv_obj_t* object) {
         if (lv_obj_check_type(child, &lv_label_class)) {
             lv_area_t area;
             lv_obj_get_coords(child, &area);
-            if (area.y2 >= kNoticeTop) lv_obj_add_flag(child, LV_OBJ_FLAG_HIDDEN);
+            // SPEC-113: the notice covers the last row of the content band and nothing else; the action bar
+            // below it stays.
+            if (area.y2 >= kNoticeTop && area.y1 < kNoticeTop + ui::kRowHeight) lv_obj_add_flag(child, LV_OBJ_FLAG_HIDDEN);
         } else {
             hide_under_notice(child);
         }

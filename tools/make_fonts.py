@@ -42,6 +42,7 @@ def characters():
     assert len(wanted) == 218
     wanted.add(0x0336)      # COMBINING LONG STROKE OVERLAY: a muted voice's number, struck through (SPEC-091)
     wanted.add(0xFFFD)      # REPLACEMENT CHARACTER: what the playlist importers put for bytes that are not text
+    wanted.add(0x2193)      # DOWNWARDS ARROW: the job mark on the top line (SPEC-147)
     return sorted(wanted)
 
 
