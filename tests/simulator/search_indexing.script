@@ -3,10 +3,12 @@
 # fixture: collections/85/C64Music C64Music
 # fakes: fakes/browse_slow_listing
 
-# Every listing of a folder takes one second of the fake clock. After the first second the browser has
-# its root, and the index build, which walks the folders one after another, has seen the root and no
-# tune yet. Its first step has given every tune HVSC lists a record all the same.
-advance 1000
+# Every listing of a folder takes one second of the fake clock. The start comes first (SPEC-200: the
+# clean-up of SPEC-202, which lists the app's own folders, and then the index's check), so the build's
+# second step, which walks the collection's folders one after another, reads files only some seconds in.
+# Ten seconds in, its first step has given every tune HVSC lists a record, and the walk has not yet reached
+# /MUSICIANS/T/Tester_Tom, the last folder of the fixture collection.
+advance 10000
 expect screen = browser
 expect title = /
 expect rows[0].text = DEMOS
@@ -16,12 +18,12 @@ expect place = search-field
 expect text matches Indexing [0-9]+ %
 
 # A word of a path finds its tune already.
-type clock
+type songs
 key Enter
 expect place = search-results
 expect list.total = 1
 expect position = 1/1
-expect rows[0].text = Clock_Demo.sid
+expect rows[0].text = Three_Songs.sid
 expect text matches Indexing [0-9]+ %
 
 # A word of its title does not yet: its file has not been read.
@@ -29,8 +31,8 @@ key 4
 expect place = search-field
 key End
 key Space
-type sixty
-expect fields matches "text":"clock sixty"[,}]
+type subtunes
+expect fields matches "text":"songs subtunes"[,}]
 key Enter
 expect text contains "No results"
 expect text matches Indexing [0-9]+ %
@@ -55,13 +57,16 @@ key Backspace
 key Backspace
 key Backspace
 key Backspace
+key Backspace
+key Backspace
+key Backspace
 expect fields matches "text":""[,}]
-type clock
+type songs
 key Space
-type sixty
+type subtunes
 key Enter
 expect place = search-results
 expect list.total = 1
-expect rows[0].text = Clock_Demo.sid
+expect rows[0].text = Three_Songs.sid
 expect text matches ^(?![\s\S]*Indexing)
 expect-requests 0
