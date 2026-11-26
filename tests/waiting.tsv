@@ -20,7 +20,6 @@ SPEC-100 SPEC-165 a query that matches nothing says "No results", and nothing is
 SPEC-100 Search: a query typed on the fixture collection gives the expected rows; Enter plays a result and the results become the queue; "Folder" shows a result in the browser at its folder, highlighted	code	expect screen = search
 SPEC-100 in the search results the keys 7 and 8 are "Fav" and "Add", and act on the highlighted result	code	expect screen = search
 SPEC-164 the filter panel has four lines, each changed with Left and Right; Enter applies them and ESC leaves them as they were; each filter alone, and all together, remove exactly the fixture tunes that do not fit	code	expect place = search-results
-SPEC-201 the same with a fake download held open: the download is cut short, and nothing of it is in the collection	code	line: expect screen = hvsc
 SPEC-090 Playlists and Playlist open by their keys, playing an entry opens now playing, and from the deepest stack five presses of ESC reach the browser	code	expect screen = playlists
 SPEC-090 SPEC-110 every screen that is always built opens by its keys alone, and the stack is as the item says after each	code	expect screen = search
 SPEC-090 SPEC-114 with a panel and help open over the fifth screen, six short presses of ESC reach the browser	code	expect place = search-results
@@ -63,7 +62,7 @@ SPEC-172 SPEC-170 a playlist is made, three tunes are added, the third is moved 
 SPEC-022 with the index build held by slow files on the long worker, Enter on an absent tune makes its request at once	code	expect screen = search
 SPEC-010 the 12-pixel font has a glyph for each of the 218 printable Windows-1252 characters	code	not built yet
 SPEC-010 the 14-pixel font has a glyph for each of the 218 printable Windows-1252 characters	code	not built yet
-SPEC-022 the scripts of the thread rules, run in the ThreadSanitizer build, pass and give no report	code	structure_threads_index.script: the script stopped at: expect screen = hvsc
+SPEC-022 the scripts of the thread rules, run in the ThreadSanitizer build, pass and give no report	code	structure_threads_index.script: the script stopped at: expect screen = search
 SPEC-109 the mini player on the browser, Search and Settings shows the state, the title and the elapsed time while a tune plays or is paused, and the failed mark with the file's name when it cannot be played	code	expect screen = search
 SPEC-069 a playlist entry that is missing shows MSG_ENTRY_MISSING when a key chooses it, and is passed over at once, without the message, when playback reaches it by itself	code	expect screen = playlists
 SPEC-076 the volume keys set the system volume to the nearest multiple of 5 % above or below, Mute toggles the mute, and the notice MSG_VOLUME shows the new level or "Muted"	code	expect notice.id = MSG_VOLUME
