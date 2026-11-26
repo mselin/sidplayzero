@@ -342,10 +342,13 @@ HttpResult CurlHttpClient::fetch(const HttpRequest& request, const Progress& pro
         result.failure = HttpFailure::Network;   // the server did not answer what was asked
     } else if (transfer.cancelled) {
         result.failure = HttpFailure::Cancelled;
+    } else if (status == 404 || status == 410) {
+        // The server has said the file is not there. How its page about that ended does not change it: a
+        // server may close the connection without TLS's closing message, which newer libcurl reports as
+        // a receive error after the status has been read.
+        result.failure = HttpFailure::NotFound;
     } else if (code != CURLE_OK) {
         result.failure = failure_of(code);
-    } else if (status == 404 || status == 410) {
-        result.failure = HttpFailure::NotFound;
     } else if (status != 200 && status != 206) {
         result.failure = HttpFailure::Network;
     } else if (short_rest) {
