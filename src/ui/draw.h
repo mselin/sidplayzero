@@ -58,6 +58,7 @@ int text_width(const std::string& text, const lv_font_t* font);
 
 // What make_label() recorded of a label: the text it was given, the width that text needs, and whether
 // it was cut. False for an object that make_label() did not make.
-bool label_record(lv_obj_t* label, std::string* id, int* full_width, bool* cut);
+// What make_label recorded of a label: its id, the width and text it would need whole, and whether it was cut.
+bool label_record(lv_obj_t* label, std::string* id, int* full_width, bool* cut, std::string* full_text = nullptr);
 
 }  // namespace spz::ui

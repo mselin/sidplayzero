@@ -26,6 +26,7 @@ public:
 private:
     void refresh();
     std::string value_of(const SettingsRow& row) const;
+    bool backlight_unavailable(const SettingsRow& row) const;
     bool fixed_by_variable(const SettingsRow& row) const;
     void step(int by, bool wrap);
     void open_prompt();

@@ -6,6 +6,7 @@
 #include <memory>
 
 #include "spz/settings_file.h"
+#include "spz/system.h"
 #include "ui/draw.h"
 #include "ui/panel.h"
 
@@ -24,6 +25,12 @@ bool SettingsScreen::ready() {
     }
 }
 
+bool SettingsScreen::backlight_unavailable(const SettingsRow& row) const {
+    if (row.key != "screen_off_after") return false;
+    Backlight* backlight = shell()->services().backlight;
+    return backlight == nullptr || !backlight->can_change();
+}
+
 bool SettingsScreen::fixed_by_variable(const SettingsRow& row) const {
     return row.key == "collection" && shell()->services().collection_from_variable;
 }
@@ -31,6 +38,8 @@ bool SettingsScreen::fixed_by_variable(const SettingsRow& row) const {
 std::string SettingsScreen::value_of(const SettingsRow& row) const {
     // SPEC-040: with HVSC_BASE set, the row shows the root it gives, and cannot be changed.
     if (fixed_by_variable(row)) return shell()->services().collection + " (from HVSC_BASE)";
+    // SPEC-207: with a backlight the app may not change, the row says so and the setting stays 0.
+    if (backlight_unavailable(row)) return "Not available on this device";
     return setting_text(shell()->services().settings->settings(), row.key);
 }
 
@@ -73,6 +82,7 @@ void SettingsScreen::step(int by, bool wrap) {
 
 void SettingsScreen::open_prompt() {
     const SettingsRow& row = table_[list_.highlighted()];
+    if (backlight_unavailable(row)) return;
     if (fixed_by_variable(row)) return;
     Shell* frame = shell();
     const std::string key = row.key;

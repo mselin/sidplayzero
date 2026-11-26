@@ -23,6 +23,7 @@ namespace {
 
 struct Box {
     std::string id, band, text;
+    std::string whole;
     int x, y, w, h, text_x, text_w;
     bool clipped;
 };
@@ -40,8 +41,12 @@ void collect(lv_obj_t* object, std::vector<Box>* boxes) {
         Box box;
         int full_width = 0;
         bool cut = false;
-        const bool recorded = label_record(object, &box.id, &full_width, &cut);
+        std::string whole;
+        const bool recorded = label_record(object, &box.id, &full_width, &cut, &whole);
         box.text = text ? text : "";
+        // SPEC-254: `boxes[].text` is the text as drawn (FIND-023); `text` is all the text on the screen, so it
+        // holds a cut label's whole text.
+        box.whole = recorded ? whole : box.text;
         box.x = area.x1;
         box.y = area.y1;
         box.w = area.x2 - area.x1 + 1;
@@ -81,9 +86,9 @@ void describe_drawn(Json* description) {
         item.set("text_w", box.text_w);
         item.set("clipped", box.clipped);
         list.push(item);
-        if (!box.text.empty()) {
+        if (!box.whole.empty()) {
             if (!text.empty()) text += "\n";
-            text += box.text;
+            text += box.whole;
         }
     }
     description->set("boxes", list);

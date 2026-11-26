@@ -13,6 +13,7 @@ namespace {
 
 struct Record {
     std::string id;
+    std::string full_text;   // the whole text, before it was cut to fit
     int full_width = 0;
     bool cut = false;
 };
@@ -81,6 +82,7 @@ lv_obj_t* make_label(lv_obj_t* parent, const std::string& id, const std::string&
     const lv_font_t* font = style.font ? style.font : text_font();
     Owned* owned = new Owned();
     owned->record.id = id;
+    owned->record.full_text = text;
     owned->record.full_width = text_width(text, font);
     std::string shown = text;
     if (owned->record.full_width > w) {
@@ -148,12 +150,13 @@ lv_obj_t* make_area(lv_obj_t* parent, int x, int y, int w, int h) {
     return area;
 }
 
-bool label_record(lv_obj_t* label, std::string* id, int* full_width, bool* cut) {
+bool label_record(lv_obj_t* label, std::string* id, int* full_width, bool* cut, std::string* full_text) {
     const Owned* owned = static_cast<const Owned*>(lv_obj_get_user_data(label));
     if (owned == nullptr || owned->magic != kMagic) return false;
     *id = owned->record.id;
     *full_width = owned->record.full_width;
     *cut = owned->record.cut;
+    if (full_text) *full_text = owned->record.full_text;
     return true;
 }
 
