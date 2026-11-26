@@ -1,0 +1,11 @@
+[SIDPLAY/Windows Playlist]
+Format=2
+Basedir=MUSICIANS\T\Tester_Tom
+file=Three_Songs.sid
+name=Three Subtunes
+subtune=1
+time=6
+file=New_Chip.sid
+name=New Chip
+subtune=1
+time=2

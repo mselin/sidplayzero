@@ -1,0 +1,11 @@
+#EXTM3U
+#PLAYLIST:Turbo
+#EXTINF:2,Thirty-two characters of author! - Hülsbeck Tëst
+#SIDTUNE:md5=fafa933aecb877995ca115cce727ebcf
+/MUSICIANS/H/Huelsbeck_Chris/Huelsbeck_Test.sid
+#EXTINF:2,Test Author - Sixty Hertz
+#SIDTUNE:md5=8e9071bbe73f26eeaac2f231f6521852
+/DEMOS/A-F/Clock_Demo.sid
+#EXTINF:2,Test Author - Either Chip
+#SIDTUNE:md5=fda614b23e153e4b3de011e3fb5ec259
+/GAMES/A-F/Either_Chip.sid

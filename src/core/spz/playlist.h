@@ -77,4 +77,20 @@ std::string playlist_file_name(const std::string& name);
 // control character. Whether the name is taken is the store's to say.
 bool is_playlist_name(const std::string& name);
 
+// Small helpers of text that the files of the lists share (playlists, importing, exporting).
+namespace lists_text {
+bool is_valid_utf8(const std::string& text);
+std::string latin1_to_utf8(const std::string& text);
+std::size_t utf8_length(const std::string& text);                          // in characters
+std::string utf8_prefix(const std::string& text, std::size_t characters);   // the first characters
+std::string ascii_lower(std::string text);
+bool same_ignoring_case(const std::string& a, const std::string& b);        // A-Z as a-z
+// The lines of a file: each ended by LF, CR LF or CR; a zero byte ends its line and a line is cut at
+// kPlaylistLineLimit bytes, the rest of it dropped (SPEC-204).
+std::vector<std::string> split_lines(const Bytes& file);
+// A line as UTF-8: as it is when it is valid UTF-8 (a character cut at the limit dropped), else read as
+// Latin-1.
+std::string as_utf8(std::string line);
+}  // namespace lists_text
+
 }  // namespace spz
