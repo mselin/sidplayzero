@@ -21,7 +21,7 @@ namespace spz::platform {
 
 class SoftwareSound {
 public:
-    // `worker`, if given, is where the device is opened again after it was lost (SoftwareBackend).
+    // `worker`, if given, is where the device is opened again after it was lost (SPEC-078).
     SoftwareSound(Engine* engine, AudioSink* sink, Clock* clock, Executor* ui, Executor* worker = nullptr);
     // Stops the render thread first, if it runs.
     ~SoftwareSound();

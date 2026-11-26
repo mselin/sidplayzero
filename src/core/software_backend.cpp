@@ -190,10 +190,17 @@ void SoftwareBackend::device_was_lost() {
         post(&SoundBackendListener::device_lost);
     }
     {
+        // A load may have opened a new stream meanwhile (open_stream() ends reopening_): that one stays.
         std::lock_guard<std::mutex> sink_lock(sink_mutex_);
-        close_stream();
+        bool still;
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            still = reopening_;
+        }
+        if (still) close_stream();
     }
     std::lock_guard<std::mutex> lock(mutex_);
+    if (!reopening_) return;
     lost_.store(true);
     tries_ = 0;
     reopen_timer_ = clock_->call_after(kReopenEveryMs, guarded([this] { try_reopen(); }));
@@ -289,12 +296,12 @@ bool SoftwareBackend::load(const std::vector<std::uint8_t>& tune, int subtune, c
     }
 
     lock.lock();
+    loading_ = false;   // loads come one at a time, from the player's worker
     if (ticket != ticket_) {
         // A stop() or another load() came meanwhile, and wins.
         if (why) *why = "MSG_ENGINE_REFUSED";
         return false;
     }
-    loading_ = false;
     if (!engine_ok) {
         if (why) *why = reason.empty() ? "MSG_ENGINE_REFUSED" : reason;
         return false;

@@ -131,19 +131,20 @@ struct Composition::JobGuard : Executor {
     void post(std::function<void()> job) override {
         Composition* p = parts;
         p->app()->long_worker()->post([p, job] {
-            if (platform::run_guarded("a job of HVSC", job)) return;
-            p->on_ui([p] {
-                const JobKind kind = p->jobs_.state().kind;
-                if (kind != JobKind::Setup && kind != JobKind::Update && kind != JobKind::Download) return;
-                p->jobs_.end();
-                if (p->scope_->player) p->scope_->player->set_playing_off(false);
-                ++p->services().hvsc_changes;
-                p->app()->redraw();
-            });
+            if (!platform::run_guarded("a job of HVSC", job)) p->on_ui([p] { p->end_failed_job(); });
         });
     }
     Composition* parts;
 };
+
+void Composition::end_failed_job() {
+    const JobKind kind = jobs_.state().kind;
+    if (kind != JobKind::Setup && kind != JobKind::Update && kind != JobKind::Download) return;
+    jobs_.end();
+    if (scope_->player) scope_->player->set_playing_off(false);
+    ++services().hvsc_changes;
+    app()->redraw();
+}
 
 void Composition::route_fetches_to_player(RootScope* scope, FetchListener* listener) {
     scope->fetch_router->player = listener;
@@ -310,10 +311,15 @@ void Composition::hvsc_at_start() {
     const std::string database = database_file(scope);
     const std::string cache = folders_.cache;
     app()->long_worker()->post([this, files, listing, download, listing_path, database, cache] {
-        if (download) download->recover();
-        if (!open_listing(files, listing, listing_path, database, cache)) {
-            on_ui([this] { app()->notice("MSG_LENGTHS_UNREADABLE"); });
+        // SPEC-144: a download that a killed run left past step 6 is finished now, as a job of its own.
+        if (download && !platform::run_guarded("finishing the download", [download] { download->recover(); })) {
+            on_ui([this] { end_failed_job(); });
         }
+        // Whatever the listing comes to, start-up goes on: a listing that throws is as none.
+        bool readable = true;
+        platform::run_guarded("opening the listing",
+                              [&] { readable = open_listing(files, listing, listing_path, database, cache); });
+        if (!readable) on_ui([this] { app()->notice("MSG_LENGTHS_UNREADABLE"); });
         on_ui([this] {
             // The listing is ready: the browser shows its folder, the player gets its entry back, and the
             // workers go on with SPEC-200's step 5.

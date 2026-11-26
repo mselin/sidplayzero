@@ -57,13 +57,19 @@ struct HeldEngine : spz::fake::Engine {
     }
 };
 
-// Whether `fn` returns within half a second on another thread. It is waited for in any case.
-template <typename Fn>
-bool answers_at_once(Fn fn) {
-    std::future<void> done = std::async(std::launch::async, fn);
-    const bool at_once = done.wait_for(std::chrono::milliseconds(500)) == std::future_status::ready;
-    return at_once;
-}
+// Asks of a backend on other threads, each to be answered within half a second. The answers are waited
+// for only in done(), once whatever held them has been let go, so that a test that fails does not hang.
+struct Asks {
+    std::vector<std::future<void>> asked;
+    template <typename Fn>
+    bool at_once(Fn fn) {
+        asked.push_back(std::async(std::launch::async, fn));
+        return asked.back().wait_for(std::chrono::milliseconds(500)) == std::future_status::ready;
+    }
+    void done() {
+        for (std::future<void>& one : asked) one.wait();
+    }
+};
 
 // The whole sound path, with a worker of its own for the device (SPEC-078's attempts).
 struct DevicePath : PlayerFixture {
@@ -120,12 +126,18 @@ TEST_CASE("SPEC-022 SPEC-070 while the engine loads a tune, the backend's other 
 
     std::uint8_t registers[spz::Engine::kRegisters];
     bool got_registers = true, rendered = true;
-    CHECK(answers_at_once([&] { got_registers = backend.registers(0, registers); }));
-    CHECK(answers_at_once([&] { backend.chips(); }));
-    CHECK(answers_at_once([&] { backend.set_muted(0, 0, true); }));
-    CHECK(answers_at_once([&] { rendered = backend.render_step(); }));
+    Asks asks;
+    const bool registers_at_once = asks.at_once([&] { got_registers = backend.registers(0, registers); });
+    const bool chips_at_once = asks.at_once([&] { backend.chips(); });
+    const bool mute_at_once = asks.at_once([&] { backend.set_muted(0, 0, true); });
+    const bool render_at_once = asks.at_once([&] { rendered = backend.render_step(); });
     engine.release();
+    asks.done();
     loader.join();
+    CHECK(registers_at_once);
+    CHECK(chips_at_once);
+    CHECK(mute_at_once);
+    CHECK(render_at_once);
     CHECK_FALSE(got_registers);               // nothing is loaded yet while it loads
     CHECK_FALSE(rendered);
     CHECK(loaded);
@@ -144,9 +156,12 @@ TEST_CASE("SPEC-022 SPEC-070 a stop while the engine loads wins: that load fails
     bool loaded = true;
     std::thread loader([&] { loaded = backend.load(tune, 1, settings, nullptr); });
     engine.wait_inside();
-    CHECK(answers_at_once([&] { backend.stop(); }));
+    Asks asks;
+    const bool stop_at_once = asks.at_once([&] { backend.stop(); });
     engine.release();
+    asks.done();
     loader.join();
+    CHECK(stop_at_once);
     CHECK_FALSE(loaded);
     std::uint8_t registers[spz::Engine::kRegisters];
     CHECK_FALSE(backend.registers(0, registers));

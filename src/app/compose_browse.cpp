@@ -5,6 +5,7 @@
 #include <cstdlib>
 
 #include "app/composition.h"
+#include "platform/guarded.h"
 #include "spz/keep_start.h"
 
 namespace spz::app {
@@ -154,7 +155,10 @@ void Composition::collection_changed() {
     // The new root's listing, opened or built on the long worker as at start (SPEC-142); then the browser,
     // the index and the playlists take it up.
     app()->long_worker()->post([this, scope, files, listing, listing_path, database, cache] {
-        const bool unreadable = !open_listing(files, listing, listing_path, database, cache);
+        bool readable = true;
+        platform::run_guarded("opening the listing",
+                              [&] { readable = open_listing(files, listing, listing_path, database, cache); });
+        const bool unreadable = !readable;
         on_ui([this, scope, unreadable] {
             if (!scope->live) return;
             if (unreadable) app()->notice("MSG_LENGTHS_UNREADABLE");

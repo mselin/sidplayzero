@@ -139,6 +139,7 @@ private:
     // long worker.
     struct JobGuard;
     std::shared_ptr<JobGuard> job_guard_;
+    void end_failed_job();            // on the UI thread: the job of set-up, update or download whose work threw
     // The scope's HVSC parts: its listing, fetcher, set-up, releases and download.
     void make_hvsc_scope(RootScope* scope);
 
