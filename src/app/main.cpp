@@ -32,20 +32,9 @@
 
 namespace {
 
-volatile std::sig_atomic_t g_signals = 0;
-spz::platform::RealClock* g_clock = nullptr;
-
-void on_signal(int) { g_signals = g_signals + 1; }
-
-std::uint32_t tick() { return static_cast<std::uint32_t>(g_clock->now_ms()); }
-
 int usage() {
     std::fprintf(stderr, "usage: sidplayzero [--version]\n");
     return 2;
-}
-
-std::vector<std::string> libraries() {
-    return {spz::platform::engine_library_version(), spz::platform::residfp_library_version()};
 }
 
 }  // namespace
@@ -58,7 +47,7 @@ int main(int argc, char** argv) {
         const std::string word = argv[i];
         if (word == "--version") {
             // SPEC-103: the About screen's first two lines: the app with its version, and the libraries.
-            const std::vector<std::string> lines = spz::ui::about_lines(libraries());
+            const std::vector<std::string> lines = spz::ui::about_lines(spz::app::engine_libraries());
             std::printf("%s\n%s\n", lines[0].c_str(), lines[1].c_str());
             return 0;
         }
@@ -105,11 +94,8 @@ int main(int argc, char** argv) {
     spz::platform::MiniaudioSink sink;
 
     // Step 3: the display and the keyboard.
-    g_clock = &clock;
-    lv_init();
-    lv_tick_set_cb(tick);
     std::string why;
-    if (!spz::platform::open_display(spz::platform::default_display(), &why)) {
+    if (!spz::app::start_program(&clock, spz::platform::default_display(), &why)) {
         std::fprintf(stderr, "sidplayzero: %s\n", why.c_str());
         return 1;
     }
@@ -117,11 +103,7 @@ int main(int argc, char** argv) {
     const bool keyboard_open = keyboard.open(&why);
     if (!keyboard_open) std::fprintf(stderr, "sidplayzero: %s\n", why.c_str());
 
-    struct sigaction action;
-    std::memset(&action, 0, sizeof action);
-    action.sa_handler = on_signal;
-    sigaction(SIGTERM, &action, nullptr);
-    sigaction(SIGINT, &action, nullptr);
+    spz::app::count_exit_signals();
 
     spz::app::Seams seams;
     seams.clock = &clock;
@@ -135,7 +117,7 @@ int main(int argc, char** argv) {
     seams.sink = &sink;
     seams.render_thread = true;
     seams.make_engine = [] { return std::unique_ptr<spz::Engine>(new spz::platform::RealEngine()); };
-    seams.libraries = libraries();
+    seams.libraries = spz::app::engine_libraries();
     seams.at_exit = [&http] {
         http.stop_all();
         spz::platform::stop_all_children();
@@ -162,7 +144,7 @@ int main(int argc, char** argv) {
     lv_refr_now(nullptr);
 
     while (!app->leaving()) {
-        if (g_signals > 0) app->leave();
+        if (spz::app::exit_signals() > 0) app->leave();
         keyboard.poll([&](int code, bool pressed) { app->key(code, pressed); });
         clock.run_due();
         app->pump();
@@ -170,8 +152,7 @@ int main(int argc, char** argv) {
         usleep(5000);
     }
     // SPEC-201. A second signal ends the process at once.
-    signal(SIGTERM, SIG_DFL);
-    signal(SIGINT, SIG_DFL);
+    spz::app::obey_exit_signals();
     app->shut_down();
     app.reset();
     lock.release();

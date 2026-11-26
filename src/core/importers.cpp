@@ -8,6 +8,7 @@
 
 #include "spz/paths.h"
 #include "spz/playlist.h"
+#include "spz/text.h"
 
 namespace spz {
 
@@ -17,11 +18,10 @@ using lists_text::as_utf8;
 using lists_text::ascii_lower;
 using lists_text::split_lines;
 
-bool starts_with(const std::string& s, const std::string& prefix) { return s.compare(0, prefix.size(), prefix) == 0; }
-
-bool ends_with(const std::string& s, const std::string& end) {
-    return s.size() >= end.size() && s.compare(s.size() - end.size(), end.size(), end) == 0;
-}
+using text::ends_with;
+using text::hex_value;
+using text::starts_with;
+using text::trim;
 
 bool all_digits(const std::string& s) {
     if (s.empty()) return false;
@@ -48,13 +48,6 @@ std::string one_line(std::string text) {
     return text;
 }
 
-std::string trim(const std::string& s) {
-    std::size_t begin = 0, end = s.size();
-    while (begin < end && (s[begin] == ' ' || s[begin] == '\t')) ++begin;
-    while (end > begin && (s[end - 1] == ' ' || s[end - 1] == '\t')) --end;
-    return s.substr(begin, end - begin);
-}
-
 // The text of a file as UTF-8 lines: UTF-8 if the whole file is valid UTF-8, else Latin-1.
 std::vector<std::string> text_lines(const Bytes& file) {
     std::vector<std::string> lines = split_lines(file);
@@ -64,13 +57,6 @@ std::vector<std::string> text_lines(const Bytes& file) {
     // A byte-order mark at the start is not part of the first line.
     if (!lines.empty() && starts_with(lines[0], "\xEF\xBB\xBF")) lines[0] = lines[0].substr(3);
     return lines;
-}
-
-int hex_value(char c) {
-    if (c >= '0' && c <= '9') return c - '0';
-    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
-    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
-    return -1;
 }
 
 std::string percent_decoded(const std::string& s) {
@@ -192,23 +178,6 @@ private:
         if (has_filename && !filename.empty()) names->push_back(filename);
         return true;
     }
-    static void put_utf8(std::uint32_t code, std::string* out) {
-        if (code < 0x80) {
-            *out += static_cast<char>(code);
-        } else if (code < 0x800) {
-            *out += static_cast<char>(0xC0 | (code >> 6));
-            *out += static_cast<char>(0x80 | (code & 0x3F));
-        } else if (code < 0x10000) {
-            *out += static_cast<char>(0xE0 | (code >> 12));
-            *out += static_cast<char>(0x80 | ((code >> 6) & 0x3F));
-            *out += static_cast<char>(0x80 | (code & 0x3F));
-        } else {
-            *out += static_cast<char>(0xF0 | (code >> 18));
-            *out += static_cast<char>(0x80 | ((code >> 12) & 0x3F));
-            *out += static_cast<char>(0x80 | ((code >> 6) & 0x3F));
-            *out += static_cast<char>(0x80 | (code & 0x3F));
-        }
-    }
     bool hex4(std::uint32_t* out) {
         if (at_ + 4 > data_.size()) return false;
         std::uint32_t value = 0;
@@ -259,7 +228,7 @@ private:
                     } else if (code >= 0xD800 && code <= 0xDFFF) {
                         code = 0xFFFD;
                     }
-                    put_utf8(code, out);
+                    text::put_utf8(code, out);
                     break;
                 }
                 default: return false;

@@ -32,6 +32,7 @@
 #include <thread>
 #include <vector>
 
+#include "app/workers.h"
 #include "lvgl.h"
 #include "platform/audio_guard.h"
 #include "platform/curl_http.h"
@@ -43,13 +44,13 @@
 #include "platform/real_files.h"
 #include "platform/software_sound.h"
 #include "platform/system_seams.h"
-#include "platform/threads.h"
 #include "spz/complete_download.h"
 #include "spz/folders.h"
 #include "spz/hvsc_setup.h"
 #include "spz/job.h"
 #include "spz/listing.h"
 #include "spz/notice_gate.h"
+#include "spz/path_text.h"
 #include "spz/safe_file.h"
 #include "spz/settings.h"
 #include "spz/settings_file.h"
@@ -107,17 +108,6 @@ bool parse(const std::vector<std::string>& args, const std::vector<std::string>&
         }
     }
     return true;
-}
-
-std::string folder_of(const std::string& path) {
-    const std::size_t slash = path.find_last_of('/');
-    if (slash == std::string::npos) return ".";
-    return slash == 0 ? "/" : path.substr(0, slash);
-}
-
-std::string name_of(const std::string& path) {
-    const std::size_t slash = path.find_last_of('/');
-    return slash == std::string::npos ? path : path.substr(slash + 1);
 }
 
 // --- listing (SPEC-142) -----------------------------------------------------------------------------------
@@ -226,15 +216,15 @@ public:
 
 // The UI thread of the tool: the main thread, running what is posted to it and the clock's timers until
 // `done` says so, or the time is up.
-bool run_ui(spz::platform::UiQueue* ui, spz::platform::RealClock* clock, const std::function<bool()>& done,
+bool run_ui(spz::app::UiQueue* ui, spz::platform::RealClock* clock, const std::function<bool()>& done,
             const std::function<void()>& each = nullptr, long seconds = 3600) {
     const auto until = std::chrono::steady_clock::now() + std::chrono::seconds(seconds);
     while (std::chrono::steady_clock::now() < until) {
-        ui->run_pending();
+        ui->run_all();
         if (clock) clock->run_due();
         if (each) each();
         if (done()) return true;
-        ui->wait(5);
+        if (ui->empty()) std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
     return false;
 }
@@ -250,7 +240,7 @@ int setup(const std::vector<std::string>& args) {
     RealFiles files;
     spz::platform::CurlHttpClient http(rules_from(a));
     spz::platform::RealClock clock;
-    spz::platform::UiQueue ui;
+    spz::app::UiQueue ui;
     AcceptedNotice record;
     NoPanel panel;
     spz::NoticeGate gate(&record, &panel);
@@ -266,7 +256,7 @@ int setup(const std::vector<std::string>& args) {
         void hvsc_failed(int s) override { step = s; ended = 2; }
     } listener;
 
-    spz::platform::WorkerThread long_worker;
+    spz::app::Worker long_worker{"spz-long"};
     spz::HvscSetupParts parts;
     parts.files = &files;
     parts.http = &http;
@@ -283,7 +273,7 @@ int setup(const std::vector<std::string>& args) {
     bool ended = false;
     if (job.start()) ended = run_ui(&ui, &clock, [&] { return listener.ended.load() != 0; });
     long_worker.stop();
-    ui.run_pending();
+    ui.run_all();
     if (ended && listener.ended == 1) {
         say("result", "ready");
         say("release", std::to_string(listener.release));
@@ -550,7 +540,7 @@ int complete_download(const std::vector<std::string>& args) {
     Watch watch;
     watch.jobs = &jobs;
     watch.marker = cache + "/install.state";
-    watch.staging = folder_of(root) + "/.sidplayzero-staging";
+    watch.staging = spz::path_text::folder_of(root) + "/.sidplayzero-staging";
     watch.stop_in_step = std::atoi(a.value("--stop-in-step", "0").c_str());
     watch.die_in_step = std::atoi(a.value("--die-in-step", "0").c_str());
     watch.die_after_moves = std::atoi(a.value("--die-after-moves", "0").c_str());
@@ -563,7 +553,7 @@ int complete_download(const std::vector<std::string>& args) {
     WatchedUnpacker unpacker(&real_unpacker, &watch);
     EnoughMemory memory;
     spz::platform::RealClock clock;
-    spz::platform::UiQueue ui;
+    spz::app::UiQueue ui;
     AcceptedNotice record;
     NoPanel panel;
     spz::NoticeGate gate(&record, &panel);
@@ -588,7 +578,7 @@ int complete_download(const std::vector<std::string>& args) {
         spz::Listing::build(&real_files, database, listing_file);
     }
 
-    spz::platform::WorkerThread long_worker;
+    spz::app::Worker long_worker{"spz-long"};
     spz::CompleteDownloadParts parts;
     parts.files = &files;
     parts.http = &http;
@@ -615,7 +605,7 @@ int complete_download(const std::vector<std::string>& args) {
         });
         run_ui(&ui, &clock, [&] { return recovered.load() && (before < 7 || listener.ended.load() != 0 || !jobs.running()); });
         long_worker.stop();
-        ui.run_pending();
+        ui.run_all();
         const int after = spz::read_install_marker(&real_files, cache);
         if (before == 0) {
             say("result", "nothing");
@@ -632,7 +622,7 @@ int complete_download(const std::vector<std::string>& args) {
         ended = run_ui(&ui, &clock, [&] { return listener.ended.load() != 0; }, [&] { watch.look(); });
     }
     long_worker.stop();
-    ui.run_pending();
+    ui.run_all();
     if (ended && listener.ended == 1) {
         say("result", "done");
     } else {
@@ -799,7 +789,7 @@ int audio_guard(const std::vector<std::string>& args) {
     spz::platform::MiniaudioSink real_sink(spz::platform::MiniaudioSink::Output::Null);
     MisbehavingSink sink(&real_sink, args[0]);
     spz::platform::RealClock clock;
-    spz::platform::UiQueue ui;
+    spz::app::UiQueue ui;
     spz::platform::SoftwareSound sound(&engine, &sink, &clock, &ui);
     spz::SoundBackend* backend = sound.backend();
     spz::EngineSettings settings;
@@ -815,7 +805,7 @@ int audio_guard(const std::vector<std::string>& args) {
     sound.stop_render_thread();
     backend->stop();
     real_sink.close();
-    ui.run_pending();
+    ui.run_all();
     say("callbacks", std::to_string(sink.callbacks.load()));
     return 0;
 }
@@ -842,7 +832,7 @@ std::string load_one(const std::vector<std::uint8_t>& bytes, bool unchecked = fa
     spz::platform::RealEngine engine;
     QuietSink sink;
     spz::platform::RealClock clock;
-    spz::platform::UiQueue ui;
+    spz::app::UiQueue ui;
     std::string result = "played";
     {
         spz::platform::SoftwareSound sound(&engine, &sink, &clock, &ui);
@@ -856,11 +846,11 @@ std::string load_one(const std::vector<std::uint8_t>& bytes, bool unchecked = fa
             const std::size_t wanted = settings.sample_rate / 10;
             for (int turn = 0; turn < 10000 && sound.buffered() < wanted; ++turn) {
                 if (!sound.render_step()) break;
-                ui.run_pending();
+                ui.run_all();
             }
             backend->stop();
         }
-        ui.run_pending();
+        ui.run_all();
     }
     return result;
 }
@@ -889,7 +879,7 @@ int load_tunes(const std::vector<std::string>& args) {
             return 1;
         }
         if (!cut) {
-            say(name_of(path), load_one(bytes, unchecked));
+            say(spz::path_text::last_part(path), load_one(bytes, unchecked));
         } else {
             int refused = 0, failed = 0, played = 0;
             for (std::size_t length = 0; length <= bytes.size(); ++length) {
@@ -902,7 +892,7 @@ int load_tunes(const std::vector<std::string>& args) {
                     ++failed;
                 }
             }
-            say(name_of(path), std::to_string(bytes.size() + 1) + " lengths, " + std::to_string(refused) + " refused, " +
+            say(spz::path_text::last_part(path), std::to_string(bytes.size() + 1) + " lengths, " + std::to_string(refused) + " refused, " +
                                    std::to_string(failed) + " failed, " + std::to_string(played) + " played");
         }
         ++done;
@@ -967,7 +957,7 @@ int kept_files(const std::vector<std::string>& args) {
     }
     // The app's four folders (SPEC-134): the playlists' folder is in the data folder.
     int temp = 0;
-    for (const std::string& folder : {folders.config, folder_of(folders.playlists), folders.state, folders.cache}) {
+    for (const std::string& folder : {folders.config, spz::path_text::folder_of(folders.playlists), folders.state, folders.cache}) {
         temp += count_temp_files(&files, folder);
     }
     say("temp_files", std::to_string(temp));

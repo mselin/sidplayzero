@@ -176,9 +176,12 @@ private:
     void make_search();
     void search_at_start();           // SPEC-161: the index checked and brought up to date
     void make_search_scope(RootScope* scope);
-    // On the long worker; MSG_INDEX_READY when the reason calls for it. It stops at its next batch when its
-    // scope is retired (a new root), and the next build, of the new root's index, rebuilds (SPEC-161).
-    void build_index(IndexReason reason);
+    // The index of the scope in use built on the long worker (SPEC-161), the cache folder made first. It
+    // stops at its next batch when the app leaves or its scope is retired (a new root); the next build, of
+    // the new root's index, rebuilds. Then `done`, if given, has how it went, on the long worker; without
+    // it, the build's notice (MSG_INDEX_READY when the reason calls for it) is raised and everything is
+    // drawn again, unless the scope has been retired meanwhile.
+    void build_index(IndexReason reason, std::function<void(const IndexRun&)> done = nullptr);
     struct OwnTunesInIndex;           // OwnTunes, for the playlists' resolver
 
     // ---- playlists and favourites: compose_lists.cpp -------------------------------------------------------

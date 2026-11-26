@@ -4,45 +4,18 @@
 
 #include <algorithm>
 
+#include "spz/path_text.h"
+#include "spz/safe_file.h"
+#include "spz/text.h"
+
 namespace spz {
-
-namespace lists_files {
-
-FileStatus write_safely(Files* files, const std::string& target, const Bytes& bytes) {
-    const std::size_t slash = target.rfind('/');
-    const std::string folder = slash == std::string::npos ? std::string(".") : target.substr(0, slash == 0 ? 1 : slash);
-    const std::string name = slash == std::string::npos ? target : target.substr(slash + 1);
-    const std::string temporary = (slash == std::string::npos ? std::string() : target.substr(0, slash + 1)) + "." +
-                                  name + ".tmp-sidplayzero";
-    FileStatus status = files->make_folders(folder);
-    if (status != FileStatus::Ok) return status;
-    status = files->write(temporary, bytes);
-    if (status == FileStatus::Ok) status = files->sync(temporary);
-    if (status == FileStatus::Ok) status = files->rename(temporary, target);
-    if (status != FileStatus::Ok) {
-        files->remove(temporary);
-        return status;
-    }
-    // The rename is done: the target holds the new bytes whatever the flush of the folder says.
-    files->sync(folder);
-    return FileStatus::Ok;
-}
-
-}  // namespace lists_files
 
 namespace {
 
 using lists_text::ascii_lower;
 using lists_text::same_ignoring_case;
-
-bool ends_with(const std::string& s, const std::string& end) {
-    return s.size() >= end.size() && s.compare(s.size() - end.size(), end.size(), end) == 0;
-}
-
-std::string last_part(const std::string& path) {
-    const std::size_t slash = path.rfind('/');
-    return slash == std::string::npos ? path : path.substr(slash + 1);
-}
+using path_text::last_part;
+using text::ends_with;
 
 ListsResult failed(const std::string& message = "") {
     ListsResult result;
@@ -121,7 +94,8 @@ FileStatus Playlists::save(std::size_t index) {
             if (facts.found != Found::Missing && facts.path != entry.entry.path) entry.entry.path = facts.path;
         }
     }
-    return lists_files::write_safely(files_, folder_ + "/" + file_names_[index], write_playlist(list));
+    // The rename is done: the playlist's file holds the new bytes whatever the flush of the folder says.
+    return safe_write(files_, folder_ + "/" + file_names_[index], write_playlist(list), FolderFlush::Ignored);
 }
 
 void Playlists::load() {

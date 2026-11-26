@@ -9,6 +9,9 @@
 
 #include "hvsc_files.h"
 #include "spz/listing.h"
+#include "spz/path_text.h"
+#include "spz/paths.h"
+#include "spz/safe_file.h"
 
 namespace spz {
 
@@ -19,13 +22,9 @@ const char* const kDocumentNames[5] = {"DOCUMENTS/Songlengths.md5", "DOCUMENTS/S
 
 namespace {
 
-const char kTempEnding[] = ".tmp-sidplayzero";   // SPEC-132
-const std::uint64_t kMiB = 1024ull * 1024ull;
+using path_text::last_part;
 
-std::string last_part(const std::string& path) {
-    const std::size_t slash = path.rfind('/');
-    return slash == std::string::npos ? path : path.substr(slash + 1);
-}
+const std::uint64_t kMiB = 1024ull * 1024ull;
 
 bool exists(Files* files, const std::string& path) {
     FileInfo info;
@@ -109,51 +108,11 @@ private:
 
 }  // namespace
 
-std::string parent_folder(const std::string& path) {
-    const std::size_t slash = path.rfind('/');
-    if (slash == std::string::npos) return ".";
-    if (slash == 0) return "/";
-    return path.substr(0, slash);
-}
-
-std::string join_url(const std::string& base, const std::string& path) {
-    std::size_t end = base.size();
-    while (end > 0 && base[end - 1] == '/') --end;
-    return base.substr(0, end) + path;
-}
-
-std::string temp_beside(const std::string& target) {
-    const std::size_t slash = target.rfind('/');
-    const std::string folder = slash == std::string::npos ? "" : target.substr(0, slash + 1);
-    return folder + "." + last_part(target) + kTempEnding;
-}
-
-FileStatus commit_temporary(Files* files, const std::string& temporary, const std::string& target) {
-    FileStatus status = files->sync(temporary);
-    if (status == FileStatus::Ok) status = files->rename(temporary, target);
-    if (status != FileStatus::Ok) {
-        files->remove(temporary);
-        return status;
-    }
-    files->sync(parent_folder(target));
-    return FileStatus::Ok;
-}
-
-FileStatus write_safely(Files* files, const std::string& target, const Bytes& bytes) {
-    const std::string temporary = temp_beside(target);
-    const FileStatus status = files->write(temporary, bytes);
-    if (status != FileStatus::Ok) {
-        files->remove(temporary);
-        return status;
-    }
-    return commit_temporary(files, temporary, target);
-}
-
 FileStatus copy_safely(Files* files, const std::string& from, const std::string& to, std::size_t limit) {
     Bytes bytes;
     const FileStatus status = files->read(from, limit, &bytes);
     if (status != FileStatus::Ok) return status;
-    return write_safely(files, to, bytes);
+    return safe_write(files, to, bytes, FolderFlush::Ignored);
 }
 
 FileStatus remove_tree(Files* files, const std::string& folder) {

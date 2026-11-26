@@ -9,6 +9,7 @@
 #include <string>
 #include <vector>
 
+#include "spz/lifetime.h"
 #include "spz/playlists.h"
 #include "ui/rows.h"
 #include "ui/screen.h"
@@ -44,7 +45,7 @@ private:
     std::string name_;                 // the playlist shown
     int changes_seen_ = 0;             // Services::lists_changes when the rows were made
     RowList list_;
-    std::shared_ptr<bool> alive_ = std::make_shared<bool>(true);
+    Lifetime lifetime_;
 };
 
 }  // namespace spz::ui

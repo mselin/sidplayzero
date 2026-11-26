@@ -20,20 +20,24 @@
 #include <thread>
 #include <vector>
 
-#include "app/hooks/sim_fakes.h"
 #include "app/app.h"
+#include "app/hooks/sim_fakes.h"
 #include "app/start.h"
 #include "lvgl.h"
 #include "platform/display.h"
 #include "platform/real_clock.h"
 #include "platform/real_engine.h"
 #include "spz/keys.h"
+#include "spz/text.h"
 #include "spz/version.h"
 #include "ui/png.h"
 
 namespace spz::hooks {
 
 namespace {
+
+// A line of a script or of a fakes file, as it is read: spaces, tabs and a CR at either end dropped.
+std::string trim(const std::string& line) { return text::trim(line, text::kLineSpaces); }
 
 namespace fs = std::filesystem;
 
@@ -43,12 +47,8 @@ const int kStatusAlreadyRunning = 1;
 const std::int64_t kStepMs = 10;                         // `advance` moves the fake clock in steps of this
 const std::chrono::seconds kSettleLimit(10);
 
-Clock* g_clock = nullptr;
-std::uint32_t tick() { return static_cast<std::uint32_t>(g_clock->now_ms()); }
-
-// SIGTERM and SIGINT leave, as they do without a script (SPEC-201): the script ends there, with status 0.
-volatile std::sig_atomic_t g_signals = 0;
-void on_signal(int) { g_signals = g_signals + 1; }
+// SIGTERM and SIGINT leave, as they do without a script (SPEC-201): the script ends there, with status 0
+// (app::count_exit_signals()).
 
 // How a script stops early: with the status the program ends with, and what to say.
 struct Stop {
@@ -56,12 +56,6 @@ struct Stop {
     std::string message;
     std::string expected, found;
 };
-
-std::string trim(const std::string& text) {
-    const std::size_t first = text.find_first_not_of(" \t\r");
-    if (first == std::string::npos) return "";
-    return text.substr(first, text.find_last_not_of(" \t\r") - first + 1);
-}
 
 // Takes the first word off `rest` and returns it.
 std::string word(std::string* rest) {
@@ -141,17 +135,9 @@ public:
         files_.list_delay_ms = fakes_.list_delay_ms;
         files_.root_writable = fakes_.root_writable;
 
-        g_clock = clock_;
-        lv_init();
-        lv_tick_set_cb(tick);
         const platform::DisplayKind kind = options_.headless ? platform::DisplayKind::Memory : platform::default_display();
-        if (!platform::open_display(kind, &why)) return fail_plain(kStatusScriptError, why);
-
-        struct sigaction action;
-        std::memset(&action, 0, sizeof action);
-        action.sa_handler = on_signal;
-        sigaction(SIGTERM, &action, nullptr);
-        sigaction(SIGINT, &action, nullptr);
+        if (!app::start_program(clock_, kind, &why)) return fail_plain(kStatusScriptError, why);
+        app::count_exit_signals();
 
         int status = 0;
         int line_number = 0;
@@ -200,7 +186,7 @@ private:
         // On the fake clock the script turns the render loop before each pull (SPEC-253: "the render loop is
         // waiting"); on the real clock it runs on its thread, and the sink pulls in real time.
         seams.render_thread = clock_ == &real_clock_;
-        seams.libraries = {platform::engine_library_version(), platform::residfp_library_version()};
+        seams.libraries = app::engine_libraries();
         seams.held = [this](std::thread::id thread) { return holds_.held(thread); };
         seams.at_exit = [this] { files_.stopping = true; };
         seams.has_seed = options_.has_seed;
@@ -252,10 +238,9 @@ private:
 
     // ---- time ----------------------------------------------------------------------------------------
     void run_ui_once() {
-        if (g_signals > 0) {
+        if (app::exit_signals() > 0) {
             // SPEC-201: the exit begins; a second signal during it ends the process at once.
-            signal(SIGTERM, SIG_DFL);
-            signal(SIGINT, SIG_DFL);
+            app::obey_exit_signals();
             throw Stop{0, "told to leave by a signal", "", ""};
         }
         if (clock_ == &real_clock_) real_clock_.run_due();

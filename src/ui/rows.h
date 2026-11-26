@@ -8,6 +8,7 @@
 
 #include "lvgl.h"
 #include "spz/json.h"
+#include "spz/screen_size.h"
 
 namespace spz::ui {
 
@@ -37,7 +38,7 @@ public:
     bool on_action(const std::string& action);
 
     // Draws the rows that show, from `y` in `parent`, each `kRowHeight` high and `width` wide.
-    void draw(lv_obj_t* parent, int y, int width = 320) const;
+    void draw(lv_obj_t* parent, int y, int width = kScreenWidth) const;
 
     // "n/total", or "" for an empty list.
     std::string position() const;

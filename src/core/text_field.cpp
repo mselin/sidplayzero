@@ -2,6 +2,8 @@
 // A field that text is typed into (SPEC-099).
 #include "spz/text_field.h"
 
+#include "spz/text.h"
+
 namespace spz {
 
 namespace {
@@ -30,24 +32,6 @@ std::u32string decode(const std::string& text) {
         }
     }
     return out;
-}
-
-void encode(char32_t c, std::string* out) {
-    if (c < 0x80) {
-        out->push_back(static_cast<char>(c));
-    } else if (c < 0x800) {
-        out->push_back(static_cast<char>(0xC0 | (c >> 6)));
-        out->push_back(static_cast<char>(0x80 | (c & 0x3F)));
-    } else if (c < 0x10000) {
-        out->push_back(static_cast<char>(0xE0 | (c >> 12)));
-        out->push_back(static_cast<char>(0x80 | ((c >> 6) & 0x3F)));
-        out->push_back(static_cast<char>(0x80 | (c & 0x3F)));
-    } else {
-        out->push_back(static_cast<char>(0xF0 | (c >> 18)));
-        out->push_back(static_cast<char>(0x80 | ((c >> 12) & 0x3F)));
-        out->push_back(static_cast<char>(0x80 | ((c >> 6) & 0x3F)));
-        out->push_back(static_cast<char>(0x80 | (c & 0x3F)));
-    }
 }
 
 }  // namespace
@@ -99,7 +83,7 @@ bool TextField::apply(const std::string& action, char32_t character) {
 
 std::string TextField::text() const {
     std::string out;
-    for (const char32_t c : chars_) encode(c, &out);
+    for (const char32_t c : chars_) text::put_utf8(c, &out);
     return out;
 }
 

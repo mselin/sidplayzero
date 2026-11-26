@@ -16,17 +16,15 @@
 #include <string>
 #include <vector>
 
+#include "spz/limits.h"
+#include "spz/text.h"
 #include "spz/text_field.h"
 #include "spz/types.h"
 
 namespace spz {
 
-// SPEC-204: a playlist's file, and a file being imported, is read at most this far.
-const std::size_t kPlaylistFileLimit = 4 * 1024 * 1024;
-// SPEC-204: a playlist holds at most this many entries; the rest of the file is not read.
-const std::size_t kPlaylistEntryLimit = 20000;
-// SPEC-204: a line longer than this many bytes is cut there.
-const std::size_t kPlaylistLineLimit = 4096;
+// SPEC-204's limits of a playlist's file, its entries and its lines are spz/limits.h's: kPlaylistFileLimit,
+// kPlaylistEntryLimit, kLineLimit.
 // SPEC-172: a playlist's name is 1 to this many characters: kPlaylistNameLimit, in spz/text_field.h (one
 // definition for the two headers, so that a file may include both).
 // SPEC-171: the playlist that always exists.
@@ -61,7 +59,7 @@ struct PlaylistRead {
 };
 
 // Reads a playlist's file (SPEC-170). Never fails otherwise: a line it cannot use is kept or skipped. A
-// zero byte ends its line, and a line over kPlaylistLineLimit is cut (SPEC-204). This is one of the
+// zero byte ends its line, and a line over kLineLimit is cut (SPEC-204). This is one of the
 // readers that SPEC-205 fuzzes.
 PlaylistRead read_playlist(const Bytes& file);
 
@@ -78,16 +76,17 @@ std::string playlist_file_name(const std::string& name);
 // control character. Whether the name is taken is the store's to say.
 bool is_playlist_name(const std::string& name);
 
-// Small helpers of text that the files of the lists share (playlists, importing, exporting).
+// The helpers of text that the files of the lists use (playlists, importing, exporting): spz/text.h's, and
+// the lines of a playlist's file.
 namespace lists_text {
-bool is_valid_utf8(const std::string& text);
-std::string latin1_to_utf8(const std::string& text);
-std::size_t utf8_length(const std::string& text);                          // in characters
-std::string utf8_prefix(const std::string& text, std::size_t characters);   // the first characters
-std::string ascii_lower(std::string text);
-bool same_ignoring_case(const std::string& a, const std::string& b);        // A-Z as a-z
+using text::ascii_lower;
+using text::is_valid_utf8;
+using text::latin1_to_utf8;
+using text::same_ignoring_case;
+using text::utf8_length;
+using text::utf8_prefix;
 // The lines of a file: each ended by LF, CR LF or CR; a zero byte ends its line and a line is cut at
-// kPlaylistLineLimit bytes, the rest of it dropped (SPEC-204).
+// kLineLimit bytes, the rest of it dropped (SPEC-204).
 std::vector<std::string> split_lines(const Bytes& file);
 // A line as UTF-8: as it is when it is valid UTF-8 (a character cut at the limit dropped), else read as
 // Latin-1.

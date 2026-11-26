@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// What the HVSC area's files share, and nothing outside them uses: the file moves of SPEC-132 done
-// through the Files seam, the clearing of a folder, and SPEC-140's steps 2 to 6, which a set-up and an
-// update (SPEC-148) both run. Private to src/core/{hvsc_setup,releases,fetcher,complete_download}.cpp.
+// What the HVSC area's files share, and nothing outside them uses: a copy through SPEC-132's safe write,
+// the clearing of a folder, and SPEC-140's steps 2 to 6, which a set-up and an update (SPEC-148) both run.
+// Private to src/core/{hvsc_setup,releases,fetcher,complete_download}.cpp.
 #pragma once
 
 #include <cstdint>
@@ -25,21 +25,9 @@ const char kHvSids[] = "DOCUMENTS/hv_sids.txt";
 // hv_sids.txt is two lines; what is read of it at most (SPEC-204).
 const std::size_t kHvSidsReadLimit = 64 * 1024;
 
-// The folder a path is in: "/a/b/c" gives "/a/b", "/c" gives "/", "c" gives ".".
-std::string parent_folder(const std::string& path);
-// An address under `url_files` or another base address: `base` with any slash at its end dropped, then
-// `path`, which starts with "/".
-std::string join_url(const std::string& base, const std::string& path);
-// SPEC-132's name for the temporary file of a target: ".NAME.tmp-sidplayzero" beside it.
-std::string temp_beside(const std::string& target);
-
-// The second half of SPEC-132's safe write, for a file already written at `temporary` in the target's
-// folder: flushes it, renames it over `target`, flushes the folder. On failure the temporary file is
-// removed and the target is as it was.
-FileStatus commit_temporary(Files* files, const std::string& temporary, const std::string& target);
-// SPEC-132's safe write: the temporary file, then commit_temporary(). The target's folder must exist.
-FileStatus write_safely(Files* files, const std::string& target, const Bytes& bytes);
-// Reads a file of at most `limit` bytes and writes it safely at `to`.
+// Reads a file of at most `limit` bytes and writes it at `to` through SPEC-132's safe write. The area's
+// files are kept once renamed into place: a folder that cannot be flushed after it is no failure
+// (FolderFlush::Ignored), and neither is it for the area's other safe writes.
 FileStatus copy_safely(Files* files, const std::string& from, const std::string& to, std::size_t limit);
 
 // Removes a folder and everything in it, without following links. Ok if it was not there.

@@ -18,6 +18,7 @@
 #include <vector>
 
 #include "spz/job.h"
+#include "spz/lifetime.h"
 #include "ui/rows.h"
 #include "ui/screen.h"
 
@@ -75,7 +76,7 @@ private:
     std::uint64_t seen_changes_ = 0;
     bool looking_ = false;
     bool look_wanted_ = false;
-    std::shared_ptr<bool> alive_;
+    Lifetime lifetime_;
     mutable RowList list_;
     mutable std::vector<std::string> row_texts_;
     std::string drawn_;

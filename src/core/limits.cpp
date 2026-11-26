@@ -15,7 +15,7 @@ std::size_t size_limit(FileKind kind) {
         case FileKind::State:
         case FileKind::HvSids: return 64 * KiB;
         case FileKind::Playlist:
-        case FileKind::Import: return 4 * MiB;
+        case FileKind::Import: return kPlaylistFileLimit;
         case FileKind::HvscText:
         case FileKind::BugList: return 1 * MiB;
         case FileKind::Stil: return 16 * MiB;

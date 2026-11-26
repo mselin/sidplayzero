@@ -43,7 +43,7 @@ void Composition::make_search_scope(RootScope* scope) {
     services().index = scope->index.get();
 }
 
-void Composition::build_index(IndexReason reason) {
+void Composition::build_index(IndexReason reason, std::function<void(const IndexRun&)> done) {
     // The build stops at its next batch when the app leaves, or when its scope is retired (a new root);
     // what it last saved is kept. A build of the index that is shown is followed by a redraw, so that
     // "Indexing n %" goes (SPEC-100).
@@ -52,9 +52,13 @@ void Composition::build_index(IndexReason reason) {
     Files* files = seams_.files;
     const std::string cache = folders_.cache;
     std::shared_ptr<std::atomic<bool>> live = scope_->index_live;
-    app()->long_worker()->post([this, index, files, cache, reason, live] {
+    app()->long_worker()->post([this, index, files, cache, reason, live, done] {
         files->make_folders(cache);
         const IndexRun run = index->build(reason, [this, live] { return running() && live->load(); });
+        if (done) {
+            done(run);
+            return;
+        }
         if (!live->load()) return;
         on_ui([this, run, live] {
             if (!live->load()) return;

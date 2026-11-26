@@ -15,6 +15,7 @@
 #include "spz/download_resume.h"
 #include "spz/listing.h"
 #include "spz/md5.h"
+#include "spz/path_text.h"
 #include "spz/paths.h"
 #include "spz/safe_file.h"
 #include "spz/tune.h"
@@ -162,7 +163,7 @@ bool write_marker(Files* files, const std::string& cache, int step, const std::s
     if (step <= 0) return files->remove(marker_path(cache)) == FileStatus::Ok;
     std::string text = "step = " + std::to_string(step) + "\n";
     if (!archive.empty()) text += "archive = " + archive + "\n";
-    return write_safely(files, marker_path(cache), Bytes(text.begin(), text.end())) == FileStatus::Ok;
+    return safe_write(files, marker_path(cache), Bytes(text.begin(), text.end()), FolderFlush::Ignored) == FileStatus::Ok;
 }
 
 // The files under a folder, by their paths inside it, sorted; links and special files are not followed
@@ -213,7 +214,7 @@ DownloadOffer download_offer(const HvscStatus& status, Files* files, Unpacker* u
     std::uint64_t free_bytes = 0;
     if (files->free_bytes(root, &free_bytes) != FileStatus::Ok) free_bytes = 0;
     offer.free_mib = free_bytes / kMiB;
-    offer.can_write = files->can_write(parent_folder(root));
+    offer.can_write = files->can_write(path_text::folder_of(root));
     if (!status.set_up || status.release == 0) return offer;
     if (!offer.unpacker) {
         offer.text = "MSG_NEED_7ZIP";
@@ -358,7 +359,7 @@ struct CompleteDownload::Impl {
     std::string archive;                     // the archive's name in the cache, for the running job
 
     std::string staging() const {
-        const std::string parent = parent_folder(p.root);
+        const std::string parent = path_text::folder_of(p.root);
         return (parent == "/" ? "" : parent) + "/" + kStagingName;
     }
     std::string database() const { return p.root + "/" + kSongLengths; }
@@ -522,7 +523,7 @@ struct CompleteDownload::Impl {
         std::stable_sort(found.begin(), found.end(), [&](const std::string& a, const std::string& b) { return rank(a) < rank(b); });
         for (const std::string& name : found) {
             const std::string to = p.root + "/" + name;
-            if (files->make_folders(parent_folder(to)) != FileStatus::Ok) return fail_late(7);
+            if (files->make_folders(path_text::folder_of(to)) != FileStatus::Ok) return fail_late(7);
             if (files->rename(from_folder + "/" + name, to) != FileStatus::Ok) return fail_late(7);
         }
         if (!found.empty()) files->sync(p.root + "/DOCUMENTS");

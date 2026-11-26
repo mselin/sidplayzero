@@ -11,6 +11,7 @@
 #include "spz/fetcher.h"
 #include "spz/index.h"
 #include "spz/keymap.h"
+#include "spz/path_text.h"
 #include "spz/player.h"
 #include "ui/draw.h"
 #include "ui/filter_panel.h"
@@ -39,18 +40,13 @@ std::vector<std::string> characters(const std::string& text) {
     return chars;
 }
 
-std::string file_name(const std::string& path) {
-    const std::size_t slash = path.rfind('/');
-    return slash == std::string::npos ? path : path.substr(slash + 1);
-}
-
 }  // namespace
 
 SearchScreen::SearchScreen(Shell* shell) : Screen(shell), field_(kSearchFieldLimit) {
     list_.set_shown(kResultRows);
 }
 
-SearchScreen::~SearchScreen() { *alive_ = false; }
+SearchScreen::~SearchScreen() { lifetime_.end(); }
 
 bool SearchScreen::ready() { return shell()->services().index != nullptr; }
 
@@ -100,7 +96,7 @@ RowList SearchScreen::rows() const {
     rows.reserve(hits_.size());
     for (const SearchHit& hit : hits_) {
         Row row;
-        row.text = shown_name(file_name(hit.path));
+        row.text = shown_name(path_text::last_part(hit.path));
         row.kind = "tune";
         if (s.fetcher && s.fetcher->fetching(hit.path)) row.marks.push_back("fetching");
         else if (!hit.present) row.marks.push_back("absent");
@@ -253,10 +249,10 @@ void SearchScreen::open_filter() {
     const std::time_t seconds = static_cast<std::time_t>(shell()->clock()->wall_time_s());
     std::tm when;
     gmtime_r(&seconds, &when);
-    std::weak_ptr<bool> alive = alive_;
+    const Lifetime::Token alive = lifetime_.token();
     shell()->open_panel(std::unique_ptr<Panel>(new FilterPanel(
         shell(), filter_, when.tm_year + 1900, [this, alive](const SearchFilter& filter) {
-            if (alive.expired() || !*alive.lock()) return;
+            if (!alive.alive()) return;
             filter_ = filter;
             if (searched_) run(query_);
             else shell()->redraw();
@@ -271,12 +267,12 @@ void SearchScreen::run(const std::string& query) {
     const std::uint64_t request = ++request_;
     const SearchFilter filter = filter_;
     Shell* frame = shell();
-    std::weak_ptr<bool> alive = alive_;
+    const Lifetime::Token alive = lifetime_.token();
     frame->quick()->post([this, frame, alive, index, query, filter, request] {
         // SPEC-162: one pass over the index on the quick worker, limited to 2 s.
         SearchResults results = search(*index, query, filter);
         frame->ui()->post([this, frame, alive, request, results] {
-            if (alive.expired() || !*alive.lock() || request != request_) return;
+            if (!alive.alive() || request != request_) return;
             searching_ = false;
             searched_ = true;
             hits_ = results.hits;

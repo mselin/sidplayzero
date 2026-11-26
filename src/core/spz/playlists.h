@@ -104,10 +104,4 @@ private:
     std::vector<std::string> file_names_;    // the file of each playlist, in the folder
 };
 
-namespace lists_files {
-// SPEC-132's safe write, for the files of the lists: the target's folder made, a temporary file beside
-// the target written and flushed, renamed over it, and the folder flushed.
-FileStatus write_safely(Files* files, const std::string& target, const Bytes& bytes);
-}  // namespace lists_files
-
 }  // namespace spz

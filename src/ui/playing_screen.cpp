@@ -8,6 +8,7 @@
 #include "spz/favourites.h"
 #include "spz/keymap.h"
 #include "spz/messages.h"
+#include "spz/path_text.h"
 #include "spz/settings_file.h"
 #include "spz/sound_backend.h"
 #include "spz/stil.h"
@@ -32,17 +33,6 @@ std::string time_of(Millis ms) {
     std::snprintf(text, sizeof text, "%lld:%02lld", static_cast<long long>(seconds / 60),
                   static_cast<long long>(seconds % 60));
     return text;
-}
-
-std::string file_name(const std::string& path) {
-    const std::size_t slash = path.find_last_of('/');
-    return slash == std::string::npos ? path : path.substr(slash + 1);
-}
-
-std::string folder_of(const std::string& path) {
-    const std::size_t slash = path.find_last_of('/');
-    if (slash == std::string::npos || slash == 0) return "/";
-    return path.substr(0, slash);
 }
 
 std::string model_text(const PlayerStatus& s) {
@@ -74,7 +64,7 @@ std::array<std::string, 6> PlayingScreen::lines_for(const PlayerStatus& s, const
         out[0] = "Nothing is playing";
         return out;
     }
-    const std::string name = file_name(s.entry.path);
+    const std::string name = path_text::last_part(s.entry.path);
     const bool live = s.state == PlayerState::Playing || s.state == PlayerState::Paused;
     const std::string total = s.length_ms > 0 ? time_of(s.length_ms) : "--:--";
     switch (s.state) {
@@ -338,7 +328,7 @@ bool PlayingScreen::on_action(const KeyEvent& event) {
         // SPEC-096: the browser, at this tune; it plays on.
         const PlayerStatus status = player->status();
         if (status.has_entry && s.browser && status.entry.path.compare(0, 7, "file://") != 0) {
-            s.browser->show(folder_of(status.entry.path), file_name(status.entry.path));
+            s.browser->show(path_text::collection_parent(status.entry.path), path_text::last_part(status.entry.path));
         }
         Shell* frame = shell();
         frame->open("browser");          // this screen is closed now: nothing of it may be touched

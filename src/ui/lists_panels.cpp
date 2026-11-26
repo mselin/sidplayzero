@@ -8,6 +8,7 @@
 #include "spz/keymap.h"
 #include "spz/listing.h"
 #include "spz/messages.h"
+#include "spz/path_text.h"
 #include "spz/playlist.h"
 #include "spz/playlists.h"
 #include "ui/panel.h"
@@ -18,13 +19,8 @@ namespace {
 
 const char* const kNewPlaylist = "New playlist\xE2\x80\xA6";
 
-std::string file_name_of(const std::string& path) {
-    const std::size_t slash = path.rfind('/');
-    return slash == std::string::npos ? path : path.substr(slash + 1);
-}
-
 std::string name_without_ending(const std::string& path) {
-    std::string name = file_name_of(path);
+    std::string name = path_text::last_part(path);
     const std::size_t dot = name.rfind('.');
     if (dot != std::string::npos && dot > 0) name = name.substr(0, dot);
     return name;
@@ -34,12 +30,12 @@ bool blank(const std::string& text) { return text.find_first_not_of(" \t") == st
 
 std::string lower_ending(const std::string& name) {
     const std::size_t dot = name.rfind('.');
-    return dot == std::string::npos ? "" : lists_text::ascii_lower(name.substr(dot));
+    return dot == std::string::npos ? "" : text::ascii_lower(name.substr(dot));
 }
 
 // SPEC-115: the endings of the part `import-more` (SPEC-176, SPEC-177) only when it is built.
 bool importable_in_this_build(const std::string& path) {
-    const std::string ending = lower_ending(file_name_of(path));
+    const std::string ending = lower_ending(path_text::last_part(path));
     if (ending == ".js2" || ending == ".json" || ending == ".spl") return part_built("import-more");
     return ending == ".m3u" || ending == ".m3u8";
 }
@@ -68,7 +64,7 @@ ImportWork read_and_match(Files* files, const std::string& root, const std::stri
     }
     const std::size_t slash = path.rfind('/');
     const std::string folder = slash == std::string::npos ? std::string(".") : path.substr(0, slash);
-    const ImportRead read = read_import(file_name_of(path), bytes);
+    const ImportRead read = read_import(path_text::last_part(path), bytes);
     work.message = read.message;
     if (read.message == "MSG_FILE_TOO_LARGE" || read.message == "MSG_IMPORT_NOTHING") return work;
     const Importer importer(files, root, import_folder, listing, nullptr);
@@ -206,8 +202,8 @@ void open_import(Shell* shell) {
             for (const std::string& path : found) {
                 Row row;
                 row.text = path.compare(0, import_folder.size() + 1, import_folder + "/") == 0
-                               ? file_name_of(path)
-                               : file_name_of(root) + "/" + file_name_of(path);
+                               ? path_text::last_part(path)
+                               : path_text::last_part(root) + "/" + path_text::last_part(path);
                 row.kind = "action";
                 rows.push_back(row);
             }

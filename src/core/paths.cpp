@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// The two rules for the path of a tune inside the collection (SPEC-154).
+// The two rules for the path of a tune inside the collection (SPEC-154), and the address of a file under a
+// base address.
 #include "spz/paths.h"
 
 #include <cstddef>
 #include <cstdint>
+
+#include "spz/text.h"
 
 namespace spz {
 
@@ -24,10 +27,7 @@ bool has_tune_shape(const std::string& path) {
         if (slash == std::string::npos) break;
         start = slash + 1;
     }
-    if (path.size() < 5) return false;
-    const char* end = path.c_str() + path.size() - 4;
-    auto lower = [](char c) { return (c >= 'A' && c <= 'Z') ? static_cast<char>(c - 'A' + 'a') : c; };
-    return end[0] == '.' && lower(end[1]) == 's' && lower(end[2]) == 'i' && lower(end[3]) == 'd';
+    return path.size() >= 5 && text::is_tune_name(path);
 }
 
 // Valid UTF-8 (no overlong forms, no surrogates, nothing past U+10FFFF) with no control character (C0,
@@ -41,32 +41,11 @@ bool is_clean_utf8(const std::string& text) {
             ++i;
             continue;
         }
-        std::size_t more;
-        std::uint32_t code, least;
-        if (c >= 0xC2 && c <= 0xDF) {
-            more = 1;
-            code = c & 0x1F;
-            least = 0x80;
-        } else if (c >= 0xE0 && c <= 0xEF) {
-            more = 2;
-            code = c & 0x0F;
-            least = 0x800;
-        } else if (c >= 0xF0 && c <= 0xF4) {
-            more = 3;
-            code = c & 0x07;
-            least = 0x10000;
-        } else {
-            return false;
-        }
-        if (text.size() - i <= more) return false;
-        for (std::size_t k = 1; k <= more; ++k) {
-            const unsigned char next = static_cast<unsigned char>(text[i + k]);
-            if ((next & 0xC0) != 0x80) return false;
-            code = (code << 6) | (next & 0x3F);
-        }
-        if (code < least || code > 0x10FFFF || (code >= 0xD800 && code <= 0xDFFF)) return false;
+        std::uint32_t code = 0;
+        const std::size_t length = text::utf8_char(text, i, &code);
+        if (length == 0) return false;
         if (code >= 0x80 && code <= 0x9F) return false;   // the C1 control characters
-        i += more + 1;
+        i += length;
     }
     return true;
 }
@@ -86,6 +65,12 @@ bool is_hvsc_path(const std::string& path) {
 bool is_collection_path(const std::string& path) {
     if (path.size() > 1024) return false;
     return is_clean_utf8(path) && has_tune_shape(path);
+}
+
+std::string join_url(const std::string& base, const std::string& path) {
+    std::size_t end = base.size();
+    while (end > 0 && base[end - 1] == '/') --end;
+    return base.substr(0, end) + path;
 }
 
 }  // namespace spz

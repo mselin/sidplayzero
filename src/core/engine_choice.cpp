@@ -10,7 +10,9 @@
 #include <system_error>
 #include <vector>
 
+#include "spz/path_text.h"
 #include "spz/safe_file.h"
+#include "spz/text.h"
 
 namespace spz {
 
@@ -19,17 +21,8 @@ namespace {
 const char kSpeedFile[] = "speed.ini";
 const std::size_t kSpeedFileLimit = 4096;   // the file is a few lines; anything longer is not ours
 
-std::string join(const std::string& folder, const std::string& name) {
-    if (folder.empty()) return name;
-    return folder.back() == '/' ? folder + name : folder + "/" + name;
-}
-
-std::string trim(const std::string& text) {
-    std::size_t first = 0, last = text.size();
-    while (first < last && (text[first] == ' ' || text[first] == '\t')) ++first;
-    while (last > first && (text[last - 1] == ' ' || text[last - 1] == '\t')) --last;
-    return text.substr(first, last - first);
-}
+using path_text::join;
+using text::trim;
 
 std::string number_text(double value) {
     char buffer[64];

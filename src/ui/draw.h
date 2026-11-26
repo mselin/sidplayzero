@@ -7,12 +7,13 @@
 #include <string>
 
 #include "lvgl.h"
+#include "spz/screen_size.h"
 
 namespace spz::ui {
 
 // SPEC-091: the bands, as rows of pixels.
-const int kWidth = 320;
-const int kHeight = 170;
+const int kWidth = kScreenWidth;
+const int kHeight = kScreenHeight;
 const int kTopHeight = 16;          // rows 0 to 15
 const int kContentTop = 16;         // rows 16 to 135
 const int kContentHeight = 120;

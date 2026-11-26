@@ -18,6 +18,7 @@
 #include "spz/executor.h"
 #include "spz/fetcher.h"
 #include "spz/files.h"
+#include "spz/lifetime.h"
 #include "spz/listing.h"
 #include "spz/player_fetcher.h"
 #include "spz/player_roms.h"
@@ -242,7 +243,7 @@ private:
     PlayerSeams seams_;
     PlayerOptions options_;
     const Settings* settings_ = nullptr;
-    std::shared_ptr<bool> alive_;
+    Lifetime lifetime_;
     std::shared_ptr<std::atomic<std::uint64_t>> generation_shared_;   // read by the worker's jobs
 
     ShuffleGenerator generator_;

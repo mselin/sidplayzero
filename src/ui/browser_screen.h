@@ -9,6 +9,7 @@
 #include <string>
 
 #include "spz/clock.h"
+#include "spz/lifetime.h"
 #include "ui/rows.h"
 #include "ui/screen.h"
 
@@ -49,7 +50,7 @@ private:
     std::string detail_key_;          // folder and name of the entry the detail is for, or is awaited for
     std::string detail_;              // its text; "" for none
     Clock::TimerId detail_timer_ = 0;
-    std::shared_ptr<bool> alive_ = std::make_shared<bool>(true);
+    Lifetime lifetime_;
 };
 
 }  // namespace spz::ui

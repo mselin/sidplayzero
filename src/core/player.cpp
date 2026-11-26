@@ -86,7 +86,7 @@ std::map<const SoundBackend*, const Player*>& drivers() {
 }  // namespace
 
 Player::Player(const PlayerSeams& seams, const PlayerOptions& options, const Settings* settings)
-    : seams_(seams), options_(options), settings_(settings), alive_(std::make_shared<bool>(true)),
+    : seams_(seams), options_(options), settings_(settings),
       generation_shared_(std::make_shared<std::atomic<std::uint64_t>>(0)),
       generator_(seed_of(options, seams.clock)) {
     if (seams_.backend) {
@@ -110,7 +110,7 @@ Player::~Player() {
         const auto found = drivers().find(seams_.backend);
         if (found != drivers().end() && found->second == this) drivers().erase(found);
     }
-    *alive_ = false;
+    lifetime_.end();
     for (Clock::TimerId* id : {&wait_timer_, &failed_timer_, &ahead_timer_, &tick_timer_}) cancel_timer(id);
 }
 
@@ -167,10 +167,10 @@ void Player::cancel_timer(Clock::TimerId* id) {
 
 Clock::TimerId Player::timer(Millis ms, void (Player::*fn)()) {
     if (!seams_.clock) return 0;
-    const std::shared_ptr<bool> alive = alive_;
+    const Lifetime::Token alive = lifetime_.token();
     const std::uint64_t generation = generation_;
     return seams_.clock->call_after(ms < 0 ? 0 : ms, [this, alive, generation, fn] {
-        if (*alive && generation == generation_) (this->*fn)();
+        if (alive.alive() && generation == generation_) (this->*fn)();
     });
 }
 
@@ -295,7 +295,7 @@ void Player::load_current(int subtune) {
         job.listing = *listing_;
     }
 
-    const std::shared_ptr<bool> alive = alive_;
+    const Lifetime::Token alive = lifetime_.token();
     const std::shared_ptr<std::atomic<std::uint64_t>> current = generation_shared_;
     Files* files = seams_.files;
     SoundBackend* backend = seams_.backend;
@@ -304,7 +304,7 @@ void Player::load_current(int subtune) {
         LoadResult result;
         if (!run_load(job, files, backend, *current, &result)) return;
         ui->post([this, alive, result] {
-            if (*alive) loaded_result(result);
+            if (alive.alive()) loaded_result(result);
         });
     });
     notify();
@@ -526,10 +526,10 @@ void Player::request(bool attended) {
     fetch_in_flight_ = true;
     const std::uint64_t token = ++fetch_token_;
     const std::uint64_t generation = generation_;
-    const std::shared_ptr<bool> alive = alive_;
+    const Lifetime::Token alive = lifetime_.token();
     notify();
     seams_.fetcher->fetch(entry_.path, attended, [this, alive, generation, token](const FetchResult& result) {
-        if (*alive) fetch_answer(generation, token, result);
+        if (alive.alive()) fetch_answer(generation, token, result);
     });
 }
 
@@ -684,7 +684,7 @@ void Player::ahead_due() {
     Entry next;
     if (!queue_.peek_next(repeat_all(), &next)) return;
     // Whether it is on the device is found out on the worker.
-    const std::shared_ptr<bool> alive = alive_;
+    const Lifetime::Token alive = lifetime_.token();
     const std::uint64_t generation = generation_;
     const std::string file = full_path(next.path);
     Files* files = seams_.files;
@@ -699,7 +699,7 @@ void Player::ahead_due() {
         ListedTune listed;
         const bool in_listing = has_listing && listing.by_path(path, &listed);
         ui->post([this, alive, generation, path, present, in_listing] {
-            if (*alive) ahead_checked(generation, path, present, in_listing);
+            if (alive.alive()) ahead_checked(generation, path, present, in_listing);
         });
     });
 }
@@ -715,9 +715,9 @@ void Player::ahead_checked(std::uint64_t generation, const std::string& path, bo
     ahead_.token = ++fetch_token_;
     fetch_in_flight_ = true;
     const std::uint64_t token = ahead_.token;
-    const std::shared_ptr<bool> alive = alive_;
+    const Lifetime::Token alive = lifetime_.token();
     seams_.fetcher->fetch_ahead(path, [this, alive, token](const FetchResult& result) {
-        if (*alive) ahead_answer(token, result);
+        if (alive.alive()) ahead_answer(token, result);
     });
 }
 

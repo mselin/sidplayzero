@@ -10,6 +10,7 @@
 #include "spz/playlist.h"
 #include "spz/playlist_export.h"
 #include "spz/playlist_fetch.h"
+#include "spz/safe_file.h"
 #include "ui/draw.h"
 #include "ui/panel.h"
 
@@ -17,7 +18,7 @@ namespace spz::ui {
 
 PlaylistScreen::PlaylistScreen(Shell* shell) : Screen(shell), name_(shell->services().open_playlist) {}
 
-PlaylistScreen::~PlaylistScreen() { *alive_ = false; }
+PlaylistScreen::~PlaylistScreen() { lifetime_.end(); }
 
 bool PlaylistScreen::ready() {
     const Playlists* playlists = shell()->services().playlists;
@@ -135,7 +136,7 @@ void PlaylistScreen::open_more() {
     }
     Shell* frame = shell();
     const std::string name = name_;
-    std::weak_ptr<bool> alive = alive_;
+    const Lifetime::Token alive = lifetime_.token();
     frame->open_panel(std::make_unique<ListPanel>(frame, "more-playlist", "More", rows,
                                                   [this, frame, what, name, alive](std::size_t i) {
         if (i >= what.size()) return;
@@ -145,7 +146,7 @@ void PlaylistScreen::open_more() {
             if (now.fetch_missing == nullptr || now.playlists == nullptr) return;
             now.fetch_missing->start(now.playlists->queue(name));
         } else if (what[i] == "export") {
-            if (alive.expired() || !*alive.lock()) return;
+            if (!alive.alive()) return;
             export_playlist();
         }
     }));
@@ -162,7 +163,7 @@ void PlaylistScreen::export_playlist() {
     const std::string path = s.export_folder + "/" + playlist_file_name(name_);
     Shell* frame = shell();
     frame->quick()->post([frame, files, path, copy] {
-        const FileStatus status = lists_files::write_safely(files, path, exported_playlist(copy));
+        const FileStatus status = safe_write(files, path, exported_playlist(copy), FolderFlush::Ignored);
         frame->ui()->post([frame, status, path] {
             if (status == FileStatus::Ok) frame->notice("MSG_EXPORTED", {{"path", path}});
             else if (status == FileStatus::NoSpace) frame->notice("MSG_CARD_FULL");

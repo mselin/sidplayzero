@@ -24,15 +24,23 @@ std::string temp_path_for(const std::string& target);
 // Whether a file's name (not its path) is that of such a temporary file: a dot in front, and the ending.
 bool is_temp_name(const std::string& name);
 
+// What a safe write returns when the rename is done but the folder cannot be flushed after it: the target
+// holds the new bytes, but the rename may not have reached the card yet.
+enum class FolderFlush {
+    Reported,   // the flush's failure is returned: the settings, the state, the listing, the speed factors
+    Ignored,    // Ok all the same: the playlists, the index, fetched tunes and HVSC's documents
+};
+
 // SPEC-132: writes `bytes` to the temporary file, flushes it (Files::sync), renames it over `target`, and
 // flushes the folder, in that order. The target's folder is made first if it is not there (SPEC-134).
 // Ok means the target now holds `bytes`. Whatever else is returned, and wherever a failure or a kill came,
 // the target is either as it was before or holds all of `bytes`: never a part, never a mixture.
-FileStatus safe_write(Files* files, const std::string& target, const Bytes& bytes);
+FileStatus safe_write(Files* files, const std::string& target, const Bytes& bytes,
+                      FolderFlush flush = FolderFlush::Reported);
 
 // The second half of a safe write, for a file that something else (a download) has already written at
 // temp_path_for(target): flushes it, renames it over `target`, and flushes the folder. The same promise.
-FileStatus safe_commit(Files* files, const std::string& target);
+FileStatus safe_commit(Files* files, const std::string& target, FolderFlush flush = FolderFlush::Reported);
 
 // Removes every temporary file (is_temp_name) directly in `folder`, and nothing else. Returns how many it
 // removed; 0 for a folder that is not there. The app calls this at start for each of its own folders, and

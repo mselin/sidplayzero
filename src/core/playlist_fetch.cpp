@@ -10,7 +10,7 @@ namespace spz {
 FetchMissing::FetchMissing(Clock* clock, Files* files, const std::string& root, const EntryResolver* resolver,
                            PlaylistTuneFetcher* fetcher, NoticeGate* gate, FetchMissingListener* listener)
     : clock_(clock), files_(files), root_(root), resolver_(resolver), fetcher_(fetcher), gate_(gate),
-      listener_(listener), alive_(std::make_shared<bool>(true)) {}
+      listener_(listener) {}
 
 FetchMissing::~FetchMissing() {
     if (timer_set_) clock_->cancel(timer_);
@@ -18,14 +18,14 @@ FetchMissing::~FetchMissing() {
 
 void FetchMissing::start(const std::vector<Entry>& entries) {
     if (state_.running || waiting_for_gate_) return;
-    std::weak_ptr<bool> alive = alive_;
+    const Lifetime::Token alive = lifetime_.token();
     auto go_on = [this, alive, entries] {
-        if (alive.expired()) return;
+        if (!alive.alive()) return;
         waiting_for_gate_ = false;
         go(entries);
     };
     auto cancelled = [this, alive] {
-        if (alive.expired()) return;
+        if (!alive.alive()) return;
         waiting_for_gate_ = false;   // ESC: nothing was asked for, and nothing is
     };
     if (gate_ == nullptr) {
@@ -74,10 +74,10 @@ void FetchMissing::ask_next() {
         return;
     }
     in_flight_ = true;
-    std::weak_ptr<bool> alive = alive_;
+    const Lifetime::Token alive = lifetime_.token();
     const std::string path = todo_[static_cast<std::size_t>(state_.done)];
     fetcher_->fetch_for_playlist(path, [this, alive](const std::string& failure) {
-        if (alive.expired()) return;
+        if (!alive.alive()) return;
         file_done(failure);
     });
 }
@@ -100,10 +100,10 @@ void FetchMissing::file_done(const std::string& failure) {
         finish("MSG_FETCHED_SOME");
         return;
     }
-    std::weak_ptr<bool> alive = alive_;
+    const Lifetime::Token alive = lifetime_.token();
     timer_set_ = true;
     timer_ = clock_->call_after(kPauseMs, [this, alive] {
-        if (alive.expired()) return;
+        if (!alive.alive()) return;
         ask_next();
     });
 }

@@ -10,84 +10,6 @@ const char* const kFavouritesName = "Favourites";
 
 namespace lists_text {
 
-bool is_valid_utf8(const std::string& s) {
-    std::size_t i = 0;
-    while (i < s.size()) {
-        const unsigned char c = static_cast<unsigned char>(s[i]);
-        std::size_t more = 0;
-        char32_t point = c;
-        if (c < 0x80) {
-            more = 0;
-        } else if (c >= 0xC2 && c <= 0xDF) {
-            more = 1;
-            point = c & 0x1F;
-        } else if (c >= 0xE0 && c <= 0xEF) {
-            more = 2;
-            point = c & 0x0F;
-        } else if (c >= 0xF0 && c <= 0xF4) {
-            more = 3;
-            point = c & 0x07;
-        } else {
-            return false;
-        }
-        if (i + more >= s.size() && more > 0) return false;
-        for (std::size_t k = 1; k <= more; ++k) {
-            const unsigned char next = static_cast<unsigned char>(s[i + k]);
-            if ((next & 0xC0) != 0x80) return false;
-            point = (point << 6) | (next & 0x3F);
-        }
-        if ((more == 2 && point < 0x800) || (more == 3 && (point < 0x10000 || point > 0x10FFFF))) return false;
-        if (point >= 0xD800 && point <= 0xDFFF) return false;
-        i += more + 1;
-    }
-    return true;
-}
-
-std::string latin1_to_utf8(const std::string& s) {
-    std::string out;
-    out.reserve(s.size() + s.size() / 4);
-    for (const char c : s) {
-        const unsigned char byte = static_cast<unsigned char>(c);
-        if (byte < 0x80) {
-            out += c;
-        } else {
-            out += static_cast<char>(0xC0 | (byte >> 6));
-            out += static_cast<char>(0x80 | (byte & 0x3F));
-        }
-    }
-    return out;
-}
-
-std::size_t utf8_length(const std::string& s) {
-    std::size_t n = 0;
-    for (const char c : s) {
-        if ((static_cast<unsigned char>(c) & 0xC0) != 0x80) ++n;
-    }
-    return n;
-}
-
-std::string utf8_prefix(const std::string& s, std::size_t characters) {
-    std::size_t n = 0;
-    for (std::size_t i = 0; i < s.size(); ++i) {
-        if ((static_cast<unsigned char>(s[i]) & 0xC0) != 0x80) {
-            if (n == characters) return s.substr(0, i);
-            ++n;
-        }
-    }
-    return s;
-}
-
-std::string ascii_lower(std::string s) {
-    for (char& c : s) {
-        if (c >= 'A' && c <= 'Z') c = static_cast<char>(c - 'A' + 'a');
-    }
-    return s;
-}
-
-bool same_ignoring_case(const std::string& a, const std::string& b) {
-    return a.size() == b.size() && ascii_lower(a) == ascii_lower(b);
-}
-
 std::vector<std::string> split_lines(const Bytes& file) {
     std::vector<std::string> lines;
     std::string line;
@@ -109,7 +31,7 @@ std::vector<std::string> split_lines(const Bytes& file) {
             ended = true;
             continue;
         }
-        if (line.size() >= kPlaylistLineLimit) {
+        if (line.size() >= kLineLimit) {
             ended = true;
             continue;
         }
@@ -139,7 +61,7 @@ namespace {
 
 using namespace lists_text;
 
-bool starts_with(const std::string& s, const char* prefix) { return s.rfind(prefix, 0) == 0; }
+using text::starts_with;
 
 bool is_md5(const std::string& s) {
     if (s.size() != 32) return false;
@@ -243,7 +165,7 @@ PlaylistRead read_playlist(const Bytes& file) {
     Playlist& list = result.playlist;
     Pending pending;
     bool named = false;
-    for (const std::string& raw_line : split_lines(file)) {
+    for (const std::string& raw_line : lists_text::split_lines(file)) {
         if (raw_line.empty()) continue;
         const std::string line = as_utf8(raw_line);
         if (line[0] == '#') {

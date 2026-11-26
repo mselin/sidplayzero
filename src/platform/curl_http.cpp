@@ -11,6 +11,7 @@
 #include <mutex>
 
 #include "platform/guarded.h"
+#include "spz/text.h"
 #include "spz/version.h"
 
 #ifndef SPZ_TEST_HOOKS
@@ -31,16 +32,12 @@ void global_init() {
     std::call_once(once, [] { curl_global_init(CURL_GLOBAL_DEFAULT); });
 }
 
-bool starts_with(const std::string& text, const char* prefix) {
-    return text.compare(0, std::strlen(prefix), prefix) == 0;
-}
-
 // http://127.0.0.1, then a port of digits or nothing, then a path or nothing: the address's host is
 // 127.0.0.1 and nothing else. "http://127.0.0.1:x@other.host/" is refused: whatever comes before an `@`
 // is a user name, and the host is what follows it.
 bool is_loopback_http(const std::string& url) {
     const char prefix[] = "http://127.0.0.1";
-    if (!starts_with(url, prefix)) return false;
+    if (!text::starts_with(url, prefix)) return false;
     std::size_t at = sizeof prefix - 1;
     if (at < url.size() && url[at] == ':') {
         ++at;
@@ -49,22 +46,8 @@ bool is_loopback_http(const std::string& url) {
     return at == url.size() || url[at] == '/';
 }
 
-std::string lower(std::string text) {
-    for (char& c : text) {
-        if (c >= 'A' && c <= 'Z') c = static_cast<char>(c - 'A' + 'a');
-    }
-    return text;
-}
-
-std::string trim(const std::string& text) {
-    std::size_t begin = 0, end = text.size();
-    while (begin < end && (text[begin] == ' ' || text[begin] == '\t')) ++begin;
-    while (end > begin && (text[end - 1] == ' ' || text[end - 1] == '\t' || text[end - 1] == '\r' ||
-                           text[end - 1] == '\n')) {
-        --end;
-    }
-    return text.substr(begin, end - begin);
-}
+// A header's name or value: spaces and tabs at the start, and those and the line's end at the end, dropped.
+std::string trim(const std::string& text) { return text::trim_start(text::trim_end(text, " \t\r\n")); }
 
 std::uint64_t number(const std::string& text) {
     std::uint64_t value = 0;
@@ -80,7 +63,7 @@ std::uint64_t number(const std::string& text) {
 // A Content-Range of a 206: "bytes FIRST-LAST/TOTAL", TOTAL a number or "*". False for anything else.
 bool read_content_range(const std::string& value, std::uint64_t* first, std::uint64_t* last, std::uint64_t* total) {
     const std::string unit = "bytes ";
-    if (lower(value.substr(0, unit.size())) != unit) return false;
+    if (text::ascii_lower(value.substr(0, unit.size())) != unit) return false;
     const std::string range = trim(value.substr(unit.size()));
     const std::size_t dash = range.find('-');
     const std::size_t slash = range.find('/');
@@ -119,7 +102,7 @@ struct Transfer {
     static std::size_t header(char* data, std::size_t size, std::size_t count, void* user) {
         auto* self = static_cast<Transfer*>(user);
         const std::string line(data, size * count);
-        if (starts_with(line, "HTTP/")) {   // a new answer, after a redirect: forget the last one's
+        if (text::starts_with(line, "HTTP/")) {   // a new answer, after a redirect: forget the last one's
             self->etag.clear();
             self->last_modified.clear();
             self->content_length = 0;
@@ -129,7 +112,7 @@ struct Transfer {
         }
         const std::size_t colon = line.find(':');
         if (colon == std::string::npos) return size * count;
-        const std::string name = lower(trim(line.substr(0, colon)));
+        const std::string name = text::ascii_lower(trim(line.substr(0, colon)));
         const std::string value = trim(line.substr(colon + 1));
         if (name == "etag") {
             self->etag = value;
@@ -261,7 +244,7 @@ bool CurlHttpClient::test_rules_allowed() { return SPZ_TEST_HOOKS != 0; }
 
 HttpResult CurlHttpClient::fetch(const HttpRequest& request, const Progress& progress) {
     HttpResult result;
-    const bool https = starts_with(request.url, "https://");
+    const bool https = text::starts_with(request.url, "https://");
     const bool loopback = rules_.loopback_http && is_loopback_http(request.url);
     if (!https && !loopback) {
         result.failure = HttpFailure::Tls;     // not HTTPS: refused before anything is sent

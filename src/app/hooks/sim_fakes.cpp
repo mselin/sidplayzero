@@ -8,16 +8,14 @@
 #include <sstream>
 
 #include "platform/audio_guard.h"
+#include "spz/text.h"
 
 namespace spz::hooks {
 
 namespace {
 
-std::string trim(const std::string& text) {
-    const std::size_t first = text.find_first_not_of(" \t\r");
-    if (first == std::string::npos) return "";
-    return text.substr(first, text.find_last_not_of(" \t\r") - first + 1);
-}
+// A line of a script or of a fakes file, as it is read: spaces, tabs and a CR at either end dropped.
+std::string trim(const std::string& line) { return text::trim(line, text::kLineSpaces); }
 
 bool truth(const std::string& value) { return value == "yes" || value == "true" || value == "on" || value == "1"; }
 

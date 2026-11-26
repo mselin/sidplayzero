@@ -14,6 +14,7 @@
 #include "spz/clock.h"
 #include "spz/collection.h"
 #include "spz/executor.h"
+#include "spz/lifetime.h"
 #include "spz/types.h"
 
 namespace spz {
@@ -124,7 +125,7 @@ private:
     int rows_on_screen_ = 6;
     std::list<Kept> kept_;                // the most recently used first
     std::map<std::string, std::string> last_highlight_;   // folder -> name of the entry last highlighted in it
-    std::shared_ptr<bool> alive_ = std::make_shared<bool>(true);   // for jobs that come back after the model is gone
+    Lifetime lifetime_;                 // for jobs that come back after the model is gone
 };
 
 }  // namespace spz

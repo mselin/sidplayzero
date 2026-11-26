@@ -11,6 +11,7 @@
 #include "spz/keep_start.h"
 #include "spz/keymap.h"
 #include "spz/messages.h"
+#include "spz/path_text.h"
 #include "spz/version.h"
 #include "spz/volume.h"
 
@@ -50,11 +51,6 @@ const char* state_mark(PlayerState state) {
         case PlayerState::Failed: return "!";
         default: return "...";
     }
-}
-
-std::string file_name(const std::string& path) {
-    const std::size_t slash = path.find_last_of('/');
-    return slash == std::string::npos ? path : path.substr(slash + 1);
 }
 
 bool network_failure(const std::string& message) {
@@ -320,7 +316,7 @@ void Composition::make_play() {
         const Json* had = d->get("mini");
         Json mini = had && !had->is_null() ? *had : Json::object();
         mini.set("state", state_word(st.state));
-        mini.set("title", st.tune_known && !st.info.title.empty() ? st.info.title : file_name(st.entry.path));
+        mini.set("title", st.tune_known && !st.info.title.empty() ? st.info.title : path_text::last_part(st.entry.path));
         const bool timed = st.state == PlayerState::Playing || st.state == PlayerState::Paused;
         mini.set("elapsed", timed ? Json(time_text(st.elapsed_ms)) : Json());
         d->set("mini", mini);
@@ -332,7 +328,7 @@ void Composition::make_play() {
             if (!st.has_entry) return "";
             std::string text = state_mark(st.state);
             text += " ";
-            text += st.tune_known && !st.info.title.empty() ? st.info.title : file_name(st.entry.path);
+            text += st.tune_known && !st.info.title.empty() ? st.info.title : path_text::last_part(st.entry.path);
             if (st.state == PlayerState::Playing || st.state == PlayerState::Paused) {
                 text += " " + time_text(st.elapsed_ms);
             }

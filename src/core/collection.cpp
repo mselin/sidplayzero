@@ -9,18 +9,17 @@
 #include <utility>
 
 #include "spz/md5.h"
+#include "spz/path_text.h"
 #include "spz/paths.h"
 #include "spz/safe_file.h"
+#include "spz/text.h"
 #include "spz/tune.h"
 
 namespace spz {
 
 namespace {
 
-unsigned char folded(char c) {
-    const unsigned char u = static_cast<unsigned char>(c);
-    return (u >= 'A' && u <= 'Z') ? static_cast<unsigned char>(u - 'A' + 'a') : u;
-}
+unsigned char folded(char c) { return static_cast<unsigned char>(text::ascii_lower(c)); }
 
 // <0, 0 or >0 for a[ab, ae) against b[bb, be) in the order of SPEC-042: ASCII letters as lower case
 // (FIND-018), the shorter of two that start alike first, and a tie broken by plain bytes.
@@ -39,48 +38,8 @@ int compare_names(const std::string& a, std::size_t ab, std::size_t ae, const st
     return 0;
 }
 
-// Whether a file's name makes it a tune of the collection: it ends in ".sid" in any case (SPEC-041).
-bool is_tune_name(const std::string& name) {
-    if (name.size() < 4) return false;
-    const std::size_t at = name.size() - 4;
-    return name[at] == '.' && folded(name[at + 1]) == 's' && folded(name[at + 2]) == 'i' && folded(name[at + 3]) == 'd';
-}
-
-// "/" and "A" give "/A"; "/A" and "B" give "/A/B".
-std::string child_of(const std::string& folder, const std::string& name) {
-    return folder == "/" ? "/" + name : folder + "/" + name;
-}
-
-// The length in bytes of the valid UTF-8 character at text[i], or 0 if the byte there does not start one.
-std::size_t utf8_length(const std::string& text, std::size_t i) {
-    const unsigned char c = static_cast<unsigned char>(text[i]);
-    if (c < 0x80) return 1;
-    std::size_t more;
-    std::uint32_t code, least;
-    if (c >= 0xC2 && c <= 0xDF) {
-        more = 1;
-        code = c & 0x1Fu;
-        least = 0x80;
-    } else if (c >= 0xE0 && c <= 0xEF) {
-        more = 2;
-        code = c & 0x0Fu;
-        least = 0x800;
-    } else if (c >= 0xF0 && c <= 0xF4) {
-        more = 3;
-        code = c & 0x07u;
-        least = 0x10000;
-    } else {
-        return 0;
-    }
-    if (text.size() - i <= more) return 0;
-    for (std::size_t k = 1; k <= more; ++k) {
-        const unsigned char next = static_cast<unsigned char>(text[i + k]);
-        if ((next & 0xC0) != 0x80) return 0;
-        code = (code << 6) | (next & 0x3Fu);
-    }
-    if (code < least || code > 0x10FFFF || (code >= 0xD800 && code <= 0xDFFF)) return 0;
-    return more + 1;
-}
+using path_text::collection_child;
+using text::is_tune_name;
 
 }  // namespace
 
@@ -130,7 +89,7 @@ std::string shown_name(const std::string& name) {
     shown.reserve(name.size());
     std::size_t i = 0;
     while (i < name.size()) {
-        const std::size_t length = utf8_length(name, i);
+        const std::size_t length = text::utf8_char(name, i);
         if (length == 0) {
             shown += '?';
             ++i;
@@ -246,7 +205,7 @@ FolderListing Collection::list(const std::string& folder) const {
     std::sort(folders.begin(), folders.end(), by_name);
     std::sort(tunes.begin(), tunes.end(), by_name);
     for (FolderEntry& entry : tunes) {
-        const std::string path = child_of(folder, entry.name);
+        const std::string path = collection_child(folder, entry.name);
         if (is_collection_path(path)) entry.path = path;
     }
     out.entries.reserve(folders.size() + tunes.size());
@@ -285,7 +244,7 @@ EntryDetail Collection::detail(const std::string& folder, const FolderEntry& ent
     detail.present = entry.present;
     if (!entry.present) {
         ListedTune listed;
-        if (listing_open() && listing_->by_path(child_of(folder, entry.name), &listed)) {
+        if (listing_open() && listing_->by_path(collection_child(folder, entry.name), &listed)) {
             detail.subtunes = static_cast<int>(listed.lengths.size());
             if (!listed.lengths.empty()) detail.length_ms = listed.lengths[0];
         }

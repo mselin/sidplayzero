@@ -2,6 +2,7 @@
 // SPEC-131, SPEC-135, SPEC-202: what the app does at start with what it kept.
 #include "spz/keep_start.h"
 
+#include "spz/path_text.h"
 #include "spz/safe_file.h"
 
 namespace spz {
@@ -28,11 +29,6 @@ bool is_plain_folder(const std::string& folder) {
     return true;
 }
 
-std::string parent_of(const std::string& folder) {
-    const std::size_t slash = folder.rfind('/');
-    return slash == 0 || slash == std::string::npos ? "/" : folder.substr(0, slash);
-}
-
 bool folder_is_there(const std::string& folder, Files* files, const std::string& root, const Listing* listing) {
     FileInfo info;
     if (files->info(root + folder, &info) == FileStatus::Ok && info.is_folder) return true;
@@ -57,7 +53,7 @@ BrowserPlace browser_place_at_start(const State& state, Files* files, const std:
     place.folder = "/";
     if (!is_plain_folder(state.browser_folder)) return place;
     std::string folder = state.browser_folder;
-    while (folder != "/" && !folder_is_there(folder, files, root, listing)) folder = parent_of(folder);
+    while (folder != "/" && !folder_is_there(folder, files, root, listing)) folder = path_text::collection_parent(folder);
     place.folder = folder;
     if (folder == state.browser_folder) place.entry = state.browser_entry;
     return place;

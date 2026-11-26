@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "lvgl.h"
+#include "spz/screen_size.h"
 
 #if SPZ_DISPLAY_FRAMEBUFFER
 #include "src/drivers/display/fb/lv_linux_fbdev.h"
@@ -18,8 +19,8 @@ namespace spz::platform {
 
 namespace {
 
-const int kWidth = 320;
-const int kHeight = 170;
+const int kWidth = kScreenWidth;
+const int kHeight = kScreenHeight;
 
 void flush_to_nowhere(lv_display_t* display, const lv_area_t*, std::uint8_t*) {
     lv_display_flush_ready(display);

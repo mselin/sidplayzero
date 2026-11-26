@@ -39,6 +39,8 @@
 #include "spz/engine_choice.h"
 #include "spz/keymap.h"
 #include "spz/keys.h"
+#include "spz/path_text.h"
+#include "spz/text.h"
 #include "spz/version.h"
 #include "ui/selftest_screen.h"
 
@@ -101,17 +103,6 @@ std::string decimal(double value, int places) {
     char text[64];
     std::snprintf(text, sizeof text, "%.*f", places, value);
     return text;
-}
-
-std::string trim(const std::string& text) {
-    const std::size_t first = text.find_first_not_of(" \t\r");
-    if (first == std::string::npos) return "";
-    return text.substr(first, text.find_last_not_of(" \t\r") - first + 1);
-}
-
-std::string file_name(const std::string& path) {
-    const std::size_t slash = path.find_last_of('/');
-    return slash == std::string::npos ? path : path.substr(slash + 1);
 }
 
 // "3:55.594": a length as the song length database writes it.
@@ -483,7 +474,7 @@ struct Composition::SelfTest : ui::SelfTestView {
     void fetch_lines() {
         std::vector<std::string> lines = {"Benchmark: fetching the four tunes of the set.",
                                           "Tune " + std::to_string(std::min<std::size_t>(fetch_at + 1, 4)) + "/4: " +
-                                              file_name(kBenchmarkSet[std::min<std::size_t>(fetch_at, 3)])};
+                                              path_text::last_part(kBenchmarkSet[std::min<std::size_t>(fetch_at, 3)])};
         if (!fetch_failed.empty()) lines.push_back("Not fetched: " + std::to_string(fetch_failed.size()));
         say(lines);
     }
@@ -1098,7 +1089,7 @@ void Composition::make_selftest() {
         line = text.substr(at, end == std::string::npos ? std::string::npos : end - at);
         const std::size_t equals = line.find('=');
         if (equals != std::string::npos) {
-            const std::string key = trim(line.substr(0, equals)), value = trim(line.substr(equals + 1));
+            const std::string key = text::trim(line.substr(0, equals), text::kLineSpaces), value = text::trim(line.substr(equals + 1), text::kLineSpaces);
             if (key == "step") self->step = value;
 #if SPZ_TEST_HOOKS
             // SPEC-253, SPEC-260: a test build may shorten the benchmark.

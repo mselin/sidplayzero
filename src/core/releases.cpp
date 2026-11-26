@@ -15,7 +15,9 @@
 #include "hvsc_files.h"
 #include "spz/listing.h"
 #include "spz/md5.h"
+#include "spz/path_text.h"
 #include "spz/paths.h"
+#include "spz/safe_file.h"
 #include "spz/tune.h"
 
 namespace spz {
@@ -62,7 +64,7 @@ struct Releases::Impl {
         }
         std::string text;
         for (const std::string& path : changed) text += path + "\n";
-        write_safely(p.files, changed_file(), Bytes(text.begin(), text.end()));
+        safe_write(p.files, changed_file(), Bytes(text.begin(), text.end()), FolderFlush::Ignored);
     }
 
     // SPEC-148: after the new documents and listing are in place, for each tune the old listing named
@@ -100,8 +102,8 @@ struct Releases::Impl {
                 const std::string to = p.root + elsewhere.path;
                 FileInfo info;
                 if (p.files->info(to, &info) == FileStatus::Ok) continue;   // never over a file that is there
-                if (p.files->make_folders(parent_folder(to)) != FileStatus::Ok) continue;
-                if (p.files->rename(file, to) == FileStatus::Ok) p.files->sync(parent_folder(to));
+                if (p.files->make_folders(path_text::folder_of(to)) != FileStatus::Ok) continue;
+                if (p.files->rename(file, to) == FileStatus::Ok) p.files->sync(path_text::folder_of(to));
             }
         }
         save();

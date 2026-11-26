@@ -36,7 +36,7 @@ bool playing_now(const PlayerStatus& status) {
 BrowserScreen::BrowserScreen(Shell* shell) : Screen(shell) {}
 
 BrowserScreen::~BrowserScreen() {
-    *alive_ = false;
+    lifetime_.end();
     if (detail_timer_ != 0) shell()->clock()->cancel(detail_timer_);
 }
 
@@ -160,9 +160,9 @@ void BrowserScreen::watch_detail() {
     if (detail_timer_ != 0) shell()->clock()->cancel(detail_timer_);
     detail_timer_ = 0;
     if (key.empty()) return;
-    std::weak_ptr<bool> alive = alive_;
+    const Lifetime::Token alive = lifetime_.token();
     detail_timer_ = shell()->clock()->call_after(kDetailAfterMs, [this, alive, key] {
-        if (alive.expired() || !*alive.lock()) return;
+        if (!alive.alive()) return;
         detail_timer_ = 0;
         ask_detail(key);
     });
@@ -178,7 +178,7 @@ void BrowserScreen::ask_detail(const std::string& key) {
     const SettingsFile* settings = shell()->services().settings;
     const Millis default_ms = settings ? static_cast<Millis>(settings->settings().default_length_s) * 1000 : 0;
     Shell* frame = shell();
-    std::weak_ptr<bool> alive = alive_;
+    const Lifetime::Token alive = lifetime_.token();
     // The quick worker reads the file: the header, and the MD5 for the length (SPEC-046).
     frame->quick()->post([frame, alive, tree, folder, entry, default_ms, key, this] {
         const EntryDetail detail = tree->detail(folder, entry, default_ms);
@@ -192,7 +192,7 @@ void BrowserScreen::ask_detail(const std::string& key) {
             }
         }
         frame->ui()->post([frame, alive, key, text, this] {
-            if (alive.expired() || !*alive.lock() || key != detail_key_) return;
+            if (!alive.alive() || key != detail_key_) return;
             detail_ = text;
             frame->redraw();
         });

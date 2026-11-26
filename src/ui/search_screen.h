@@ -10,6 +10,7 @@
 #include <string>
 #include <vector>
 
+#include "spz/lifetime.h"
 #include "spz/search.h"
 #include "spz/text_field.h"
 #include "ui/rows.h"
@@ -59,7 +60,7 @@ private:
     std::uint64_t request_ = 0;         // the latest search asked for; older answers are dropped
     bool shown_indexing_ = false;       // what the top line last showed of the index build
     int shown_percent_ = -1;
-    std::shared_ptr<bool> alive_ = std::make_shared<bool>(true);
+    Lifetime lifetime_;
 };
 
 }  // namespace spz::ui

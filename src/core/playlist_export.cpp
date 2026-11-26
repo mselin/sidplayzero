@@ -3,6 +3,7 @@
 #include "spz/playlist_export.h"
 
 #include "spz/playlist.h"
+#include "spz/safe_file.h"
 
 namespace spz {
 
@@ -47,7 +48,7 @@ ListsResult export_playlist(Files* files, const Playlists& playlists, const std:
     const Playlist* playlist = playlists.find(name);
     if (playlist == nullptr) return result;
     const std::string path = export_folder + "/" + playlist_file_name(name);
-    const FileStatus status = lists_files::write_safely(files, path, exported_playlist(*playlist));
+    const FileStatus status = safe_write(files, path, exported_playlist(*playlist), FolderFlush::Ignored);
     if (status != FileStatus::Ok) {
         if (status == FileStatus::NoSpace) result.message = "MSG_CARD_FULL";
         return result;

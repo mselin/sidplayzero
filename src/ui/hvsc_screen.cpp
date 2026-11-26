@@ -103,9 +103,9 @@ std::string job_mark(const JobState& s) {
     return "\xE2\x86\x93 " + std::to_string(job_percent(s)) + " %";   // "↓ n %"
 }
 
-HvscScreen::HvscScreen(Shell* shell) : Screen(shell), alive_(std::make_shared<bool>(true)) {}
+HvscScreen::HvscScreen(Shell* shell) : Screen(shell) {}
 
-HvscScreen::~HvscScreen() { *alive_ = false; }
+HvscScreen::~HvscScreen() { lifetime_.end(); }
 
 bool HvscScreen::ready() {
     const Services& s = shell()->services();
@@ -138,7 +138,7 @@ void HvscScreen::look_again() {
     const bool download = s.download != nullptr;
     const std::string root = s.collection;
     Shell* frame = shell();
-    std::shared_ptr<bool> alive = alive_;
+    const Lifetime::Token alive = lifetime_.token();
     frame->quick()->post([this, frame, alive, files, listing, index, unpacker, memory, download, root] {
         Facts found;
         found.known = true;
@@ -167,7 +167,7 @@ void HvscScreen::look_again() {
             std::fprintf(stderr, "sidplayzero: reading what is known of HVSC failed: %s\n", error.what());
         }
         frame->ui()->post([this, frame, alive, found] {
-            if (!*alive) return;
+            if (!alive.alive()) return;
             facts_ = found;
             looking_ = false;
             if (look_wanted_) look_again();

@@ -7,6 +7,7 @@
 #include <sstream>
 
 #include "spz/notice_gate.h"
+#include "spz/text.h"
 #include "spz/version.h"
 #include "ui/draw.h"
 #include "ui/panel.h"
@@ -19,12 +20,6 @@ const std::size_t kHvscTxtLimit = 1024 * 1024;       // HVSC's HVSC.txt is some 
 
 bool all_dashes(const std::string& line) {
     return !line.empty() && line.find_first_not_of('-') == std::string::npos;
-}
-
-std::string trimmed(const std::string& line) {
-    const std::size_t first = line.find_first_not_of(" \t\r");
-    if (first == std::string::npos) return "";
-    return line.substr(first, line.find_last_not_of(" \t\r") - first + 1);
 }
 
 }  // namespace
@@ -45,7 +40,7 @@ std::string hvsc_copyright_section(const std::string& file) {
     std::vector<std::string> lines;
     std::istringstream in(file);
     std::string line;
-    while (std::getline(in, line)) lines.push_back(trimmed(line));
+    while (std::getline(in, line)) lines.push_back(text::trim(line, text::kLineSpaces));
     // A heading is a line of words between two lines of dashes.
     std::size_t start = lines.size();
     for (std::size_t i = 1; i + 1 < lines.size(); ++i) {

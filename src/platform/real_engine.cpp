@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "platform/real_engine.h"
 
+#include "spz/player_roms.h"
 #include "spz/tune.h"
 
 #include <sidplayfp/SidConfig.h>
@@ -143,9 +144,9 @@ bool RealEngine::load(const std::vector<std::uint8_t>& tune, int subtune, const 
     if (info == nullptr) return refuse("MSG_ENGINE_REFUSED");
 
     // The ROMs, when set and of the right size (SPEC-068); the player has already checked them.
-    d.kernal = settings.kernal.size() == 8192 ? settings.kernal : std::vector<std::uint8_t>();
-    d.basic = settings.basic.size() == 8192 ? settings.basic : std::vector<std::uint8_t>();
-    d.chargen = settings.chargen.size() == 4096 ? settings.chargen : std::vector<std::uint8_t>();
+    d.kernal = settings.kernal.size() == kKernalRomSize ? settings.kernal : std::vector<std::uint8_t>();
+    d.basic = settings.basic.size() == kBasicRomSize ? settings.basic : std::vector<std::uint8_t>();
+    d.chargen = settings.chargen.size() == kChargenRomSize ? settings.chargen : std::vector<std::uint8_t>();
     if (info->compatibility() == SidTuneInfo::COMPATIBILITY_BASIC && d.basic.empty()) {
         return refuse("MSG_NEEDS_BASIC");
     }

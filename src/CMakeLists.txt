@@ -94,7 +94,6 @@ add_library(spz_platform OBJECT
     platform/real_files.cpp
     platform/software_sound.cpp
     platform/system_seams.cpp
-    platform/threads.cpp
     platform/miniaudio_impl.c
 )
 target_include_directories(spz_platform PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
@@ -144,7 +143,7 @@ if(SIDPLAYZERO_TEST_HOOKS)
     target_include_directories(sidplayzero PRIVATE "${CMAKE_SOURCE_DIR}/tests/fakes")
     target_compile_definitions(sidplayzero PRIVATE SPZ_TEST_HOOKS=1)
     # The integration tests' way into the `platform` layer (see app/hooks/tool_main.cpp).
-    add_executable(spz_tool app/hooks/tool_main.cpp)
+    add_executable(spz_tool app/hooks/tool_main.cpp app/workers.cpp)
     target_link_libraries(spz_tool PRIVATE spz_platform)
     target_compile_definitions(spz_tool PRIVATE SPZ_TEST_HOOKS=1)
     target_compile_options(spz_tool PRIVATE ${SPZ_WARNINGS})

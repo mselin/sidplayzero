@@ -5,6 +5,8 @@
 #include <cstdint>
 #include <vector>
 
+#include "spz/limits.h"
+#include "spz/text.h"
 #include "spz/types.h"
 
 namespace spz {
@@ -13,23 +15,8 @@ const char* const kNoNotes = "No notes for this tune";
 
 namespace {
 
-const std::size_t kLineLimit = 4096;    // SPEC-204: a longer line is cut there
 
-// Latin-1 to UTF-8: every byte is the code point of the same number.
-std::string latin1_to_utf8(const std::string& text) {
-    std::string out;
-    out.reserve(text.size());
-    for (const char c : text) {
-        const unsigned char byte = static_cast<unsigned char>(c);
-        if (byte < 0x80) {
-            out += c;
-        } else {
-            out += static_cast<char>(0xC0 | (byte >> 6));
-            out += static_cast<char>(0x80 | (byte & 0x3F));
-        }
-    }
-    return out;
-}
+using text::latin1_to_utf8;
 
 // The lines of the file, one at a time: a line ends at LF, with a CR before it dropped; a zero byte ends
 // its line, and a line is cut at 4,096 bytes, the rest of it dropped in both cases.

@@ -30,8 +30,11 @@
 #include <cstring>
 #include <unordered_map>
 
+#include "spz/collection.h"
+#include "spz/limits.h"
 #include "spz/paths.h"
 #include "spz/safe_file.h"
+#include "spz/text.h"
 
 namespace spz {
 
@@ -41,7 +44,6 @@ const char kMagic[8] = {'S', 'P', 'Z', 'L', 'I', 'S', 'T', '1'};
 const std::size_t kHeaderSize = 64;
 const std::size_t kTuneRecord = 32;
 const std::size_t kFolderRecord = 32;
-const std::size_t kLineCut = 4096;        // SPEC-204
 
 // --- reading the database -------------------------------------------------------------------------------
 
@@ -51,11 +53,14 @@ struct Parsed {
     std::vector<std::uint32_t> lengths;
 };
 
-int hex_value(char c) {
-    if (c >= '0' && c <= '9') return c - '0';
-    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
-    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
-    return -1;
+// 32 hexadecimal digits as the 16 bytes of an MD5. False if any of them is not a hexadecimal digit.
+bool md5_bytes(const char* digits, std::uint8_t out[16]) {
+    for (int i = 0; i < 16; ++i) {
+        const int high = text::hex_value(digits[2 * i]), low = text::hex_value(digits[2 * i + 1]);
+        if (high < 0 || low < 0) return false;
+        out[i] = static_cast<std::uint8_t>(high * 16 + low);
+    }
+    return true;
 }
 
 bool is_digit(char c) { return c >= '0' && c <= '9'; }
@@ -87,12 +92,7 @@ bool parse_length(const char* p, std::size_t n, std::uint32_t* out) {
 
 // "MD5=length length ...": 32 hexadecimal digits, then at least one length, separated by spaces.
 bool parse_md5_line(const std::string& line, Parsed* out) {
-    if (line.size() < 34 || line[32] != '=') return false;
-    for (int i = 0; i < 16; ++i) {
-        const int high = hex_value(line[2 * i]), low = hex_value(line[2 * i + 1]);
-        if (high < 0 || low < 0) return false;
-        out->md5[i] = static_cast<std::uint8_t>(high * 16 + low);
-    }
+    if (line.size() < 34 || line[32] != '=' || !md5_bytes(line.data(), out->md5)) return false;
     out->lengths.clear();
     std::size_t i = 33;
     while (i < line.size()) {
@@ -108,44 +108,6 @@ bool parse_md5_line(const std::string& line, Parsed* out) {
         i = end;
     }
     return !out->lengths.empty();
-}
-
-// --- the order of SPEC-042 (FIND-018) -----------------------------------------------------------------------
-
-char folded(char c) { return (c >= 'A' && c <= 'Z') ? static_cast<char>(c - 'A' + 'a') : c; }
-
-// <0, 0 or >0 for a[ab, ae) against b[bb, be): ASCII letters as lower case; a tie by plain bytes.
-int compare_names(const std::string& a, std::size_t ab, std::size_t ae, const std::string& b, std::size_t bb, std::size_t be) {
-    const std::size_t an = ae - ab, bn = be - bb, n = std::min(an, bn);
-    for (std::size_t i = 0; i < n; ++i) {
-        const unsigned char x = static_cast<unsigned char>(folded(a[ab + i]));
-        const unsigned char y = static_cast<unsigned char>(folded(b[bb + i]));
-        if (x != y) return x < y ? -1 : 1;
-    }
-    if (an != bn) return an < bn ? -1 : 1;
-    for (std::size_t i = 0; i < n; ++i) {
-        const unsigned char x = static_cast<unsigned char>(a[ab + i]), y = static_cast<unsigned char>(b[bb + i]);
-        if (x != y) return x < y ? -1 : 1;
-    }
-    return 0;
-}
-
-// Whether the tune at path `a` comes before the tune at `b` in the listing: folder by folder, a folder's
-// folders before its tunes, each by name. Both are HVSC paths.
-bool path_before(const std::string& a, const std::string& b) {
-    std::size_t i = 1, j = 1;
-    for (;;) {
-        std::size_t ea = a.find('/', i), eb = b.find('/', j);
-        const bool folder_a = ea != std::string::npos, folder_b = eb != std::string::npos;
-        if (!folder_a) ea = a.size();
-        if (!folder_b) eb = b.size();
-        if (folder_a != folder_b) return folder_a;
-        const int c = compare_names(a, i, ea, b, j, eb);
-        if (c != 0) return c < 0;
-        if (!folder_a) return false;
-        i = ea + 1;
-        j = eb + 1;
-    }
 }
 
 // --- writing the file ------------------------------------------------------------------------------------
@@ -371,7 +333,7 @@ ListingBuild Listing::build(Files* files, const std::string& database, const std
         while (end < data.size() && data[end] != '\n') ++end;
         std::size_t cut = end;
         if (cut > at && data[cut - 1] == '\r') --cut;
-        if (cut - at > kLineCut) cut = at + kLineCut;
+        if (cut - at > kLineLimit) cut = at + kLineLimit;   // SPEC-204
         line.assign(reinterpret_cast<const char*>(data.data()) + at, cut - at);
         const std::size_t zero = line.find('\0');
         if (zero != std::string::npos) line.resize(zero);
@@ -409,7 +371,7 @@ ListingBuild Listing::build(Files* files, const std::string& database, const std
     result.lines_skipped = static_cast<int>(skipped);
     if (parsed.empty() || skipped * 100 > lines) return result;
 
-    std::stable_sort(parsed.begin(), parsed.end(), [](const Parsed& a, const Parsed& b) { return path_before(a.path, b.path); });
+    std::stable_sort(parsed.begin(), parsed.end(), [](const Parsed& a, const Parsed& b) { return path_comes_before(a.path, b.path); });
     const Bytes file = make_file(parsed, info);
     result.tunes = static_cast<int>(parsed.size());
     result.folders = static_cast<int>(get_u32(file.data() + 32)) - 1;
@@ -499,11 +461,7 @@ bool Listing::by_md5(const std::string& md5, ListedTune* out) const {
     const std::shared_ptr<const Map> map = snapshot();
     if (!map || md5.size() != 32) return false;
     std::uint8_t wanted[16];
-    for (int i = 0; i < 16; ++i) {
-        const int high = hex_value(md5[2 * i]), low = hex_value(md5[2 * i + 1]);
-        if (high < 0 || low < 0) return false;
-        wanted[i] = static_cast<std::uint8_t>(high * 16 + low);
-    }
+    if (!md5_bytes(md5.data(), wanted)) return false;
     const Map& m = *map;
     auto md5_of = [&m](std::uint32_t t) -> const std::uint8_t* {
         return t < m.tunes ? m.at(m.tunes_at + t * kTuneRecord + 16) : nullptr;

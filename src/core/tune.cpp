@@ -5,6 +5,8 @@
 
 #include <cstdint>
 
+#include "spz/text.h"
+
 namespace spz {
 
 namespace {
@@ -19,18 +21,7 @@ const std::uint16_t kHigh[32] = {
     0x20AC, 0,      0x201A, 0x0192, 0x201E, 0x2026, 0x2020, 0x2021, 0x02C6, 0x2030, 0x0160, 0x2039, 0x0152, 0, 0x017D, 0,
     0,      0x2018, 0x2019, 0x201C, 0x201D, 0x2022, 0x2013, 0x2014, 0x02DC, 0x2122, 0x0161, 0x203A, 0x0153, 0, 0x017E, 0x0178};
 
-void put_utf8(std::uint32_t code, std::string* out) {
-    if (code < 0x80) {
-        *out += static_cast<char>(code);
-    } else if (code < 0x800) {
-        *out += static_cast<char>(0xC0 | (code >> 6));
-        *out += static_cast<char>(0x80 | (code & 0x3F));
-    } else {
-        *out += static_cast<char>(0xE0 | (code >> 12));
-        *out += static_cast<char>(0x80 | ((code >> 6) & 0x3F));
-        *out += static_cast<char>(0x80 | (code & 0x3F));
-    }
-}
+using text::put_utf8;
 
 // A 32-byte text field of the header, which need not end in a zero byte.
 std::string text_field(const Bytes& file, std::size_t at) {

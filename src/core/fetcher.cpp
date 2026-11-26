@@ -19,7 +19,9 @@
 
 #include "hvsc_files.h"
 #include "spz/md5.h"
+#include "spz/path_text.h"
 #include "spz/paths.h"
+#include "spz/safe_file.h"
 #include "spz/tune.h"
 
 namespace spz {
@@ -255,14 +257,14 @@ struct FetchState : std::enable_shared_from_this<FetchState> {
         if (p.files->free_bytes(target, &free_bytes) != FileStatus::Ok || free_bytes < kFetchRoomBytes) {
             return failed("MSG_CARD_FULL");
         }
-        const std::string folder = parent_folder(target);
+        const std::string folder = path_text::folder_of(target);
         if (p.files->make_folders(folder) != FileStatus::Ok) return failed("MSG_CANNOT_WRITE");
         if (fly_cancel) {
             outcome.cancelled = true;
             return outcome;
         }
 
-        const std::string temporary = temp_beside(target);
+        const std::string temporary = temp_path_for(target);
         HttpRequest request;
         request.url = join_url(p.settings.get().url_files, path);
         request.to_path = temporary;
@@ -296,7 +298,7 @@ struct FetchState : std::enable_shared_from_this<FetchState> {
             throw_away();
             return failed(message);
         }
-        if (commit_temporary(p.files, temporary, target) != FileStatus::Ok) return failed("MSG_CANNOT_WRITE");
+        if (safe_commit(p.files, target, FolderFlush::Ignored) != FileStatus::Ok) return failed("MSG_CANNOT_WRITE");
         if (again) p.changed->fetched_again(path);
         outcome.arrived = true;
         return outcome;

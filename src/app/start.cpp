@@ -7,17 +7,27 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <csignal>
 #include <cstdlib>
+#include <cstring>
 #include <fstream>
 #include <sstream>
 #include <string>
 
+#include "lvgl.h"
+#include "platform/real_engine.h"
 #include "platform/real_files.h"
 #include "spz/folders.h"
 
 namespace spz::app {
 
 namespace {
+
+Clock* g_clock = nullptr;
+std::uint32_t tick() { return static_cast<std::uint32_t>(g_clock->now_ms()); }
+
+volatile std::sig_atomic_t g_signals = 0;
+void on_signal(int) { g_signals = g_signals + 1; }
 
 std::string variable(const char* name) {
     const char* value = std::getenv(name);
@@ -60,6 +70,32 @@ void Lock::release() {
         ::close(fd_);
         fd_ = -1;
     }
+}
+
+bool start_program(Clock* clock, platform::DisplayKind kind, std::string* why) {
+    g_clock = clock;
+    lv_init();
+    lv_tick_set_cb(tick);
+    return platform::open_display(kind, why);
+}
+
+void count_exit_signals() {
+    struct sigaction action;
+    std::memset(&action, 0, sizeof action);
+    action.sa_handler = on_signal;
+    sigaction(SIGTERM, &action, nullptr);
+    sigaction(SIGINT, &action, nullptr);
+}
+
+int exit_signals() { return g_signals; }
+
+void obey_exit_signals() {
+    signal(SIGTERM, SIG_DFL);
+    signal(SIGINT, SIG_DFL);
+}
+
+std::vector<std::string> engine_libraries() {
+    return {platform::engine_library_version(), platform::residfp_library_version()};
 }
 
 long long ms_since_process_start() {

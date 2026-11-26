@@ -12,6 +12,7 @@
 
 #include "spz/clock.h"
 #include "spz/files.h"
+#include "spz/lifetime.h"
 #include "spz/notice_gate.h"
 #include "spz/playlist_resolve.h"
 #include "spz/playlists.h"
@@ -87,7 +88,7 @@ private:
     NoticeGate* gate_;
     FetchMissingListener* listener_;
 
-    std::shared_ptr<bool> alive_;        // callbacks hold a weak copy: none runs once this is gone
+    Lifetime lifetime_;                  // callbacks hold a token of it: none runs once this is gone
     std::vector<std::string> todo_;      // the HVSC paths of this go, in order
     int absent_ = 0;                     // absent entries when the go began
     int fetched_ = 0;

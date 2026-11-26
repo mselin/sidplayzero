@@ -4,14 +4,14 @@
 
 #include "lvgl.h"
 #include "spz/json.h"
+#include "ui/draw.h"
 
 namespace spz::ui {
 
-// The bands of SPEC-091.
-const int kScreenWidth = 320;
-const int kScreenHeight = 170;
-const int kTopLineBottom = 15;
-const int kContentBottom = 135;
+// The last row of pixels of the top line and of the content band (SPEC-091): a box is in the band its top
+// row is in.
+const int kTopLineBottom = kContentTop - 1;
+const int kContentBottom = kActionTop - 1;
 
 // A description with every field of SPEC-254, each null, for a screen to fill in.
 Json blank_description();

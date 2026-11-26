@@ -5,21 +5,13 @@
 #include <algorithm>
 #include <utility>
 
+#include "spz/path_text.h"
+
 namespace spz {
 
 namespace {
 
 // The folder a path is in: "/A/B.sid" gives "/A", "/B.sid" gives "/".
-std::string parent_of(const std::string& path) {
-    const std::size_t slash = path.rfind('/');
-    if (slash == std::string::npos || slash == 0) return "/";
-    return path.substr(0, slash);
-}
-
-std::string child_of(const std::string& folder, const std::string& name) {
-    return folder == "/" ? "/" + name : folder + "/" + name;
-}
-
 }  // namespace
 
 BrowserModel::BrowserModel(Collection* collection, Executor* quick, Executor* ui, Clock* clock)
@@ -94,7 +86,7 @@ void BrowserModel::ask(const std::string& folder, bool have_kept, std::int64_t k
     waiting_ = true;
     asked_at_ = clock_->now_ms();
     const std::uint64_t request = request_;
-    const std::weak_ptr<bool> alive = alive_;
+    const Lifetime::Token alive = lifetime_.token();
     Collection* collection = collection_;
     Executor* ui = ui_;
     BrowserModel* self = this;
@@ -109,13 +101,13 @@ void BrowserModel::ask(const std::string& folder, bool have_kept, std::int64_t k
         }
         if (!unchanged) listing = collection->list(folder);
         ui->post([self, alive, request, listing, unchanged]() mutable {
-            if (alive.expired()) return;
+            if (!alive.alive()) return;
             self->arrived(request, std::move(listing), unchanged);
         });
     });
     if (!have_kept) {
         clock_->call_after(kReadingAfterMs + 1, [this, alive, request] {
-            if (alive.expired()) return;
+            if (!alive.alive()) return;
             if (request == request_ && waiting_ && !loaded_) changed();
         });
     }
@@ -150,7 +142,7 @@ BrowserModel::Opened BrowserModel::open() {
     if (!loaded_ || highlight_ < 0 || highlight_ >= static_cast<int>(rows_.size())) return Opened::Nothing;
     const FolderEntry& entry = rows_[static_cast<std::size_t>(highlight_)];
     if (!entry.is_folder) return Opened::Tune;
-    const std::string child = child_of(folder_, entry.name);
+    const std::string child = path_text::collection_child(folder_, entry.name);
     show(child);
     return Opened::Folder;
 }
@@ -159,7 +151,7 @@ bool BrowserModel::parent() {
     if (folder_ == "/") return false;
     const std::size_t slash = folder_.rfind('/');
     const std::string name = folder_.substr(slash + 1);
-    show(parent_of(folder_), name);
+    show(path_text::collection_parent(folder_), name);
     return true;
 }
 
@@ -239,7 +231,7 @@ void BrowserModel::last() {
 }
 
 void BrowserModel::tune_changed(const std::string& path) {
-    const std::string folder = parent_of(path);
+    const std::string folder = path_text::collection_parent(path);
     kept_.remove_if([&](const Kept& k) { return k.listing.folder == folder; });
 }
 

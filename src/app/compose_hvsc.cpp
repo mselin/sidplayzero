@@ -367,17 +367,10 @@ void Composition::listing_changed(RootScope* scope) {
     app()->long_worker()->post([this, scope, files, listing, listing_path] {
         listing->open(files, listing_path, "");
         on_ui([this, scope] {
-            if (!scope->live) return;
+            if (!scope->live) return;                 // a live scope is the one in use, scope_
             if (scope->player) scope->player->set_listing(scope->listing.get());
             refresh_browser();
-            Index* index = scope->index.get();
-            if (!index) return;
-            std::shared_ptr<std::atomic<bool>> live = scope->index_live;
-            app()->long_worker()->post([this, index, live] {
-                const IndexRun run =
-                    index->build(IndexReason::AfterSetup, [this, live] { return running() && live->load(); });
-                if (!run.notice.empty() && live->load()) on_ui([this, run] { app()->notice(run.notice); });
-            });
+            build_index(IndexReason::AfterSetup);
         });
     });
 }

@@ -20,8 +20,10 @@
 
 #include "spz/collection.h"
 #include "spz/md5.h"
+#include "spz/path_text.h"
 #include "spz/paths.h"
 #include "spz/safe_file.h"
+#include "spz/text.h"
 #include "spz/tune.h"
 
 namespace spz {
@@ -75,54 +77,14 @@ const char* const kLatinFold[0x250 - 0xC0] = {
 // Decodes the UTF-8 character at text[i]: its code point and length. A byte that starts no valid
 // character gives length 1 and code point 0xFFFD.
 std::uint32_t decode(const std::string& text, std::size_t i, std::size_t* length) {
-    const unsigned char c = static_cast<unsigned char>(text[i]);
+    std::uint32_t code = 0;
+    *length = text::utf8_char(text, i, &code);
+    if (*length > 0) return code;
     *length = 1;
-    if (c < 0x80) return c;
-    std::size_t more;
-    std::uint32_t code, least;
-    if (c >= 0xC2 && c <= 0xDF) {
-        more = 1;
-        code = c & 0x1Fu;
-        least = 0x80;
-    } else if (c >= 0xE0 && c <= 0xEF) {
-        more = 2;
-        code = c & 0x0Fu;
-        least = 0x800;
-    } else if (c >= 0xF0 && c <= 0xF4) {
-        more = 3;
-        code = c & 0x07u;
-        least = 0x10000;
-    } else {
-        return 0xFFFD;
-    }
-    if (text.size() - i <= more) return 0xFFFD;
-    for (std::size_t k = 1; k <= more; ++k) {
-        const unsigned char next = static_cast<unsigned char>(text[i + k]);
-        if ((next & 0xC0) != 0x80) return 0xFFFD;
-        code = (code << 6) | (next & 0x3Fu);
-    }
-    if (code < least || code > 0x10FFFF || (code >= 0xD800 && code <= 0xDFFF)) return 0xFFFD;
-    *length = more + 1;
-    return code;
+    return 0xFFFD;
 }
 
-void put_utf8(std::uint32_t code, std::string* out) {
-    if (code < 0x80) {
-        out->push_back(static_cast<char>(code));
-    } else if (code < 0x800) {
-        out->push_back(static_cast<char>(0xC0 | (code >> 6)));
-        out->push_back(static_cast<char>(0x80 | (code & 0x3F)));
-    } else if (code < 0x10000) {
-        out->push_back(static_cast<char>(0xE0 | (code >> 12)));
-        out->push_back(static_cast<char>(0x80 | ((code >> 6) & 0x3F)));
-        out->push_back(static_cast<char>(0x80 | (code & 0x3F)));
-    } else {
-        out->push_back(static_cast<char>(0xF0 | (code >> 18)));
-        out->push_back(static_cast<char>(0x80 | ((code >> 12) & 0x3F)));
-        out->push_back(static_cast<char>(0x80 | ((code >> 6) & 0x3F)));
-        out->push_back(static_cast<char>(0x80 | (code & 0x3F)));
-    }
-}
+using text::put_utf8;
 
 // Adds `text` to `out` as search text: ASCII letters in lower case, digits as they are, accented Latin
 // letters as their base letters, other letters as they are (Greek and Cyrillic in lower case), combining
@@ -306,34 +268,7 @@ bool read_index_file(const Bytes& file, IndexHeader* header, std::vector<IndexRe
     return true;
 }
 
-// SPEC-132's safe write: a temporary file beside the target, synced, renamed over it, the folder synced.
-bool write_safely(Files* files, const std::string& target, const Bytes& bytes) {
-    const std::size_t slash = target.rfind('/');
-    const std::string folder = slash == std::string::npos ? "." : slash == 0 ? "/" : target.substr(0, slash);
-    const std::string name = slash == std::string::npos ? target : target.substr(slash + 1);
-    const std::string temporary = (slash == std::string::npos ? "" : target.substr(0, slash + 1)) + "." + name + kTempEnding;
-    if (files->make_folders(folder) != FileStatus::Ok) return false;
-    if (files->write(temporary, bytes) != FileStatus::Ok || files->sync(temporary) != FileStatus::Ok ||
-        files->rename(temporary, target) != FileStatus::Ok) {
-        files->remove(temporary);
-        return false;
-    }
-    files->sync(folder);
-    return true;
-}
-
-bool is_tune_name(const std::string& name) {
-    if (name.size() < 4) return false;
-    auto lower = [](char c) { return (c >= 'A' && c <= 'Z') ? static_cast<char>(c - 'A' + 'a') : c; };
-    const std::size_t at = name.size() - 4;
-    return name[at] == '.' && lower(name[at + 1]) == 's' && lower(name[at + 2]) == 'i' && lower(name[at + 3]) == 'd';
-}
-
-std::string parent_of(const std::string& path) {
-    const std::size_t slash = path.rfind('/');
-    if (slash == std::string::npos || slash == 0) return "/";
-    return path.substr(0, slash);
-}
+using text::is_tune_name;
 
 IndexRecord absent_record(const std::string& path) {
     IndexRecord r;
@@ -421,7 +356,7 @@ bool Index::save() {
         std::lock_guard<std::mutex> lock(mutex_);
         bytes = write_index(header_, complete_, records_);
     }
-    return write_safely(files_, index_file_, bytes);
+    return safe_write(files_, index_file_, bytes, FolderFlush::Ignored) == FileStatus::Ok;   // SPEC-132
 }
 
 std::size_t Index::locate(const std::string& path) const {
@@ -639,7 +574,7 @@ void Index::refresh_folder(const std::string& folder) {
     std::vector<OnDevice> device;
     if (!walk(folder, false, &device)) return;   // a folder that is gone is seen by the next start's step two
     const std::vector<OnDevice> to_read =
-        reconcile(device, [&folder](const std::string& path) { return parent_of(path) == folder; });
+        reconcile(device, [&folder](const std::string& path) { return path_text::collection_parent(path) == folder; });
     for (const OnDevice& tune : to_read) put(read_record(tune));
 }
 
