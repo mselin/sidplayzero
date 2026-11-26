@@ -126,8 +126,9 @@ public:
     Executor* quick() override { return &quick_; }
     Executor* fetch_worker() override { return &fetch_; }
     Executor* long_worker() override { return &long_; }
-    Executor* render() override { return &render_; }
     ui::Services& services() override { return services_; }
+    // The quick worker, for the jobs that must still run when the app leaves: the saves of SPEC-201.
+    Executor* saves() { return quick_.kept(); }
     void notice(const std::string& id, const std::map<std::string, std::string>& about = {}) override;
     bool open(const std::string& screen) override;
     void set_bottom(const std::string& screen) override;
@@ -138,10 +139,11 @@ public:
     bool help_open() const override { return help_open_; }
     void when_no_overlay(std::function<void()> fn) override;
     void redraw() override { dirty_ = true; }
-    void on_action(const std::string& action, std::function<void(const KeyEvent&)> handler) override;
-    void add_describer(std::function<void(Json*)> fn) override { describers_.push_back(std::move(fn)); }
-    void add_top_right(std::function<std::string()> text) override { top_right_.push_back(std::move(text)); }
-    void every(Millis ms, std::function<void()> fn) override;
+    Hook on_action(const std::string& action, std::function<void(const KeyEvent&)> handler) override;
+    Hook add_describer(std::function<void(Json*)> fn) override;
+    Hook add_top_right(std::function<std::string()> text) override;
+    Hook every(Millis ms, std::function<void()> fn) override;
+    void remove(Hook hook) override;
 
     // The stack's bottom and top, by name.
     std::string bottom() const;
@@ -165,7 +167,7 @@ private:
     void help_action(const std::string& action);
     void brightness(bool up);
     void screenshot();
-    void tick(std::size_t index);
+    void tick(Hook hook);
 
     Seams seams_;
     ui::Services services_;
@@ -177,16 +179,22 @@ private:
     std::unique_ptr<ui::Panel> closed_panel_;                       // kept until the key that closed it is done
     bool help_open_ = false;
     std::size_t help_first_ = 0;
-    std::map<std::string, std::function<void(const KeyEvent&)>> handlers_;
+    // What the Shell's hooks added, each by its Hook, in the order added (a Hook is never used twice).
+    Hook last_hook_ = 0;
+    struct Handler {
+        std::string action;
+        std::function<void(const KeyEvent&)> fn;
+    };
+    std::map<Hook, Handler> handlers_;
     std::vector<std::function<void()>> after_overlay_;              // waiting for no panel and no help
-    std::vector<std::function<void(Json*)>> describers_;
-    std::vector<std::function<std::string()>> top_right_;
+    std::map<Hook, std::function<void(Json*)>> describers_;
+    std::map<Hook, std::function<std::string()>> top_right_;
     struct Every {
         Millis ms;
         std::function<void()> fn;
         Clock::TimerId timer;
     };
-    std::vector<Every> every_;
+    std::map<Hook, Every> every_;
     std::function<bool()> key_filter_;
     std::function<void(Millis)> key_timer_;
     std::vector<Millis> keys_read_;                                 // when each key not yet answered was read
@@ -200,10 +208,9 @@ private:
 
     // The threads, last: they go first, so that no job of theirs outlives what it uses.
     UiQueue ui_;
-    Worker quick_{"spz-quick", true};
+    Worker quick_{"spz-quick"};
     Worker fetch_{"spz-fetch"};
     Worker long_{"spz-long"};
-    Worker render_{"spz-render"};
     // The composition is made in the constructor's body, once the threads run, and goes before them.
     std::unique_ptr<Composition> parts_;
 };

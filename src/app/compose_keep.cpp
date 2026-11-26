@@ -48,16 +48,16 @@ void Composition::make_keep() {
     folders_ = app_folders(environment);
 
     // SPEC-200, step 2: the settings and the state, read once.
-    settings_.reset(new SettingsFile(seams_.files, app()->quick(), settings_path(folders_)));
+    settings_.reset(new SettingsFile(seams_.files, app()->saves(), settings_path(folders_)));
     settings_->load();
     const std::string reset = settings_->take_notice();
     if (!reset.empty()) app()->notice(reset);
-    state_.reset(new StateFile(seams_.files, seams_.clock, app()->quick(), state_path(folders_)));
+    state_.reset(new StateFile(seams_.files, seams_.clock, app()->saves(), state_path(folders_)));
     state_->load();
 
     // SPEC-207: the brightness a killed run left off is put back now.
     if (seams_.backlight) {
-        screen_off_.reset(new ScreenOff(seams_.clock, app()->quick(), seams_.backlight, state_.get()));
+        screen_off_.reset(new ScreenOff(seams_.clock, app()->saves(), seams_.backlight, state_.get()));
         screen_off_->at_start();
         if (part_built("screen-off") && screen_off_->available()) {
             screen_off_->set_after_s(settings_->settings().screen_off_after_s);
@@ -81,9 +81,6 @@ void Composition::make_keep() {
     metrics_.set("user_groups", user_groups());
     Metrics* metrics = &metrics_;
     app()->set_key_timer([metrics](Millis ms) { metrics->key_answered(ms); });
-
-    // SPEC-040: where the collection is; everything that follows is made from it.
-    find_root();
 }
 
 void Composition::keep_at_start() {
@@ -94,7 +91,7 @@ void Composition::keep_at_start() {
     app()->quick()->post([this, files, settings] {
         const RomsRead read = read_roms(files, settings);
         on_ui([this, read] {
-            if (player_) player_->set_roms(read.roms);
+            set_roms(read.roms);
             if (read.ignored) app()->notice("MSG_ROM_IGNORED");
         });
     });
@@ -102,7 +99,7 @@ void Composition::keep_at_start() {
 
 void Composition::setting_changed(const std::string& key) {
     const Settings& now = settings_->settings();
-    if (player_) player_->settings_changed();
+    if (scope_->player) scope_->player->settings_changed();
     if (key == "screen_off_after" && screen_off_ && part_built("screen-off") && screen_off_->available()) {
         screen_off_->set_after_s(now.screen_off_after_s);
     }

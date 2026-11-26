@@ -2,12 +2,11 @@
 // The composition, HVSC: the listing (SPEC-142), the notice and its gate (SPEC-152), jobs (SPEC-147), the
 // fetcher of single tunes (SPEC-141) with Releases as its ChangedTunes (SPEC-148), setting HVSC up
 // (SPEC-140) and the complete download (SPEC-144), and what they do at start.
-#include <chrono>
-#include <condition_variable>
+#include <atomic>
 #include <memory>
-#include <mutex>
 
 #include "app/composition.h"
+#include "platform/guarded.h"
 #include "spz/keep_start.h"
 #include "spz/keymap.h"
 #include "ui/hvsc_screen.h"
@@ -48,19 +47,23 @@ struct Composition::Notices : NoticeSink {
 
 // How a set-up, an update or the complete download ended, and the player's side of the download.
 struct Composition::HvscEvents : HvscListener, DownloadListener, PlaySwitch {
-    explicit HvscEvents(Composition* owner) : parts(owner) {}
+    HvscEvents(Composition* owner, RootScope* of) : parts(owner), scope(of) {}
     void hvsc_ready(int) override {
         // SPEC-140: the listing is new; if the HVSC screen or the empty screen shows, the browser opens at the
-        // root, once no panel and no help is open (SPEC-113).
-        parts->listing_changed();
+        // root, once no panel and no help is open (SPEC-113). A job of a root that is no longer the root
+        // changes nothing it shows.
         changed();
+        if (!scope->live) return;
+        parts->listing_changed(scope);
         App* app = parts->app();
         const bool showing = app->top_name() == "hvsc" || app->top_name() == "empty";
         if (showing || app->bottom() == "empty") {
             // Elsewhere the screen is left alone; only the empty screen under it gives its place to the browser.
             Composition* p = parts;
-            app->when_no_overlay([p, showing] {
-                if (p->browser_) p->browser_->show("/");
+            RootScope* s = scope;
+            app->when_no_overlay([p, s, showing] {
+                if (!s->live) return;
+                if (s->browser) s->browser->show("/");
                 p->app()->set_bottom("browser");
                 if (showing) p->app()->open("browser");
             });
@@ -68,35 +71,39 @@ struct Composition::HvscEvents : HvscListener, DownloadListener, PlaySwitch {
     }
     void hvsc_failed(int) override { changed(); }
     void download_done() override {
-        parts->listing_changed();
         changed();
+        if (scope->live) parts->listing_changed(scope);
     }
     void download_failed(int) override { changed(); }
-    // The HVSC screen looks at HVSC again (Services::hvsc_changes).
+    // The HVSC screen looks at HVSC again (Services::hvsc_changes). Playing is switched off and on (below) for
+    // the player of the moment, whichever root's download asks it.
     void changed() {
         ++parts->services().hvsc_changes;
         parts->app()->redraw();
     }
     void playing_off() override {
-        if (parts->player_) parts->player_->set_playing_off(true);
+        if (parts->scope_->player) parts->scope_->player->set_playing_off(true);
     }
     void playing_on() override {
-        if (parts->player_) parts->player_->set_playing_off(false);
+        if (parts->scope_->player) parts->scope_->player->set_playing_off(false);
     }
     Composition* parts;
+    RootScope* scope;
 };
 
 // SPEC-141, SPEC-161, SPEC-043: a tune's file has arrived at its HVSC path.
 struct Composition::Arrivals : NewTuneListener {
-    explicit Arrivals(Composition* owner) : parts(owner) {}
+    Arrivals(Composition* owner, RootScope* of) : parts(owner), scope(of) {}
     void tune_arrived(const std::string& path) override {
-        if (parts->browser_) parts->browser_->tune_changed(path);
-        if (Index* index = parts->index_.get()) {
+        if (!scope->live) return;
+        if (scope->browser) scope->browser->tune_changed(path);
+        if (Index* index = scope->index.get()) {
             parts->app()->quick()->post([index, path] { index->tune_arrived(path); });
         }
         parts->app()->redraw();
     }
     Composition* parts;
+    RootScope* scope;
 };
 
 // The fetcher has one listener: its answers are passed on by why they were asked.
@@ -117,44 +124,92 @@ struct Composition::FetchRouter : FetchListener {
     FetchListener* lists = nullptr;
 };
 
-void Composition::make_fetch_router() {
-    fetch_router_.reset(new FetchRouter());
-    fetcher_->set_listener(fetch_router_.get());
+// SPEC-147, A8: the long worker as set-up, update and the download see it. A job of theirs that throws
+// is logged, and the job they began is ended, so that the job mark goes and another job can begin.
+struct Composition::JobGuard : Executor {
+    explicit JobGuard(Composition* owner) : parts(owner) {}
+    void post(std::function<void()> job) override {
+        Composition* p = parts;
+        p->app()->long_worker()->post([p, job] {
+            if (!platform::run_guarded("a job of HVSC", job)) p->on_ui([p] { p->end_failed_job(); });
+        });
+    }
+    Composition* parts;
+};
+
+void Composition::end_failed_job() {
+    const JobKind kind = jobs_.state().kind;
+    if (kind != JobKind::Setup && kind != JobKind::Update && kind != JobKind::Download) return;
+    jobs_.end();
+    if (scope_->player) scope_->player->set_playing_off(false);
+    ++services().hvsc_changes;
+    app()->redraw();
 }
 
-void Composition::route_fetches_to_player(FetchListener* listener) { fetch_router_->player = listener; }
+void Composition::route_fetches_to_player(RootScope* scope, FetchListener* listener) {
+    scope->fetch_router->player = listener;
+}
 
-void Composition::route_fetches_to_lists(FetchListener* listener) { fetch_router_->lists = listener; }
+void Composition::route_fetches_to_lists(RootScope* scope, FetchListener* listener) {
+    scope->fetch_router->lists = listener;
+}
 
 std::string Composition::listing_file() const { return folders_.cache + "/listing.bin"; }
 
-std::string Composition::database_file() const { return root_.path + "/DOCUMENTS/Songlengths.md5"; }
+std::string Composition::database_file(const RootScope* scope) const {
+    return scope->root.path + "/DOCUMENTS/Songlengths.md5";
+}
+
+bool Composition::open_listing(Files* files, Listing* listing, const std::string& listing_path,
+                               const std::string& database, const std::string& cache) {
+    // SPEC-142: opened, or built again if it does not fit the database. listing.bin is one file for every
+    // root: one built from another root's database does not fit this one's, and is built again.
+    if (listing->open(files, listing_path, database)) return true;
+    FileInfo info;
+    if (files->info(database, &info) != FileStatus::Ok || info.is_folder) return true;   // no database: no listing
+    files->make_folders(cache);
+    const ListingBuild built = Listing::build(files, database, listing_path);
+    if (!built.ok) return false;
+    listing->open(files, listing_path, database);
+    return true;
+}
 
 void Composition::make_hvsc() {
-    // The listing: opened on the long worker at start (hvsc_at_start), before anything reads it.
-    listing_.reset(new Listing());
-
+    // What does not depend on the root. The rest is make_hvsc_scope().
     gate_record_.reset(new GateRecord(state_.get()));
     gate_panel_.reset(new GatePanel(app()));
     gate_.reset(new NoticeGate(gate_record_.get(), gate_panel_.get()));
     gate_panel_->gate = gate_.get();
     notices_.reset(new Notices(app()));
-    hvsc_events_.reset(new HvscEvents(this));
-    arrivals_.reset(new Arrivals(this));
+    job_guard_.reset(new JobGuard(this));
+
+    ui::Services& s = services();
+    s.notice_gate = gate_.get();
+    s.jobs = &jobs_;
+    s.unpacker = seams_.unpacker;
+    s.memory = seams_.memory;
+    make_job_mark();
+}
+
+void Composition::make_hvsc_scope(RootScope* scope) {
+    // The listing: opened on the long worker (hvsc_at_start, collection_changed), before anything reads it.
+    scope->listing.reset(new Listing());
+    scope->hvsc_events.reset(new HvscEvents(this, scope));
+    scope->arrivals.reset(new Arrivals(this, scope));
 
     ReleasesParts releases;
     releases.files = seams_.files;
     releases.http = seams_.http;
-    releases.long_worker = app()->long_worker();
+    releases.long_worker = job_guard_.get();
     releases.ui = app()->ui();
     releases.gate = gate_.get();
     releases.jobs = &jobs_;
     releases.notices = notices_.get();
     releases.settings = settings_.get();
-    releases.root = root_.path;
+    releases.root = scope->root.path;
     releases.cache = folders_.cache;
-    releases.listener = hvsc_events_.get();
-    releases_.reset(new Releases(releases));
+    releases.listener = scope->hvsc_events.get();
+    scope->releases.reset(new Releases(releases));
 
     FetcherParts fetcher;
     fetcher.files = seams_.files;
@@ -163,57 +218,53 @@ void Composition::make_hvsc() {
     fetcher.fetch_worker = app()->fetch_worker();
     fetcher.ui = app()->ui();
     fetcher.gate = gate_.get();
-    fetcher.listing = listing_.get();
+    fetcher.listing = scope->listing.get();
     fetcher.settings = settings_.get();
-    fetcher.root = root_.path;
-    fetcher.arrivals = arrivals_.get();
-    fetcher.changed = part_built("releases") ? releases_.get() : nullptr;
-    fetcher_.reset(new Fetcher(fetcher));
+    fetcher.root = scope->root.path;
+    fetcher.arrivals = scope->arrivals.get();
+    fetcher.changed = part_built("releases") ? scope->releases.get() : nullptr;
+    scope->fetcher.reset(new Fetcher(fetcher));
     // The fetcher's answers go to the player's side or the playlists' (compose_play.cpp, compose_lists.cpp).
-    make_fetch_router();
+    scope->fetch_router.reset(new FetchRouter());
+    scope->fetcher->set_listener(scope->fetch_router.get());
 
     HvscSetupParts setup;
     setup.files = seams_.files;
     setup.http = seams_.http;
-    setup.long_worker = app()->long_worker();
+    setup.long_worker = job_guard_.get();
     setup.ui = app()->ui();
     setup.gate = gate_.get();
     setup.jobs = &jobs_;
     setup.notices = notices_.get();
     setup.settings = settings_.get();
-    setup.root = root_.path;
+    setup.root = scope->root.path;
     setup.cache = folders_.cache;
-    setup.listener = hvsc_events_.get();
-    setup_.reset(new HvscSetup(setup));
+    setup.listener = scope->hvsc_events.get();
+    scope->setup.reset(new HvscSetup(setup));
 
     CompleteDownloadParts download;
     download.files = seams_.files;
     download.http = seams_.http;
     download.unpacker = seams_.unpacker;
     download.memory = seams_.memory;
-    download.long_worker = app()->long_worker();
+    download.long_worker = job_guard_.get();
     download.ui = app()->ui();
     download.gate = gate_.get();
     download.jobs = &jobs_;
     download.notices = notices_.get();
     download.settings = settings_.get();
-    download.root = root_.path;
+    download.root = scope->root.path;
     download.cache = folders_.cache;
-    download.play = hvsc_events_.get();
-    download.listener = hvsc_events_.get();
-    download_.reset(new CompleteDownload(download));
+    download.play = scope->hvsc_events.get();
+    download.listener = scope->hvsc_events.get();
+    scope->download.reset(new CompleteDownload(download));
 
     ui::Services& s = services();
-    s.listing = listing_.get();
-    s.notice_gate = gate_.get();
-    s.jobs = &jobs_;
-    s.fetcher = fetcher_.get();
-    s.setup = setup_.get();
-    s.releases = part_built("releases") ? releases_.get() : nullptr;
-    s.download = part_built("download-all") ? download_.get() : nullptr;
-    s.unpacker = seams_.unpacker;
-    s.memory = seams_.memory;
-    make_job_mark();
+    s.listing = scope->listing.get();
+    s.fetcher = scope->fetcher.get();
+    s.setup = scope->setup.get();
+    s.releases = part_built("releases") ? scope->releases.get() : nullptr;
+    s.download = part_built("download-all") ? scope->download.get() : nullptr;
 }
 
 void Composition::make_job_mark() {
@@ -251,28 +302,24 @@ void Composition::make_job_mark() {
 void Composition::hvsc_at_start() {
     // SPEC-200, step 5, on the long worker: SPEC-144's marker before anything reads the song length database,
     // then the listing (SPEC-142): opened, or built again if it does not fit the database. Only once it is
-    // ready do the browser, the player and the index start reading it, so that nothing reads it while it
-    // changes.
+    // ready do the browser, the player and the index start reading it.
     Files* files = seams_.files;
-    Listing* listing = listing_.get();
-    CompleteDownload* download = part_built("download-all") ? download_.get() : nullptr;
+    RootScope* scope = scope_.get();
+    Listing* listing = scope->listing.get();
+    CompleteDownload* download = part_built("download-all") ? scope->download.get() : nullptr;
     const std::string listing_path = listing_file();
-    const std::string database = database_file();
+    const std::string database = database_file(scope);
     const std::string cache = folders_.cache;
     app()->long_worker()->post([this, files, listing, download, listing_path, database, cache] {
-        if (download) download->recover();
-        if (!listing->open(files, listing_path, database)) {
-            FileInfo info;
-            if (files->info(database, &info) == FileStatus::Ok && !info.is_folder) {
-                files->make_folders(cache);
-                const ListingBuild built = Listing::build(files, database, listing_path);
-                if (built.ok) {
-                    listing->open(files, listing_path, database);
-                } else {
-                    on_ui([this] { app()->notice("MSG_LENGTHS_UNREADABLE"); });
-                }
-            }
+        // SPEC-144: a download that a killed run left past step 6 is finished now, as a job of its own.
+        if (download && !platform::run_guarded("finishing the download", [download] { download->recover(); })) {
+            on_ui([this] { end_failed_job(); });
         }
+        // Whatever the listing comes to, start-up goes on: a listing that throws is as none.
+        bool readable = true;
+        platform::run_guarded("opening the listing",
+                              [&] { readable = open_listing(files, listing, listing_path, database, cache); });
+        if (!readable) on_ui([this] { app()->notice("MSG_LENGTHS_UNREADABLE"); });
         on_ui([this] {
             // The listing is ready: the browser shows its folder, the player gets its entry back, and the
             // workers go on with SPEC-200's step 5.
@@ -294,8 +341,8 @@ void Composition::cleanup_at_start() {
     Metrics* metrics = &metrics_;
     Unpacker* unpacker = seams_.unpacker;
     Memory* memory = seams_.memory;
-    const Listing* listing = listing_.get();
-    const std::string root = root_.path;
+    const Listing* listing = scope_->listing.get();
+    const std::string root = scope_->root.path;
     const bool offer = unpacker && memory;   // SPEC-241 (FIND-024): written at every run
     app()->long_worker()->post([files, clock, folders, metrics, unpacker, memory, listing, root, offer] {
         clean_up_at_start(files, clock, folders);
@@ -309,49 +356,30 @@ void Composition::cleanup_at_start() {
     });
 }
 
-void Composition::listing_changed() {
-    // The listing file is new (SPEC-140, SPEC-144, SPEC-148). The Listing object is shared by pointer with
-    // the collection (read on the quick worker), the player (the UI thread), the fetcher (the fetch worker)
-    // and the index (the long worker), so it is opened again on the UI thread while the three workers are
-    // parked between their jobs; then every part that shows what it holds is told.
-    with_workers_parked([this] {
-        listing_->open(seams_.files, listing_file(), "");
-        if (player_) player_->set_listing(listing_.get());
-        refresh_browser();
-        Index* index = index_.get();
-        if (!index) return;
-        app()->long_worker()->post([this, index] {
-            const IndexRun run = index->build(IndexReason::AfterSetup, [this] { return running(); });
-            if (!run.notice.empty()) on_ui([this, run] { app()->notice(run.notice); });
+void Composition::listing_changed(RootScope* scope) {
+    // The listing file is new (SPEC-140, SPEC-144, SPEC-148). The scope's Listing is opened again in place,
+    // on the long worker: whoever reads it on another thread meanwhile reads the listing before or the one
+    // after, never half of one (Listing, SPEC-022), so no worker waits for this. Then every part that shows
+    // what it holds is told, and the index is brought up to date.
+    Files* files = seams_.files;
+    Listing* listing = scope->listing.get();
+    const std::string listing_path = listing_file();
+    app()->long_worker()->post([this, scope, files, listing, listing_path] {
+        listing->open(files, listing_path, "");
+        on_ui([this, scope] {
+            if (!scope->live) return;
+            if (scope->player) scope->player->set_listing(scope->listing.get());
+            refresh_browser();
+            Index* index = scope->index.get();
+            if (!index) return;
+            std::shared_ptr<std::atomic<bool>> live = scope->index_live;
+            app()->long_worker()->post([this, index, live] {
+                const IndexRun run =
+                    index->build(IndexReason::AfterSetup, [this, live] { return running() && live->load(); });
+                if (!run.notice.empty() && live->load()) on_ui([this, run] { app()->notice(run.notice); });
+            });
         });
     });
-}
-
-void Composition::with_workers_parked(std::function<void()> fn) {
-    struct Park {
-        std::mutex mutex;
-        std::condition_variable wake;
-        int parked = 0;
-        bool done = false;
-    };
-    auto park = std::make_shared<Park>();
-    Executor* const workers[] = {app()->quick(), app()->fetch_worker(), app()->long_worker()};
-    const int count = static_cast<int>(sizeof workers / sizeof workers[0]);
-    for (Executor* worker : workers) {
-        worker->post([this, park, fn, count] {
-            std::unique_lock<std::mutex> lock(park->mutex);
-            if (++park->parked == count) {
-                // The last to park: the UI thread does the work, then lets the three go on.
-                on_ui([park, fn] {
-                    fn();
-                    std::lock_guard<std::mutex> done(park->mutex);
-                    park->done = true;
-                    park->wake.notify_all();
-                });
-            }
-            while (!park->done && running()) park->wake.wait_for(lock, std::chrono::milliseconds(20));
-        });
-    }
 }
 
 }  // namespace spz::app

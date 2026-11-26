@@ -96,16 +96,16 @@ void App::shut_down() {
     if (asked_to_leave_ms_ < 0) asked_to_leave_ms_ = seams_.clock->now_ms();
     // SPEC-201: stop taking keys (nothing more is read once this has begun); then the sound, the screen's
     // brightness, state.ini and the outside world's waits.
-    for (Every& e : every_) {
-        if (e.timer != 0) seams_.clock->cancel(e.timer);
-        e.timer = 0;
+    for (auto& each : every_) {
+        if (each.second.timer != 0) seams_.clock->cancel(each.second.timer);
+        each.second.timer = 0;
     }
     parts_->stop();
-    // The workers stop: the quick worker finishes the saves that wait; the others end the job that runs.
+    // The workers stop: each ends the job that runs, and drops those that wait; the quick worker still runs
+    // the saves that wait (App::saves()).
     quick_.stop();
     fetch_.stop();
     long_.stop();
-    render_.stop();
     // The measurements, once everything has stopped.
     parts_->write_metrics(seams_.clock->now_ms() - asked_to_leave_ms_);
     // The screens go, and their LVGL objects with them, then what they used.
@@ -121,19 +121,50 @@ void App::render_turn() {
     if (parts_) parts_->render();
 }
 
-void App::every(Millis ms, std::function<void()> fn) {
-    every_.push_back(Every{ms, std::move(fn), 0});
-    tick(every_.size() - 1);
+App::Hook App::every(Millis ms, std::function<void()> fn) {
+    const Hook hook = ++last_hook_;
+    every_[hook] = Every{ms, std::move(fn), 0};
+    tick(hook);
+    return hook;
 }
 
-void App::tick(std::size_t index) {
-    Every& e = every_[index];
-    e.timer = seams_.clock->call_after(e.ms, [this, index] {
-        every_[index].timer = 0;
+void App::tick(Hook hook) {
+    const auto found = every_.find(hook);
+    if (found == every_.end()) return;
+    found->second.timer = seams_.clock->call_after(found->second.ms, [this, hook] {
+        auto it = every_.find(hook);
+        if (it == every_.end()) return;
+        it->second.timer = 0;
         if (shut_down_) return;
-        every_[index].fn();
-        if (!shut_down_) tick(index);
+        // A copy: `fn` may remove its own hook.
+        const std::function<void()> fn = it->second.fn;
+        fn();
+        if (!shut_down_) tick(hook);
     });
+}
+
+App::Hook App::add_describer(std::function<void(Json*)> fn) {
+    const Hook hook = ++last_hook_;
+    describers_[hook] = std::move(fn);
+    return hook;
+}
+
+App::Hook App::add_top_right(std::function<std::string()> text) {
+    const Hook hook = ++last_hook_;
+    top_right_[hook] = std::move(text);
+    return hook;
+}
+
+void App::remove(Hook hook) {
+    if (hook == 0) return;
+    handlers_.erase(hook);
+    describers_.erase(hook);
+    top_right_.erase(hook);
+    const auto found = every_.find(hook);
+    if (found != every_.end()) {
+        if (found->second.timer != 0) seams_.clock->cancel(found->second.timer);
+        every_.erase(found);
+    }
 }
 
 std::string App::bottom() const { return stack_.screens().front(); }
@@ -215,8 +246,18 @@ void App::notice(const std::string& id, const std::map<std::string, std::string>
     notices_.raise(id, message_words(id, about));
 }
 
-void App::on_action(const std::string& action, std::function<void(const KeyEvent&)> handler) {
-    handlers_[action] = std::move(handler);
+App::Hook App::on_action(const std::string& action, std::function<void(const KeyEvent&)> handler) {
+    for (const auto& each : handlers_) {
+        if (each.second.action == action) {
+            // One handler for an action: a second would take the first one's keys without a word.
+            std::fprintf(stderr, "sidplayzero: the action %s has a handler already; a second is refused\n",
+                         action.c_str());
+            return 0;
+        }
+    }
+    const Hook hook = ++last_hook_;
+    handlers_[hook] = Handler{action, std::move(handler)};
+    return hook;
 }
 
 // ---- keys --------------------------------------------------------------------------------------------------
@@ -251,8 +292,9 @@ void App::key(int linux_code, bool pressed) {
 
 std::string App::top_right_text() {
     std::string text;
-    for (const auto& piece : top_right_) {
-        const std::string part = piece();
+    const std::map<Hook, std::function<std::string()>> pieces = top_right_;   // a piece may remove a hook
+    for (const auto& piece : pieces) {
+        const std::string part = piece.second();
         if (part.empty()) continue;
         text += (text.empty() ? "" : "  ") + part;
     }
@@ -270,9 +312,10 @@ void App::on_key(const KeyEvent& event) {
     if (a.empty()) return;
     try {
         // What is the same in every place.
-        const auto handler = handlers_.find(a);
-        if (handler != handlers_.end()) {
-            handler->second(event);
+        for (const auto& each : handlers_) {
+            if (each.second.action != a) continue;
+            const std::function<void(const KeyEvent&)> handler = each.second.fn;   // it may remove its hook
+            handler(event);
             return;
         }
         if (a == "leave") {
@@ -368,13 +411,15 @@ void App::screenshot() {
         notice("MSG_SCREENSHOT_FAILED");
         return;
     }
-    const std::time_t seconds = static_cast<std::time_t>(seams_.clock->wall_time_s());
+    // The seconds and the milliseconds of one reading of the wall clock (A12).
+    const std::int64_t wall_ms = seams_.clock->wall_time_ms();
+    const std::time_t seconds = static_cast<std::time_t>(wall_ms / 1000);
     std::tm when;
     localtime_r(&seconds, &when);
     char stamp[32];
     std::strftime(stamp, sizeof stamp, "%Y%m%d_%H%M%S", &when);
     char millis[8];
-    std::snprintf(millis, sizeof millis, "%03d", static_cast<int>(seams_.clock->now_ms() % 1000));
+    std::snprintf(millis, sizeof millis, "%03d", static_cast<int>(wall_ms % 1000));
     const std::string folder = services_.home + "/Pictures/Screenshots";
     const std::string path = folder + "/sidplayzero_" + stamp + "_" + millis + ".png";
     Files* files = seams_.files;
@@ -412,7 +457,7 @@ void App::pump() {
 bool App::settled() const {
     if (!ui_.empty() || dirty_) return false;
     if (!panel_ && !help_open_ && !after_overlay_.empty()) return false;
-    for (const Worker* worker : {&quick_, &fetch_, &long_, &render_}) {
+    for (const Worker* worker : {&quick_, &fetch_, &long_}) {
         if (worker->idle()) continue;
         // A job that waits for the fake clock, or for an answer a fake holds back, counts as settled.
         if (!(seams_.held && worker->running() && seams_.held(worker->id()))) return false;
@@ -520,7 +565,8 @@ Json App::describe() {
     const std::string position = screen->position();
     if (!position.empty()) d.set("position", position);
     screen->describe(&d);
-    for (const auto& describer : describers_) describer(&d);
+    const std::map<Hook, std::function<void(Json*)>> describers = describers_;   // one may remove a hook
+    for (const auto& describer : describers) describer.second(&d);
     Json actions = Json::array();
     const bool now_typing = typing();
     const std::array<std::string, 5> labels =

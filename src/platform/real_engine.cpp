@@ -29,6 +29,7 @@ const int kMaxChips = 3;
 const int kVoices = 3;
 // The library is run this many cycles at a time, as the `sidplayfp` program runs it.
 const unsigned kCyclesPerPlay = 2000;
+const int kMostEmptyPlays = 64;           // plays in a row that give no sample before render() returns what it has
 
 #define SPZ_STRINGIFY2(x) #x
 #define SPZ_STRINGIFY(x) SPZ_STRINGIFY2(x)
@@ -93,7 +94,11 @@ struct RealEngine::Impl {
 
 RealEngine::RealEngine() : impl_(new Impl) {}
 RealEngine::~RealEngine() {
+    // The player first: it uses the chips its builder made, and the builder would otherwise go before it
+    // (members go in the reverse of their order).
     if (impl_->player) impl_->player->load(nullptr);
+    impl_->player.reset();
+    impl_->builder.reset();
 }
 
 bool RealEngine::load(const std::vector<std::uint8_t>& tune, int subtune, const EngineSettings& settings,
@@ -210,6 +215,7 @@ std::size_t RealEngine::render(std::int16_t* out, std::size_t frames) {
     if (!d.loaded || d.failed) return 0;
     d.apply_controls();
     std::size_t done = 0;
+    int empty = 0;   // plays in a row that gave no sample
     while (done < frames) {
         if (d.pending_at < d.pending.size()) {
             const std::size_t have = (d.pending.size() - d.pending_at) / 2;
@@ -226,8 +232,14 @@ std::size_t RealEngine::render(std::int16_t* out, std::size_t frames) {
             d.failed = true;
             break;
         }
-        if (samples == 0) continue;
-        const unsigned mixed = d.player->mix(d.chunk.data(), static_cast<unsigned>(samples));
+        const unsigned mixed = samples == 0 ? 0 : d.player->mix(d.chunk.data(), static_cast<unsigned>(samples));
+        if (mixed == 0) {
+            // An emulation that gives nothing does not hold the render loop for ever: what there is goes back,
+            // and the next turn asks again (A11).
+            if (++empty >= kMostEmptyPlays) break;
+            continue;
+        }
+        empty = 0;
         d.pending.insert(d.pending.end(), d.chunk.begin(), d.chunk.begin() + mixed);
     }
     d.keep_registers();

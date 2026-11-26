@@ -47,8 +47,17 @@ const std::size_t kListingFileLimit = 64u * 1024 * 1024;
 // The listing file (listing.bin) is our own and is read through Files::map. It records the size and the
 // modification time, to the nanosecond, of the database it was built from. Every read of it is checked
 // against its bounds, so a damaged file gives "not found", never a read outside it.
+//
+// A Listing may be opened again on one thread while others read it (SPEC-022): each call reads one whole
+// listing, the one before or the one after. A reader that asks several things in one job and wants them all
+// from the same listing takes a copy first (`Listing snapshot = *listing;`): a copy shares the mapped file of
+// the moment, and keeps it while it lives, however often the original is opened again.
 class Listing {
 public:
+    Listing() = default;
+    Listing(const Listing& other);
+    Listing& operator=(const Listing& other);
+
     // Reads the song length database at `database` and writes the listing to `listing_file`, through
     // SPEC-132's safe write (a temporary file beside it, synced, renamed over it, and the folder synced).
     // More than one line in a hundred skipped, or no tune at all, refuses the file.
@@ -79,7 +88,8 @@ public:
     struct Map;   // the mapped file; copies of a Listing share it, and it lives while any of them does
 
 private:
-    std::shared_ptr<const Map> map_;
+    std::shared_ptr<const Map> snapshot() const;
+    std::shared_ptr<const Map> map_;   // read and replaced only through std::atomic_load and std::atomic_store
 };
 
 }  // namespace spz

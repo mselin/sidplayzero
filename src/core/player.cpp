@@ -9,6 +9,8 @@
 #include "spz/player.h"
 
 #include <algorithm>
+#include <map>
+#include <mutex>
 #include <utility>
 
 #include "spz/md5.h"
@@ -70,14 +72,44 @@ struct Player::LoadResult {
 
 // ---- Making and wiring ---------------------------------------------------------------------------------------------
 
+namespace {
+
+// The player that drives each backend now: the last one made on it, which is also its listener. A player
+// made on a backend another drove (a new collection root, SPEC-040) takes it over; only the one that
+// drives it may take back what a late load of its own gave the backend.
+std::mutex g_drivers_mutex;
+std::map<const SoundBackend*, const Player*>& drivers() {
+    static std::map<const SoundBackend*, const Player*> map;
+    return map;
+}
+
+}  // namespace
+
 Player::Player(const PlayerSeams& seams, const PlayerOptions& options, const Settings* settings)
     : seams_(seams), options_(options), settings_(settings), alive_(std::make_shared<bool>(true)),
       generation_shared_(std::make_shared<std::atomic<std::uint64_t>>(0)),
       generator_(seed_of(options, seams.clock)) {
-    if (seams_.backend) seams_.backend->set_listener(this);
+    if (seams_.backend) {
+        {
+            std::lock_guard<std::mutex> lock(g_drivers_mutex);
+            drivers()[seams_.backend] = this;
+        }
+        seams_.backend->set_listener(this);
+    }
+}
+
+bool Player::drives_backend() const {
+    std::lock_guard<std::mutex> lock(g_drivers_mutex);
+    const auto found = drivers().find(seams_.backend);
+    return found != drivers().end() && found->second == this;
 }
 
 Player::~Player() {
+    if (seams_.backend) {
+        std::lock_guard<std::mutex> lock(g_drivers_mutex);
+        const auto found = drivers().find(seams_.backend);
+        if (found != drivers().end() && found->second == this) drivers().erase(found);
+    }
     *alive_ = false;
     for (Clock::TimerId* id : {&wait_timer_, &failed_timer_, &ahead_timer_, &tick_timer_}) cancel_timer(id);
 }
@@ -354,8 +386,11 @@ bool Player::run_load(const LoadJob& job, Files* files, SoundBackend* backend,
 void Player::loaded_result(const LoadResult& result) {
     if (result.generation != generation_ || state_ != PlayerState::Loading) {
         // A load that was left behind. If it got as far as the backend, and nothing newer is on its way
-        // there, what it loaded is taken away again.
-        if (result.loaded && state_ != PlayerState::Loading && !loaded() && seams_.backend) seams_.backend->stop();
+        // there, what it loaded is taken away again; but not by a player that another has taken the
+        // backend from, whose load may be on its way there (A10).
+        if (result.loaded && state_ != PlayerState::Loading && !loaded() && seams_.backend && drives_backend()) {
+            seams_.backend->stop();
+        }
         return;
     }
     if (!result.present) {

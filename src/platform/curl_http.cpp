@@ -10,6 +10,7 @@
 #include <cstring>
 #include <mutex>
 
+#include "platform/guarded.h"
 #include "spz/version.h"
 
 #ifndef SPZ_TEST_HOOKS
@@ -193,6 +194,18 @@ struct Transfer {
         return bytes;
     }
 
+    // What libcurl calls: C frames, which nothing may be thrown through (A8). A callback that throws stops
+    // the transfer, which then fails.
+    static std::size_t guarded_header(char* data, std::size_t size, std::size_t count, void* user) noexcept {
+        return run_guarded_or<std::size_t>("a header of a download", 0, [&] { return header(data, size, count, user); });
+    }
+    static std::size_t guarded_body(char* data, std::size_t size, std::size_t count, void* user) noexcept {
+        return run_guarded_or<std::size_t>("a download's data", 0, [&] { return body(data, size, count, user); });
+    }
+    static int guarded_info(void* user, curl_off_t a, curl_off_t b, curl_off_t c, curl_off_t d) noexcept {
+        return run_guarded_or<int>("a download's progress", 1, [&] { return info(user, a, b, c, d); });
+    }
+
     static int info(void* user, curl_off_t, curl_off_t, curl_off_t, curl_off_t) {
         auto* self = static_cast<Transfer*>(user);
         if (self->stopping->load()) {
@@ -292,12 +305,12 @@ HttpResult CurlHttpClient::fetch(const HttpRequest& request, const Progress& pro
     if (request.limit_bytes > 0) {
         curl_easy_setopt(curl, CURLOPT_MAXFILESIZE_LARGE, static_cast<curl_off_t>(request.limit_bytes));
     }
-    curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, &Transfer::header);
+    curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, &Transfer::guarded_header);
     curl_easy_setopt(curl, CURLOPT_HEADERDATA, &transfer);
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &Transfer::body);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &Transfer::guarded_body);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &transfer);
     curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
-    curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, &Transfer::info);
+    curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, &Transfer::guarded_info);
     curl_easy_setopt(curl, CURLOPT_XFERINFODATA, &transfer);
 
     curl_slist* headers = nullptr;

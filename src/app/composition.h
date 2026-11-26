@@ -87,12 +87,13 @@ public:
     void render();
 
 private:
+    struct RootScope;                 // everything that depends on the collection root: below
     App* app() const { return app_; }
     ui::Services& services() const { return app_->services(); }
 
     // ---- keep: compose_keep.cpp ---------------------------------------------------------------------------
     void make_keep();
-    void find_root();                 // SPEC-040: the collection root, from HVSC_BASE, the setting or ~/C64Music
+    CollectionRoot find_root() const; // SPEC-040: the collection root, from HVSC_BASE, the setting or ~/C64Music
     void keep_at_start();             // ROMs, measurements that every run writes
     void setting_changed(const std::string& key);
     Folders folders_;
@@ -103,21 +104,23 @@ private:
 
     // ---- HVSC: compose_hvsc.cpp -----------------------------------------------------------------------------
     void make_hvsc();
-    void make_fetch_router();
-    // Where the fetcher's answers go: those for the tune to be played and the fetch-ahead, and those for
-    // "Fetch missing" (FetchWhy::Playlist).
-    void route_fetches_to_player(FetchListener* listener);
-    void route_fetches_to_lists(FetchListener* listener);
-    void hvsc_at_start();             // the marker of SPEC-144, then the listing (SPEC-142), on the long worker
+    // SPEC-142: the listing at `listing_path` opened into `listing`, or built from `database` first if it
+    // does not fit it. On the long worker. False only if the database is there and refused
+    // (MSG_LENGTHS_UNREADABLE); with no database the root has no listing.
+    static bool open_listing(Files* files, Listing* listing, const std::string& listing_path,
+                             const std::string& database, const std::string& cache);
+    // Where a scope's fetcher's answers go: those for the tune to be played and the fetch-ahead, and those
+    // for "Fetch missing" (FetchWhy::Playlist).
+    void route_fetches_to_player(RootScope* scope, FetchListener* listener);
+    void route_fetches_to_lists(RootScope* scope, FetchListener* listener);
+    void hvsc_at_start();            // the marker of SPEC-144, then the listing (SPEC-142), on the long worker
     void cleanup_at_start();          // SPEC-202, and SPEC-145's conditions for the measurements
-    // The listing at listing.bin has changed (set up, updated, downloaded): opened again, and every part
+    // The listing at listing.bin has changed (set up, updated, downloaded): opened again, on the long
+    // worker, in place (readers on other threads keep the listing they took, SPEC-022), and then every part
     // that shows what it holds is told.
-    void listing_changed();
-    // Runs `fn` on the UI thread once the quick, fetch and long workers have each finished what they were
-    // doing and are waiting, and lets them go on after it: for a change to something they all read.
-    void with_workers_parked(std::function<void()> fn);
+    void listing_changed(RootScope* scope);
     std::string listing_file() const;
-    std::string database_file() const;
+    std::string database_file(const RootScope* scope) const;
     void make_job_mark();             // SPEC-147: `job`, `mini.job` and the job mark on every screen
     struct GateRecord;                // NoticeRecord: notice_accepted in state.ini
     struct GatePanel;                 // NoticePanel: the `notice-panel` panel
@@ -125,19 +128,20 @@ private:
     struct HvscEvents;                // HvscListener and DownloadListener
     struct Arrivals;                  // NewTuneListener: the index and the browser hear of a tune fetched
     struct FetchRouter;               // FetchListener: the fetcher's answers, to the player's or the playlists'
-    std::unique_ptr<Listing> listing_;
+    // The parts of HVSC that do not depend on the root.
     std::shared_ptr<GateRecord> gate_record_;
     std::shared_ptr<GatePanel> gate_panel_;
     std::unique_ptr<NoticeGate> gate_;
     std::shared_ptr<Notices> notices_;
     Jobs jobs_;
-    std::shared_ptr<HvscEvents> hvsc_events_;
-    std::shared_ptr<Arrivals> arrivals_;
-    std::unique_ptr<Releases> releases_;
-    std::unique_ptr<Fetcher> fetcher_;
-    std::shared_ptr<FetchRouter> fetch_router_;
-    std::unique_ptr<HvscSetup> setup_;
-    std::unique_ptr<CompleteDownload> download_;
+    // The guard of SPEC-147's jobs: a job of set-up, update or download whose work on the long worker throws
+    // is ended there all the same, so that it never stays running (A8). Given to those three as their
+    // long worker.
+    struct JobGuard;
+    std::shared_ptr<JobGuard> job_guard_;
+    void end_failed_job();            // on the UI thread: the job of set-up, update or download whose work threw
+    // The scope's HVSC parts: its listing, fetcher, set-up, releases and download.
+    void make_hvsc_scope(RootScope* scope);
 
     // ---- the collection and the browser: compose_browse.cpp -----------------------------------------------
     void make_browse();
@@ -145,22 +149,19 @@ private:
     void watch_empty_root();          // SPEC-048: every 5 s while the empty screen shows
     void refresh_browser();           // what the collection shows has changed: the browser lists afresh
     void collection_changed();        // SPEC-040: the setting `collection` has changed
+    void make_browse_scope(RootScope* scope);
     struct BrowserEvents;             // BrowserListener
-    CollectionRoot root_;
-    std::unique_ptr<Collection> collection_;
-    std::shared_ptr<BrowserEvents> browser_events_;
-    std::unique_ptr<BrowserModel> browser_;
     bool first_listing_seen_ = false;
     bool watching_root_ = false;
-    // What a change of root left behind: kept until the app ends, since jobs and other parts may still
-    // hold them.
-    std::vector<std::unique_ptr<Collection>> retired_collections_;
-    std::vector<std::unique_ptr<Listing>> retired_listings_;
 
     // ---- playing: compose_play.cpp ----------------------------------------------------------------------------
     void make_play();
-    void make_player();               // the player alone, on the root of the moment
-    void remake_player();             // a new root: a new player, the old one stopped and kept
+    void make_player(RootScope* scope);   // the scope's player
+    // What every player is given as it is made, kept here for the players of later roots.
+    void set_roms(const Roms& roms);
+    void set_speed_factors(const SpeedFactors& factors);
+    Roms roms_;
+    SpeedFactors speed_factors_;
     void play_at_start();             // the current entry and the queue (SPEC-131), and SPEC-135
     void measure_engines();           // SPEC-072, once the browser has shown for 3 s
     void measure_engines_now(Files* files, const std::string& cache, int rate);
@@ -170,32 +171,22 @@ private:
     std::unique_ptr<platform::SoftwareSound> sound_;
     SoundBackend* backend_ = nullptr;
     std::shared_ptr<PlayerEvents> player_events_;
-    std::shared_ptr<PlayerFetcher> player_fetcher_;
-    std::unique_ptr<Player> player_;
-    std::vector<std::unique_ptr<Player>> retired_players_;
 
     // ---- search: compose_search.cpp -------------------------------------------------------------------------
     void make_search();
     void search_at_start();           // SPEC-161: the index checked and brought up to date
-    void search_root_changed();       // SPEC-161: the collection root has changed: a new index, rebuilt
-    void build_index(IndexReason reason);   // on the long worker; MSG_INDEX_READY when the reason calls for it
+    void make_search_scope(RootScope* scope);
+    // On the long worker; MSG_INDEX_READY when the reason calls for it. It stops at its next batch when its
+    // scope is retired (a new root), and the next build, of the new root's index, rebuilds (SPEC-161).
+    void build_index(IndexReason reason);
     struct OwnTunesInIndex;           // OwnTunes, for the playlists' resolver
-    std::unique_ptr<Index> index_;
-    std::shared_ptr<std::atomic<bool>> index_live_;          // false once index_ has been replaced
-    std::vector<std::unique_ptr<Index>> retired_indexes_;    // those of earlier roots, kept until the app ends
-    std::shared_ptr<OwnTunes> own_tunes_;
 
     // ---- playlists and favourites: compose_lists.cpp -------------------------------------------------------
     void make_lists();
     void lists_at_start();            // the playlists, read on the quick worker
+    void make_lists_scope(RootScope* scope);
     struct ListsFetcher;             // PlaylistTuneFetcher, on the fetcher of SPEC-141
     struct ListsEvents;               // FetchMissingListener
-    std::unique_ptr<EntryResolver> resolver_;
-    std::unique_ptr<Playlists> playlists_;
-    std::unique_ptr<Favourites> favourites_;
-    std::shared_ptr<ListsFetcher> lists_fetcher_;
-    std::shared_ptr<ListsEvents> lists_events_;
-    std::unique_ptr<FetchMissing> fetch_missing_;
 
     // ---- the self-test and the measurements: compose_selftest.cpp -------------------------------------------
     void make_selftest();             // the request file (SPEC-260), the results file, the job mark of the benchmark
@@ -204,6 +195,48 @@ private:
     void device_measurements();       // SPEC-241: what only the device can say
     struct SelfTest;                  // ui::SelfTestView: the steps, the key script, the measurements they take
     std::shared_ptr<SelfTest> selftest_;
+
+    // ---- the collection root's scope (SPEC-040) ---------------------------------------------------------------
+    // Everything that depends on the collection root is made for one root, in one RootScope. When the setting
+    // `collection` names another root (collection_changed()), a new scope is made and the old one is retired
+    // whole: its player stopped, its fetches and its index build cancelled, its job asked to stop, and its
+    // listeners deaf. A retired scope is kept until the app ends, since jobs on the workers may still hold
+    // what it made. Each part of it is made by its area's make_..._scope(), in the order of make_scope().
+    struct RootScope {
+        CollectionRoot root;
+        bool live = true;                                     // false once retired (UI thread only)
+        // HVSC: compose_hvsc.cpp. The listing is opened again in place when it changes (SPEC-142).
+        std::unique_ptr<Listing> listing;
+        std::shared_ptr<HvscEvents> hvsc_events;
+        std::shared_ptr<Arrivals> arrivals;
+        std::unique_ptr<Releases> releases;
+        std::unique_ptr<Fetcher> fetcher;
+        std::shared_ptr<FetchRouter> fetch_router;
+        std::unique_ptr<HvscSetup> setup;
+        std::unique_ptr<CompleteDownload> download;
+        // The collection and the browser: compose_browse.cpp.
+        std::unique_ptr<Collection> collection;
+        std::shared_ptr<BrowserEvents> browser_events;
+        std::unique_ptr<BrowserModel> browser;
+        // Search: compose_search.cpp.
+        std::unique_ptr<Index> index;
+        std::shared_ptr<std::atomic<bool>> index_live;       // false once the scope is retired
+        std::shared_ptr<OwnTunes> own_tunes;
+        // Playlists: compose_lists.cpp. The resolver of entries works on the root, and so the playlists do.
+        std::unique_ptr<EntryResolver> resolver;
+        std::unique_ptr<Playlists> playlists;
+        std::unique_ptr<Favourites> favourites;
+        std::shared_ptr<ListsFetcher> lists_fetcher;
+        std::shared_ptr<ListsEvents> lists_events;
+        std::unique_ptr<FetchMissing> fetch_missing;
+        // Playing: compose_play.cpp.
+        std::shared_ptr<PlayerFetcher> player_fetcher;
+        std::unique_ptr<Player> player;
+    };
+    std::unique_ptr<RootScope> make_scope(const CollectionRoot& root);
+    void retire(RootScope* scope);
+    std::unique_ptr<RootScope> scope_;
+    std::vector<std::unique_ptr<RootScope>> retired_scopes_;
 
     // Runs `fn` on the UI thread, unless the app has begun to stop by then. The composition outlives the
     // workers (the App stops them before it goes), so a job may hold `this`.

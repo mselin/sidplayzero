@@ -217,6 +217,7 @@ private:
     void ahead_checked(std::uint64_t generation, const std::string& path, bool present, bool listed);
     void fail(const std::string& message);
     void stop_playback(const std::string& notice_id);   // → Idle, from playback by itself
+    bool drives_backend() const;                        // the last player made on the backend is this one
     // Playback by itself moves on: to the next entry (SPEC-062, SPEC-065), passing over what it must.
     void pass_over();
     void next_unattended();

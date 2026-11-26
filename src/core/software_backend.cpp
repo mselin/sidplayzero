@@ -9,33 +9,83 @@
 #include "spz/software_backend.h"
 
 #include <algorithm>
+#include <condition_variable>
 #include <cstring>
+#include <functional>
+#include <memory>
 #include <thread>
 
 namespace spz {
 
-SoftwareBackend::SoftwareBackend(Engine* engine, AudioSink* sink, Clock* clock, Executor* ui)
-    : engine_(engine), sink_(sink), clock_(clock), ui_(ui), alive_(std::make_shared<bool>(true)),
+struct SoftwareBackend::Life {
+    std::mutex mutex;
+    std::condition_variable idle;
+    bool alive = true;
+    int running = 0;   // guarded jobs that run now
+};
+
+namespace {
+
+// Holds a backend's Life for one guarded job: `entered` is false if the backend has begun to go.
+struct LifeEntry {
+    template <typename LifeT>
+    explicit LifeEntry(const std::shared_ptr<LifeT>& life) {
+        std::lock_guard<std::mutex> lock(life->mutex);
+        if (!life->alive) return;
+        ++life->running;
+        leave = [life] {
+            std::lock_guard<std::mutex> lock(life->mutex);
+            if (--life->running == 0) life->idle.notify_all();
+        };
+    }
+    ~LifeEntry() {
+        if (leave) leave();
+    }
+    LifeEntry(const LifeEntry&) = delete;
+    LifeEntry& operator=(const LifeEntry&) = delete;
+    bool entered() const { return static_cast<bool>(leave); }
+    std::function<void()> leave;
+};
+
+}  // namespace
+
+SoftwareBackend::SoftwareBackend(Engine* engine, AudioSink* sink, Clock* clock, Executor* ui, Executor* worker)
+    : engine_(engine), sink_(sink), clock_(clock), ui_(ui), worker_(worker), life_(std::make_shared<Life>()),
       ring_(2 * kRingFrames, 0) {
-    std::weak_ptr<bool> alive = alive_;
     // The device can be lost on any thread: the callback only says so, and the rest is done on the UI thread.
-    sink_->on_device_lost([this, alive] {
-        const std::shared_ptr<bool> still = alive.lock();
-        if (!still || !*still) return;
+    sink_->on_device_lost(guarded([this] {
         lost_.store(true);
         active_.store(false);
-        ui_->post([this, alive] {
-            const std::shared_ptr<bool> here = alive.lock();
-            if (here && *here) device_was_lost();
-        });
-    });
+        ui_->post(guarded([this] { device_was_lost(); }));
+    }));
 }
 
 SoftwareBackend::~SoftwareBackend() {
-    *alive_ = false;
+    // The sink no longer calls back; then whatever of ours still runs on another thread is waited for, and
+    // nothing of ours runs after this.
+    sink_->on_device_lost(nullptr);
+    {
+        std::unique_lock<std::mutex> lock(life_->mutex);
+        life_->alive = false;
+        life_->idle.wait(lock, [this] { return life_->running == 0; });
+    }
     if (reopen_timer_ != 0) clock_->cancel(reopen_timer_);
     quiet_callback();
+    std::lock_guard<std::mutex> sink_lock(sink_mutex_);
     if (open_) sink_->close();
+}
+
+std::function<void()> SoftwareBackend::guarded(std::function<void()> fn) {
+    std::shared_ptr<Life> life = life_;
+    return [life, fn] {
+        const LifeEntry entry(life);
+        if (entry.entered()) fn();
+    };
+}
+
+void SoftwareBackend::on_worker(std::function<void()> fn) {
+    if (worker_) worker_->post(guarded(std::move(fn)));
+    else fn();
 }
 
 void SoftwareBackend::set_listener(SoundBackendListener* listener) { listener_ = listener; }
@@ -91,69 +141,112 @@ void SoftwareBackend::update_active() {
 
 // ---- The stream ------------------------------------------------------------------------------------------------
 
-bool SoftwareBackend::open_stream() {
-    if (reopen_timer_ != 0) {
-        clock_->cancel(reopen_timer_);
-        reopen_timer_ = 0;
-    }
-    reopening_ = false;
-    if (!sink_->open(rate_, [this](std::int16_t* out, std::size_t frames) { pull(out, frames); })) {
+bool SoftwareBackend::open_stream(unsigned rate) {
+    bool was_open;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        quiet_callback();
+        if (reopen_timer_ != 0) {
+            clock_->cancel(reopen_timer_);
+            reopen_timer_ = 0;
+        }
+        reopening_ = false;
+        was_open = open_;
         open_ = false;
-        return false;
     }
-    open_ = true;
-    open_rate_ = rate_;
+    if (was_open) sink_->close();
+    const bool opened = sink_->open(rate, [this](std::int16_t* out, std::size_t frames) { pull(out, frames); });
+    std::lock_guard<std::mutex> lock(mutex_);
+    open_ = opened;
+    if (!opened) return false;
+    open_rate_ = rate;
     gone_ = false;
     lost_.store(false);
     return true;
 }
 
 void SoftwareBackend::close_stream() {
-    quiet_callback();
-    if (open_) sink_->close();
-    open_ = false;
+    bool was_open;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        quiet_callback();
+        was_open = open_;
+        open_ = false;
+    }
+    if (was_open) sink_->close();
 }
 
 void SoftwareBackend::post(void (SoundBackendListener::*event)()) {
-    std::weak_ptr<bool> alive = alive_;
-    ui_->post([this, alive, event] {
-        const std::shared_ptr<bool> here = alive.lock();
-        if (here && *here && listener_) (listener_->*event)();
-    });
+    ui_->post(guarded([this, event] {
+        if (listener_) (listener_->*event)();
+    }));
 }
 
 void SoftwareBackend::device_was_lost() {
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (reopening_ || !open_) return;
+        reopening_ = true;   // from here on nothing else opens or closes the stream on this account
+        post(&SoundBackendListener::device_lost);
+    }
+    {
+        // A load may have opened a new stream meanwhile (open_stream() ends reopening_): that one stays.
+        std::lock_guard<std::mutex> sink_lock(sink_mutex_);
+        bool still;
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            still = reopening_;
+        }
+        if (still) close_stream();
+    }
     std::lock_guard<std::mutex> lock(mutex_);
-    if (reopening_ || !open_) return;
-    post(&SoundBackendListener::device_lost);
-    close_stream();
+    if (!reopening_) return;
     lost_.store(true);
-    reopening_ = true;
     tries_ = 0;
-    std::weak_ptr<bool> alive = alive_;
-    reopen_timer_ = clock_->call_after(kReopenEveryMs, [this, alive] {
-        const std::shared_ptr<bool> here = alive.lock();
-        if (here && *here) try_reopen();
-    });
+    reopen_timer_ = clock_->call_after(kReopenEveryMs, guarded([this] { try_reopen(); }));
 }
 
 void SoftwareBackend::try_reopen() {
-    std::lock_guard<std::mutex> lock(mutex_);
-    reopen_timer_ = 0;
-    if (!reopening_) return;
-    ++tries_;
-    if (open_stream()) {
-        update_active();
-        post(&SoundBackendListener::device_back);
-        return;
+    unsigned rate;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        reopen_timer_ = 0;
+        if (!reopening_) return;
+        ++tries_;
+        rate = rate_;
     }
+    // The device is opened on the worker (SPEC-022); what came of it is told on the UI thread.
+    on_worker([this, rate] {
+        bool opened;
+        {
+            std::lock_guard<std::mutex> sink_lock(sink_mutex_);
+            {
+                std::lock_guard<std::mutex> lock(mutex_);
+                if (open_) return;   // a load opened it meanwhile
+            }
+            opened = sink_->open(rate, [this](std::int16_t* out, std::size_t frames) { pull(out, frames); });
+            std::lock_guard<std::mutex> lock(mutex_);
+            if (opened) {
+                open_ = true;
+                open_rate_ = rate;
+                gone_ = false;
+                lost_.store(false);
+                reopening_ = false;
+                update_active();
+                post(&SoundBackendListener::device_back);
+                return;
+            }
+        }
+        if (worker_) ui_->post(guarded([this] { reopen_failed(); }));
+        else reopen_failed();
+    });
+}
+
+void SoftwareBackend::reopen_failed() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (!reopening_) return;
     if (tries_ < kReopenTries) {
-        reopening_ = true;
-        std::weak_ptr<bool> alive = alive_;
-        reopen_timer_ = clock_->call_after(kReopenEveryMs, [this, alive] {
-            const std::shared_ptr<bool> here = alive.lock();
-            if (here && *here) try_reopen();
-        });
+        reopen_timer_ = clock_->call_after(kReopenEveryMs, guarded([this] { try_reopen(); }));
         return;
     }
     // It did not come back: the player pauses, and Play/Pause tries again (resume()).
@@ -177,24 +270,46 @@ void SoftwareBackend::clear_buffer() {
 
 bool SoftwareBackend::load(const std::vector<std::uint8_t>& tune, int subtune, const EngineSettings& settings,
                            std::string* why) {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::unique_lock<std::mutex> lock(mutex_);
+    const std::uint64_t ticket = ++ticket_;
     quiet_callback();
     loaded_ = false;
     started_ = false;
     paused_ = false;
+    loading_ = true;
     clear_buffer();
+    lock.unlock();
+
+    // The engine and the sink may take long: the lock is let go meanwhile (SPEC-022), and nothing else
+    // touches the engine while loading_ is set.
     std::string reason;
-    if (!engine_->load(tune, subtune, settings, &reason)) {
+    const bool engine_ok = engine_->load(tune, subtune, settings, &reason);
+    bool stream_ok = true;
+    if (engine_ok) {
+        std::lock_guard<std::mutex> sink_lock(sink_mutex_);
+        bool reopen;
+        {
+            std::lock_guard<std::mutex> state(mutex_);
+            reopen = ticket == ticket_ && (!open_ || open_rate_ != settings.sample_rate || gone_);
+        }
+        if (reopen) stream_ok = open_stream(settings.sample_rate);
+    }
+
+    lock.lock();
+    loading_ = false;   // loads come one at a time, from the player's worker
+    if (ticket != ticket_) {
+        // A stop() or another load() came meanwhile, and wins.
+        if (why) *why = "MSG_ENGINE_REFUSED";
+        return false;
+    }
+    if (!engine_ok) {
         if (why) *why = reason.empty() ? "MSG_ENGINE_REFUSED" : reason;
         return false;
     }
     rate_ = settings.sample_rate;
-    if (!open_ || open_rate_ != rate_ || gone_) {
-        if (open_) close_stream();
-        if (!open_stream()) {
-            if (why) *why = "MSG_NO_SOUND";
-            return false;
-        }
+    if (!stream_ok) {
+        if (why) *why = "MSG_NO_SOUND";
+        return false;
     }
     loaded_ = true;
     length_ = 0;
@@ -226,24 +341,43 @@ void SoftwareBackend::pause() {
 }
 
 void SoftwareBackend::resume() {
-    std::lock_guard<std::mutex> lock(mutex_);
-    if (loaded_ && (gone_ || !open_) && !reopening_) {
-        if (!open_stream()) {
+    unsigned rate;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        paused_ = false;
+        if (!loaded_ || !(gone_ || !open_) || reopening_ || resuming_) {
+            update_active();
+            return;
+        }
+        // The device has gone (SPEC-078): Play/Pause tries it again, on the worker (SPEC-022).
+        resuming_ = true;
+        rate = rate_;
+    }
+    on_worker([this, rate] {
+        std::lock_guard<std::mutex> sink_lock(sink_mutex_);
+        bool opened = true;
+        bool needed;
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            needed = gone_ || !open_;
+        }
+        if (needed) opened = open_stream(rate);
+        std::lock_guard<std::mutex> lock(mutex_);
+        resuming_ = false;
+        if (!opened) {
             lost_.store(true);
             gone_ = true;
-            std::weak_ptr<bool> alive = alive_;
-            ui_->post([this, alive] {
-                const std::shared_ptr<bool> here = alive.lock();
-                if (here && *here && listener_) listener_->failed("MSG_NO_SOUND");
-            });
+            ui_->post(guarded([this] {
+                if (listener_) listener_->failed("MSG_NO_SOUND");
+            }));
         }
-    }
-    paused_ = false;
-    update_active();
+        update_active();
+    });
 }
 
 void SoftwareBackend::stop() {
     std::lock_guard<std::mutex> lock(mutex_);
+    ++ticket_;
     quiet_callback();
     loaded_ = false;
     started_ = false;
@@ -305,7 +439,8 @@ bool SoftwareBackend::registers(int chip, std::uint8_t out[Engine::kRegisters]) 
 
 int SoftwareBackend::chips() const {
     std::lock_guard<std::mutex> lock(mutex_);
-    return loaded_ ? chips_ : engine_->chips();
+    // While a load gives the engine its tune, the engine is not asked.
+    return loaded_ || loading_ ? chips_ : engine_->chips();
 }
 
 BackendAbilities SoftwareBackend::can() const { return BackendAbilities{true, true, true, true}; }
@@ -334,7 +469,7 @@ void SoftwareBackend::apply_controls() {
 
 bool SoftwareBackend::render_step() {
     std::lock_guard<std::mutex> lock(mutex_);
-    if (!loaded_ || lost_.load()) return false;
+    if (!loaded_ || loading_ || lost_.load()) return false;
     apply_controls();
     // Underruns are not counted while skipping, nor for a second after (SPEC-066).
     counting_.store(!skip_ && (skip_off_ms_ < 0 || clock_->now_ms() - skip_off_ms_ >= kQuietAfterSkipMs));

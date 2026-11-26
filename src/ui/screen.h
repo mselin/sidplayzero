@@ -176,7 +176,6 @@ public:
     virtual Executor* quick() = 0;
     virtual Executor* fetch_worker() = 0;
     virtual Executor* long_worker() = 0;
-    virtual Executor* render() = 0;
     virtual Services& services() = 0;
 
     // SPEC-113: raises a notice of SPEC-116, its words filled in by spz::message_words().
@@ -200,20 +199,27 @@ public:
     virtual void when_no_overlay(std::function<void()> fn) = 0;
     // The state of a screen or a panel changed: draw everything again before the next frame.
     virtual void redraw() = 0;
+    // What on_action(), add_describer(), add_top_right() and every() return: given to remove(), it undoes
+    // what they added. Whoever adds something that holds an object (a screen that passes `this`) removes
+    // it before that object goes. 0 is no hook: what was refused.
+    using Hook = std::uint64_t;
     // For the areas whose actions are the same on every screen (the player's "play_pause", the volume's
     // "volume_up" ...): `handler` is called for every key whose action is `action`, wherever it is pressed.
-    virtual void on_action(const std::string& action, std::function<void(const KeyEvent&)> handler) = 0;
+    // An action has at most one handler: a second is refused (0), and the first stays.
+    virtual Hook on_action(const std::string& action, std::function<void(const KeyEvent&)> handler) = 0;
     // For what shows on every screen, not one screen's own: the player's `player` and the mini player's and
     // the job mark's `mini` (SPEC-109, SPEC-147, SPEC-254). `fn` fills its fields of every description.
-    virtual void add_describer(std::function<void(Json*)> fn) = 0;
+    virtual Hook add_describer(std::function<void(Json*)> fn) = 0;
     // The right part of the top line (SPEC-091): the mini player and the job mark. Each `text` added gives
     // its piece ("" for nothing); the frame joins the pieces, in the order added, draws them right-aligned in
     // a box named "mini", and gives the left part what is left. Asked at every drawing; call redraw() when
     // one changes. On the now-playing screen nothing is drawn there (SPEC-109).
-    virtual void add_top_right(std::function<std::string()> text) = 0;
+    virtual Hook add_top_right(std::function<std::string()> text) = 0;
     // Runs `fn` again and again, every `ms` of the clock, on the UI thread, while the app runs: for what is
     // shown that changes by itself (the elapsed time, the voice display, a job's progress).
-    virtual void every(Millis ms, std::function<void()> fn) = 0;
+    virtual Hook every(Millis ms, std::function<void()> fn) = 0;
+    // Undoes what a hook added; nothing if it is 0 or undone already. `fn` of every() may undo its own hook.
+    virtual void remove(Hook hook) = 0;
 };
 
 class Screen {

@@ -134,7 +134,9 @@ bool pactl(const std::vector<std::string>& arguments, std::string* said) {
     argv.insert(argv.end(), arguments.begin(), arguments.end());
     ChildOptions options;
     options.environment = kPlainLanguage;
-    options.timeout_ms = 2000;
+    // A volume key asks pactl three times at most (SPEC-076): each may take 600 ms, so that the whole job
+    // stays within the quick worker's 2 s (SPEC-022).
+    options.timeout_ms = 600;
     const ChildResult ran = run_child(program, argv, options);
     if (!ran.exited || ran.status != 0 || ran.stopped) return false;
     if (said) *said = ran.output;
