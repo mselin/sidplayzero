@@ -15,6 +15,7 @@
 #include <fstream>
 #include <functional>
 #include <map>
+#include <memory>
 #include <mutex>
 #include <string>
 #include <utility>
@@ -118,15 +119,15 @@ private:
 class Files : public spz::Files {
 public:
     struct Operation {
-        std::string what;   // "read", "write", "sync", "rename", "remove", "make_folders", "list", "info",
-                            // "free_bytes", "can_write"
+        std::string what;   // "read", "write", "append", "map", "sync", "rename", "remove", "make_folders",
+                            // "list", "info", "free_bytes", "block_size", "can_write"
         std::string path;
         std::string to;     // for rename
     };
 
     // The n-th operation from now (1 is the next) fails with `status` and does nothing.
     void fail_at(int n, FileStatus status = FileStatus::Failed) { fail_in_ = n; fail_status_ = status; }
-    // Every write, rename, remove and make_folders under `prefix` fails with NoAccess.
+    // Every write, append, rename, remove and make_folders under `prefix` fails with NoAccess.
     void make_read_only(const std::string& prefix) { read_only_.push_back(prefix); }
     // Undoes make_read_only for that prefix.
     void make_writable(const std::string& prefix) {
@@ -134,6 +135,8 @@ public:
     }
     // What free_bytes reports, in place of the real figure.
     void set_free_bytes(std::uint64_t bytes) { free_override_ = true; free_bytes_ = bytes; }
+    // What block_size reports. 4,096 unless the test says otherwise.
+    void set_block_size(std::uint64_t bytes) { block_size_ = bytes; }
     // Called before every operation, for a test that wants to do something in the middle of one.
     std::function<void(const Operation&)> before;
 
@@ -161,6 +164,30 @@ public:
         if (!out) return FileStatus::NoAccess;
         out.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
         return out ? FileStatus::Ok : FileStatus::Failed;
+    }
+    FileStatus append(const std::string& path, const std::vector<std::uint8_t>& bytes) override {
+        if (FileStatus s = begin({"append", path, ""}, true); s != FileStatus::Ok) return s;
+        std::ofstream out(path, std::ios::binary | std::ios::app);
+        if (!out) return FileStatus::NoAccess;
+        out.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+        return out ? FileStatus::Ok : FileStatus::Failed;
+    }
+    // In memory: the file is read whole into a buffer that the mapping keeps, so later changes to the
+    // file do not show in it, as with the real mapping of a file that is replaced by a rename.
+    FileStatus map(const std::string& path, std::size_t limit, MappedFile* out) override {
+        *out = MappedFile();
+        if (FileStatus s = begin({"map", path, ""}); s != FileStatus::Ok) return s;
+        std::error_code ec;
+        if (std::filesystem::is_directory(path, ec)) return FileStatus::Failed;
+        const auto size = std::filesystem::file_size(path, ec);
+        if (ec) return FileStatus::NotFound;
+        if (size > limit) return FileStatus::TooLarge;
+        std::ifstream in(path, std::ios::binary);
+        if (!in) return FileStatus::NoAccess;
+        auto buffer = std::make_shared<std::vector<std::uint8_t>>(std::istreambuf_iterator<char>(in),
+                                                                   std::istreambuf_iterator<char>());
+        *out = MappedFile(buffer->data(), buffer->size(), buffer);
+        return FileStatus::Ok;
     }
     FileStatus sync(const std::string& path) override { return begin({"sync", path, ""}); }
     FileStatus rename(const std::string& from, const std::string& to) override {
@@ -209,6 +236,11 @@ public:
         *out = space.available;
         return FileStatus::Ok;
     }
+    FileStatus block_size(const std::string& path, std::uint64_t* out) override {
+        if (FileStatus s = begin({"block_size", path, ""}); s != FileStatus::Ok) return s;
+        *out = block_size_;
+        return FileStatus::Ok;
+    }
     bool can_write(const std::string& folder) override {
         if (begin({"can_write", folder, ""}) != FileStatus::Ok) return false;
         return std::filesystem::is_directory(folder) && !is_read_only(folder);
@@ -238,11 +270,28 @@ private:
         if (std::filesystem::is_regular_file(status)) info.size = std::filesystem::file_size(path, ec);
         const auto time = std::filesystem::last_write_time(path, ec);
         if (!ec) {
-            const auto system = std::chrono::time_point_cast<std::chrono::seconds>(
-                time - std::filesystem::file_time_type::clock::now() + std::chrono::system_clock::now());
-            info.modified_s = system.time_since_epoch().count();
+            // To the nanosecond, the same each time it is asked (FIND-019).
+            const std::int64_t ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                time.time_since_epoch() + file_clock_offset()).count();
+            const std::int64_t s = ns >= 0 ? ns / 1000000000 : -((-ns + 999999999) / 1000000000);
+            info.modified_s = s;
+            info.modified_ns = static_cast<std::int32_t>(ns - s * 1000000000);
         }
         return info;
+    }
+    // How far the file system's clock's epoch is from 1970. C++17 has no exact conversion; the libraries'
+    // clocks differ by a whole number of seconds (none in libc++, 6,437,664,000 in libstdc++), so the
+    // difference is measured once and rounded to the second, and is then exact.
+    static std::filesystem::file_time_type::duration file_clock_offset() {
+        static const std::filesystem::file_time_type::duration offset = [] {
+            using namespace std::chrono;
+            const auto system = system_clock::now().time_since_epoch();
+            const auto file = std::filesystem::file_time_type::clock::now().time_since_epoch();
+            const auto seconds = duration_cast<std::chrono::seconds>(
+                duration_cast<milliseconds>(system) - duration_cast<milliseconds>(file) + milliseconds(500));
+            return duration_cast<std::filesystem::file_time_type::duration>(seconds);
+        }();
+        return offset;
     }
 
     int fail_in_ = 0;
@@ -250,6 +299,7 @@ private:
     std::vector<std::string> read_only_;
     bool free_override_ = false;
     std::uint64_t free_bytes_ = 0;
+    std::uint64_t block_size_ = 4096;
 };
 
 // ---------------------------------------------------------------------------------------------------

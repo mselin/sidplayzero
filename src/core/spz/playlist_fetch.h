@@ -11,6 +11,7 @@
 
 #include "spz/clock.h"
 #include "spz/files.h"
+#include "spz/notice_gate.h"
 #include "spz/playlist_resolve.h"
 #include "spz/playlists.h"
 #include "spz/types.h"
@@ -32,15 +33,8 @@ public:
     virtual void fetch_for_playlist(const std::string& hvsc_path, Done done) = 0;
 };
 
-// The gate of SPEC-152, which belongs to another part of the app: nothing uses the network until the
-// user has accepted HVSC's notice.
-class NoticeGate {
-public:
-    virtual ~NoticeGate() = default;
-    // Calls `go` at once if the notice has been accepted. If not, opens the notice panel: Enter accepts
-    // and calls `go`; ESC calls `cancelled`, and what was asked for does not happen.
-    virtual void pass(std::function<void()> go, std::function<void()> cancelled) = 0;
-};
+// The gate of SPEC-152 is NoticeGate (spz/notice_gate.h), which belongs to another part of the app:
+// nothing uses the network until the user has accepted HVSC's notice. This job uses its pass().
 
 struct FetchMissingState {
     bool running = false;

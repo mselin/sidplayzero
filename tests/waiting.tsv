@@ -6,15 +6,6 @@
 # A listed test is in order while it fails with those words. It is a fault when it fails otherwise, and
 # when it passes: a test that starts to pass is taken off this list in the same change.
 test	reason	words
-SPEC-203 every good fixture tune passes the check	code	not built yet
-SPEC-203 a tune that breaks any row of the table is refused with MSG_INVALID_SID	code	not built yet
-SPEC-203 the limits of the table are exact: 256 songs pass, a default song of 0 is read as 1	code	not built yet
-SPEC-203 a good tune cut short at any length is refused or passes, and never reads past its end	code	not built yet
-SPEC-203 SPEC-096 the header's fields are read as the fixture's header gives them	code	not built yet
-SPEC-098 SPEC-010 text from a tune's header is converted from Windows-1252, every printable character of it	code	not built yet
-SPEC-008 the MD5 function gives the test vectors of RFC 1321	code	not built yet
-SPEC-154 an HVSC path has HVSC's shape and alphabet and nothing else	code	not built yet
-SPEC-154 a collection path may have spaces and accents, and still no way out of the collection	code	not built yet
 SPEC-260 SPEC-111 the key step asks for 67 keys in turn, and a wrong answer puts the name asked for in key_codes_wrong	code	expect screen = selftest
 SPEC-260 SPEC-241 the key step with every key right writes key_codes_wrong = none and step_done	code	expect screen = selftest
 SPEC-260 in the key step a key is only recorded: TAB opens no Settings, and a held ESC still leaves	code	expect screen = selftest
@@ -409,9 +400,6 @@ SPEC-115 a key whose part is not built changes nothing and has no line in help; 
 SPEC-115 a key whose part is not built does nothing and has no label; one whose part is built has both	code	not built yet
 SPEC-115 a part is built exactly when its build switch is on, and several joined by | when any of them is	code	not built yet
 SPEC-115 the keys of brightness, screenshot, too-slow and restart give their actions only when their parts are built	code	not built yet
-SPEC-116 a message about a number has the number in the table's place for n or m	code	not built yet
-SPEC-116 a message about a path, a name, a step or a value begins with the table's words	code	not built yet
-SPEC-116 each message whose words the table gives whole has exactly those words	code	not built yet
 SPEC-110 with only a mouse and a touch screen in the list, the input set-up still creates no pointer	code	not built yet
 SPEC-110 against a made-up list with a mouse, a touch screen and two keyboards, the input set-up creates one keypad and nothing else	code	not built yet
 SPEC-110 SPEC-111 the CardputerZero's own keyboard is chosen before another device with letters, and the path in SIDPLAYZERO_KEYBOARD before both	code	not built yet
@@ -489,19 +477,6 @@ SPEC-147 the job mark's percentage is done as a share of the total, from 0 to 10
 SPEC-147 SPEC-254 a job's kind has the screen description's word for it	code	not built yet
 SPEC-147 Stop asks the running job to stop, and the job is running until it has ended itself	code	not built yet
 SPEC-144 SPEC-147 from step 7 on the complete download cannot be stopped [parts: download-all]	code	not built yet
-SPEC-142 the listing built from the fixture database has one record for each tune, in order, with every length to the millisecond	code	not built yet
-SPEC-142 a database with LF line endings gives the same listing as one with CRLF	code	not built yet
-SPEC-142 SPEC-042 the listing is in the browser's order whatever the order of the file: folders before tunes, names without regard to case	code	not built yet
-SPEC-142 lengths are read as m:ss and as m:ss.SSS, one for each subtune, and held in milliseconds	code	not built yet
-SPEC-142 a folder of the listing gives the folders and the tunes HVSC has there, each in order	code	not built yet
-SPEC-142 a tune is found by its path and by its MD5, and of two paths with one MD5 the first in order	code	not built yet
-SPEC-142 a database with one bad line in 200 is used, and one with two in 100 is refused	code	not built yet
-SPEC-142 a database in which no tune is found is refused	code	not built yet
-SPEC-142 SPEC-154 a line whose path is not an HVSC path is skipped and counted, and never gets into the listing	code	not built yet
-SPEC-142 an MD5 line with no path before it is skipped and counted	code	not built yet
-SPEC-142 the listing is built again when the database's size or modification time differs from what it records	code	not built yet
-SPEC-142 SPEC-202 a listing file that is cut short, or is not a listing, does not open	code	not built yet
-SPEC-142 SPEC-132 SPEC-154 the listing is written through a temporary file beside it, and nothing is written anywhere else	code	not built yet
 SPEC-151 starting with HVSC set up, reading what is known of it, and playing present tunes that the listing agrees with make no request	code	not built yet
 SPEC-151 with no collection at all, nothing is requested until Get HVSC is chosen	code	not built yet
 SPEC-151 SPEC-165 what a set-up and a fetch request is under url_files, and nothing else is asked of any server	code	not built yet
@@ -598,8 +573,6 @@ SPEC-150 a self-signed certificate is refused, even with the test's authority tr
 SPEC-150 a test build also accepts http://127.0.0.1	code	not built yet
 SPEC-150 a server whose certificate no trusted authority signed is refused, and nothing is written	code	not built yet
 SPEC-150 the request as the server received it names the app and its version as its user agent, and carries no cookie	code	not built yet
-SPEC-142 the app's reader builds the listing of the fixture database with the real file system: 11 tunes and 13 lengths	code	not built yet
-SPEC-142 a database with two bad lines in a hundred is refused by the real program too	code	not built yet
 SPEC-007 the real Unpacker starts 7z with an argument list and no shell: a name full of a shell's characters arrives as one argument [parts: download-all]	code	not built yet
 SPEC-149 SPEC-007 the app's reader of the real 7z's listing gives every entry of a good archive, and the check passes it [parts: download-all]	code	not built yet
 SPEC-007 the real Unpacker unpacks a good archive into the folder it is given [parts: download-all]	code	not built yet
@@ -679,7 +652,6 @@ SPEC-171 marking subtune 3 while it plays adds an entry with subtune=3, the brow
 SPEC-171 the star on the now-playing screen: an entry for the playing subtune, or one without a number while the default subtune plays [parts: playlists]	code	not built yet
 SPEC-171 Fav on the now-playing screen acts on the playing subtune's entry and leaves the tune's other entry alone [parts: playlists]	code	not built yet
 SPEC-154 SPEC-171 a tune of the user's own, with a space and an accent in its path, becomes a favourite and is still one after a restart [parts: playlists]	code	not built yet
-SPEC-021 building and opening the listing goes through Files: the fake counts each operation, and a fake that refuses leaves core no other way to the file	code	not built yet
 SPEC-172 SPEC-171 Add from the now-playing screen's More panel adds the playing subtune, Add in the browser adds the tune without a number, an entry that is already there gives MSG_ALREADY_THERE, and Fav and Add act on a search result	code	expect screen = browser
 SPEC-171 Fav marks a tune and unmarks it, marks subtune 3 while it plays, the star shows in the browser, Fav there adds a second entry, and a restart keeps the stars and the file	code	expect screen = browser
 SPEC-173 SPEC-069 a playlist of present, missing, present shows the missing entry with its mark, plays the first and the third, still holds three entries, and gives MSG_ENTRY_MISSING when the missing one is chosen	code	expect screen = browser

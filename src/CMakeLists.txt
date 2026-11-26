@@ -47,6 +47,7 @@ add_library(spz_platform STATIC
     platform/display.cpp
     platform/keyboard.cpp
     platform/real_clock.cpp
+    platform/real_files.cpp
 )
 target_include_directories(spz_platform PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 target_link_libraries(spz_platform PUBLIC spz_core lvgl)
