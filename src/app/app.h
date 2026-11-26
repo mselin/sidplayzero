@@ -32,6 +32,9 @@ struct Seams {
     Clock* clock = nullptr;
     Files* files = nullptr;
     Backlight* backlight = nullptr;          // null where the brightness cannot be changed
+    // SPEC-103: "libsidplayfp 3.1.2", "libresidfp 1.3.0", as the engine of `platform` reads them from the
+    // libraries. Empty while there is no engine: the About screen waits for it.
+    std::vector<std::string> libraries;
     // Part of "settled" (SPEC-253): whether a fake is holding back what a worker waits for.
     std::function<bool()> held;
 };

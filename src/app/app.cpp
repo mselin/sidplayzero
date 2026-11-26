@@ -67,6 +67,7 @@ App::App(const Seams& seams)
     : seams_(seams), notices_(seams.clock), keys_(seams.clock, [this] { return place(); }, this) {
     services_.files = seams.files;
     services_.backlight = seams.backlight;
+    services_.libraries = seams.libraries;
     services_.home = home_folder();
     services_.collection = collection_root();
     services_.collection_from_variable = root_from_variable();
