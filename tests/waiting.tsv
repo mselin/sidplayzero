@@ -254,11 +254,6 @@ SPEC-002 the packaged program, run under emulation, prints libsidplayfp 3.1.2 by
 SPEC-011 no file under a "GPL version 2 only" notice is among the sources compiled into the package's program	code	the engine is not built in
 SPEC-011 the installed notices file names each component that is built in, each with its licence's text, beside the installed LICENSE	code	the notices file lacks
 SPEC-005 readelf -d lists neither libpulse nor libasound, and the program holds their names, to load them when it runs	code	miniaudio is not built in
-SPEC-070 the underrun counter does not rise during the start of a subtune, a pause, a stop or the end of a song	code	not built yet
-SPEC-004 SPEC-072 with a stored speed measurement, each setting gives the expected engine for the one-, two- and three-SID fixture tunes	code	not built yet
-SPEC-072 the two speed factors are kept in the cache folder and read back as they were	code	not built yet
-SPEC-072 a new measurement is due when nothing is stored, and when the app's version or the sample rate has changed	code	not built yet
-SPEC-072 SPEC-202 stored factors that are cut short are thrown away: a new measurement is due	code	not built yet
 SPEC-025 the software backend's type is named only in its own files and in the one place that creates it	code	not built yet
 SPEC-080 the voice display: each bar is as high as its voice's frequency high byte divided by 8, lit while the gate bit is set, and it stands still while paused (tests/simulator/test_play.py compares the two dumps)	code	expect screen = browser
 SPEC-079 playing with the light engine already, underruns in three separate seconds raise the notice MSG_CANNOT_KEEP_UP, and the tune plays on as it was	code	expect screen = browser

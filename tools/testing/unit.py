@@ -42,8 +42,13 @@ def doctest_results(program, where, known, canaries, must_only, env=None):
                 failure = case.find("failure")
                 error = case.find("error")
                 bad = failure if failure is not None else error
-                seen[case.get("name")] = (FAILED, (bad.get("message", "") + "\n" + (bad.text or "")).strip()) \
+                outcome = (FAILED, (bad.get("message", "") + "\n" + (bad.text or "")).strip()) \
                     if bad is not None else (PASSED, "")
+                seen[case.get("name")] = outcome
+                # doctest writes each SUBCASE of a test as "test/subcase": the test passes only if all of them do.
+                parent = case.get("name", "").split("/", 1)[0]
+                if parent != case.get("name") and seen.get(parent, (PASSED, ""))[0] == PASSED:
+                    seen[parent] = outcome
         for test in known:
             if ASAN_CANARY in test.name:
                 continue
