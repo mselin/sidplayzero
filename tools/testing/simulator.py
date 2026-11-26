@@ -201,5 +201,6 @@ def level(variants=VARIANTS, extra_options=None, run_python=True):
             if run_python:
                 # The app's own Python tests run in both builds, so that what must hold with a part left
                 # out (SPEC-115) is checked too; each reads the build's parts from SPZ_SIM_BUILD.
-                results += python_results("tests/simulator", canaries, {"SPZ_SIM_BUILD": str(build)}, where)
+                results += python_results("tests/simulator", canaries, {"SPZ_SIM_BUILD": str(build)}, where,
+                                          must_only=folder.endswith("-must"))
     return results

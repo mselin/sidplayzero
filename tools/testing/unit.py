@@ -109,7 +109,7 @@ class _Collector(unittest.TestResult):
             self.outcomes.append((name, PASSED, ""))
 
 
-def python_results(folder, canaries, env, where=""):
+def python_results(folder, canaries, env, where="", must_only=False):
     """Runs the unittest files of a folder in this process. A test's name is its docstring's first line."""
     old = dict(os.environ)
     os.environ.update(env)
@@ -139,7 +139,16 @@ def python_results(folder, canaries, env, where=""):
             wanted.run(collector)
         finally:
             sys.stdout = stream
-        return [Result(name, outcome, message, where) for name, outcome, message in collector.outcomes]
+        results = []
+        for name, outcome, message in collector.outcomes:
+            parts = sources.parts_of(name)
+            # A test of a part runs only in a build that has it (SPEC-115): none has usbsid, and the Must-only
+            # build has no part at all.
+            if parts and (must_only or "usbsid" in parts):
+                results.append(Result(name, SKIPPED, "needs the part " + ", ".join(parts), where))
+            else:
+                results.append(Result(name, outcome, message, where))
+        return results
     finally:
         os.environ.clear()
         os.environ.update(old)

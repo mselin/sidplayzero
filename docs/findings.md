@@ -15,6 +15,17 @@ brief the project started from, so the findings below are raised against that br
 
 ## Open
 
+### FIND-025 A volume key that fails right after one that worked has its notice wait three seconds
+- Phase: 5, implementation
+- Observed: SPEC-076's test presses a volume key, makes the system's volume fail, presses again, and expects
+  `MSG_VOLUME_FAILED` at once. But `MSG_VOLUME` is still showing, and SPEC-113 has a notice with another
+  identifier wait its turn, up to 3 s.
+- Concerns: SPEC-076, SPEC-113
+- Resolution (proposed): the two volume notices, `MSG_VOLUME` and `MSG_VOLUME_FAILED`, replace each other at
+  once, as a notice replaces one with its own identifier, so the answer to a key is always the one in view.
+  The test then holds as written.
+- Status: open; a change of behaviour, for the owner to decide
+
 ### FIND-007 USBSID-Pico needs a newer engine library than the device's system has
 - Phase: 1, requirements
 - Observed: USBSID-Pico support came in libsidplayfp 2.16.0. Debian trixie, which the device runs, has 2.12.0.
