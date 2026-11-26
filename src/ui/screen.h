@@ -86,6 +86,7 @@ struct Entry;
 namespace spz::ui {
 
 class Panel;
+class SelfTestView;
 
 // The objects of `core` and `platform` the screens share, set by the app's composition (src/app/
 // composition*.cpp), each by the file of its area. A pointer is null while what it points at is not there
@@ -147,6 +148,10 @@ struct Services {
     // Counts changes to the playlists that come by themselves (a tune of "Fetch missing" arrived): a screen
     // that shows them draws again when it changes.
     int lists_changes = 0;
+
+    // ---- the self-test (SPEC-260): src/app/compose_selftest.cpp
+    // What the self-test screen shows; null when no device test asks for a step, and the screen cannot open.
+    SelfTestView* selftest = nullptr;
 };
 
 // What a screen or a panel may ask of the app's frame.

@@ -80,7 +80,8 @@ def parts_built():
     """The parts of the build under test, from its SIDPLAYZERO_PARTS (SPEC-115): "all" is every part but
     usbsid, "must" is none, else a list of names."""
     asked = "all"
-    cache = BUILD / "CMakeCache.txt"
+    # Read at each call: the level runs these tests for two builds in one process.
+    cache = Path(os.environ.get("SPZ_SIM_BUILD", ROOT / "build" / "simulator")) / "CMakeCache.txt"
     if cache.exists():
         found = re.search(r"(?m)^SIDPLAYZERO_PARTS:[A-Z]+=(.*)$", cache.read_text(encoding="utf-8", errors="replace"))
         if found:

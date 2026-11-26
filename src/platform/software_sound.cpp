@@ -19,7 +19,16 @@ SoftwareSound::~SoftwareSound() { stop_render_thread(); }
 
 SoundBackend* SoftwareSound::backend() { return &impl_->backend; }
 
-bool SoftwareSound::render_step() { return impl_->backend.render_step(); }
+bool SoftwareSound::render_step() { return timed_step(); }
+
+bool SoftwareSound::timed_step() {
+    const auto began = std::chrono::steady_clock::now();
+    const bool rendered = impl_->backend.render_step();
+    if (rendered) {
+        render_ns_ += std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - began).count();
+    }
+    return rendered;
+}
 
 std::size_t SoftwareSound::buffered() const { return impl_->backend.buffered(); }
 
@@ -27,7 +36,7 @@ void SoftwareSound::start_render_thread() {
     if (running_.exchange(true)) return;
     thread_ = std::thread([this] {
         while (running_.load()) {
-            if (!impl_->backend.render_step()) std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            if (!timed_step()) std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
     });
 }

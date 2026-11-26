@@ -11,6 +11,7 @@
 #include "ui/playing_screen.h"
 #include "ui/playlist_screen.h"
 #include "ui/playlists_screen.h"
+#include "ui/selftest_screen.h"
 #include "ui/settings_screen.h"
 
 namespace spz::app {
@@ -30,9 +31,10 @@ void add_screens(ScreenList* list) {
     list->add("playing", maker<ui::PlayingScreen>());
     list->add("settings", maker<ui::SettingsScreen>());
     list->add("about", maker<ui::AboutScreen>());
-    list->add("playlists", maker<ui::PlaylistsScreen>()); list->add("playlist", maker<ui::PlaylistScreen>());
-    // To come, from the areas that build them, one line each: "search", "playlists", "playlist", "hvsc",
-    // "selftest".
+    list->add("playlists", maker<ui::PlaylistsScreen>());
+    list->add("playlist", maker<ui::PlaylistScreen>());
+    list->add("selftest", maker<ui::SelfTestScreen>());
+    // To come, from the areas that build them, one line each: "search", "hvsc".
 }
 
 }  // namespace spz::app

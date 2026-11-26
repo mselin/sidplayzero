@@ -118,6 +118,11 @@ def python_results(folder, canaries, env, where="", must_only=False):
         for extra in (str(ROOT / folder), str(ROOT / "tools")):   # the tests' own helpers, and the tools
             if extra not in sys.path:
                 sys.path.insert(0, extra)
+        # Helpers the tests import (such as test_keys_support) are read afresh for each run: the simulator
+        # level runs a folder's tests once for each build, and a helper reads its build when it is imported.
+        for name, module in list(sys.modules.items()):
+            if str(getattr(module, "__file__", "") or "").startswith(str(ROOT / folder) + os.sep):
+                del sys.modules[name]
         for path in sorted((ROOT / folder).glob("test_*.py")):
             spec = importlib.util.spec_from_file_location(f"spz_{folder.replace('/', '_')}_{path.stem}", path)
             module = importlib.util.module_from_spec(spec)

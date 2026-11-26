@@ -7,6 +7,7 @@
 #include <csignal>
 #include <cstdio>
 #include <cstring>
+#include <map>
 #include <memory>
 #include <string>
 
@@ -113,7 +114,8 @@ int main(int argc, char** argv) {
         return 1;
     }
     spz::platform::Keyboard keyboard;
-    if (!keyboard.open(&why)) std::fprintf(stderr, "sidplayzero: %s\n", why.c_str());
+    const bool keyboard_open = keyboard.open(&why);
+    if (!keyboard_open) std::fprintf(stderr, "sidplayzero: %s\n", why.c_str());
 
     struct sigaction action;
     std::memset(&action, 0, sizeof action);
@@ -139,14 +141,25 @@ int main(int argc, char** argv) {
         spz::platform::stop_all_children();
     };
     seams.start_ms = spz::app::ms_since_process_start();
+    if (spz::platform::default_display() == spz::platform::DisplayKind::Framebuffer) {
+        // SPEC-241: what the app was allowed to open, and what miniaudio opened.
+        seams.device_facts = [&backlight, &sink, keyboard_open] {
+            std::map<std::string, std::string> facts = {
+                {"framebuffer", "yes"},
+                {"keyboard", keyboard_open ? "yes" : "no"},
+                {"backlight_writable", backlight.can_change() ? "yes" : "no"},
+            };
+            const std::string backend = sink.backend_name();
+            if (!backend.empty()) facts["audio_backend"] = backend;
+            return facts;
+        };
+    }
 
     // Steps 2, 4 and 5.
     std::unique_ptr<spz::app::App> app(new spz::app::App(seams));
     app->pump();
     lv_timer_handler();
     lv_refr_now(nullptr);
-    spz::app::record_for_selftest("start_ms", std::to_string(spz::app::ms_since_process_start()));
-    spz::app::record_for_selftest("app_version", spz::app_version());
 
     while (!app->leaving()) {
         if (g_signals > 0) app->leave();
@@ -157,12 +170,10 @@ int main(int argc, char** argv) {
         usleep(5000);
     }
     // SPEC-201. A second signal ends the process at once.
-    const std::int64_t asked = clock.now_ms();
     signal(SIGTERM, SIG_DFL);
     signal(SIGINT, SIG_DFL);
     app->shut_down();
     app.reset();
-    spz::app::record_for_selftest("exit_ms", std::to_string(clock.now_ms() - asked));
     lock.release();
     return 0;
 }

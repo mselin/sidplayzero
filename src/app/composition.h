@@ -192,6 +192,14 @@ private:
     std::shared_ptr<ListsEvents> lists_events_;
     std::unique_ptr<FetchMissing> fetch_missing_;
 
+    // ---- the self-test and the measurements: compose_selftest.cpp -------------------------------------------
+    void make_selftest();             // the request file (SPEC-260), the results file, the job mark of the benchmark
+    void selftest_at_start();         // in the ready job: the step asked for begins
+    void selftest_at_exit();          // in stop(): the keys of SPEC-241 that belong to no step
+    void device_measurements();       // SPEC-241: what only the device can say
+    struct SelfTest;                  // ui::SelfTestView: the steps, the key script, the measurements they take
+    std::shared_ptr<SelfTest> selftest_;
+
     // Runs `fn` on the UI thread, unless the app has begun to stop by then. The composition outlives the
     // workers (the App stops them before it goes), so a job may hold `this`.
     void on_ui(std::function<void()> fn);

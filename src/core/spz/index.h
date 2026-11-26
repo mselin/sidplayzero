@@ -68,6 +68,11 @@ struct IndexRun {
     bool complete = false;   // false: `keep_going` said stop, and the file holds what was last saved
     bool rebuilt = false;    // the index was built from nothing, not only brought up to date
     std::string notice;      // "MSG_INDEX_READY" when a build for User or AfterSetup is complete, else ""
+    // For the measurements of SPEC-240 and SPEC-241, by the index's clock: how long each step took, and how
+    // many tunes' files step two read.
+    Millis step_one_ms = -1;   // -1: step one did not run
+    Millis step_two_ms = 0;
+    int tunes_read = 0;
 };
 
 class Index {
