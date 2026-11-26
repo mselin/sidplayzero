@@ -7,6 +7,7 @@
 
 #include <atomic>
 #include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <thread>
 
@@ -34,6 +35,9 @@ public:
     bool render_step();
     // Frames in the ring buffer now.
     std::size_t buffered() const;
+    // The time spent in turns of the render loop that rendered something, in nanoseconds of the real clock,
+    // over the backend's whole life: what the self-test's render load is made of (SPEC-241). Any thread.
+    std::int64_t render_ns() const { return render_ns_.load(); }
 
     // The render thread (SPEC-022): turns the render loop again and again, and waits a millisecond
     // whenever there is nothing to render. Never touches LVGL or files.
@@ -44,6 +48,8 @@ private:
     struct Impl;
     std::unique_ptr<Impl> impl_;
     std::atomic<bool> running_{false};
+    std::atomic<std::int64_t> render_ns_{0};
+    bool timed_step();
     std::thread thread_;
 };
 

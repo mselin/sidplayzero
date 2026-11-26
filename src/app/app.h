@@ -59,6 +59,10 @@ struct Seams {
     std::function<bool(std::thread::id)> held;
     // SPEC-201: ends the outside world's waits at exit: requests in flight, `7z` and its children.
     std::function<void()> at_exit;
+    // SPEC-241: what only the device's own program can say, as measurements by their keys: `framebuffer`,
+    // `keyboard`, `backlight_writable`, and `audio_backend` while a stream is open. Null off the device (the
+    // simulator, a window build), whose runs write none of the keys that need the device.
+    std::function<std::map<std::string, std::string>()> device_facts;
     // The test options of SPEC-253.
     bool has_seed = false;
     std::uint64_t seed = 0;

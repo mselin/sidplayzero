@@ -84,11 +84,4 @@ long long ms_since_process_start() {
     return static_cast<long long>((up - started) * 1000.0);
 }
 
-void record_for_selftest(const std::string& key, const std::string& value) {
-    const std::string folder = state_folder();
-    if (!std::filesystem::exists(folder + "/selftest.request")) return;
-    std::ofstream results(folder + "/selftest.results", std::ios::app);
-    results << key << " = " << value << "\n";
-}
-
 }  // namespace spz::app

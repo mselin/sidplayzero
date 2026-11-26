@@ -6,11 +6,7 @@
 # A listed test is in order while it fails with those words. It is a fault when it fails otherwise, and
 # when it passes: a test that starts to pass is taken off this list in the same change.
 test	reason	words
-SPEC-260 SPEC-111 the key step asks for 67 keys in turn, and a wrong answer puts the name asked for in key_codes_wrong	code	expect screen = selftest
-SPEC-260 SPEC-241 the key step with every key right writes key_codes_wrong = none and step_done	code	expect screen = selftest
-SPEC-260 in the key step a key is only recorded: TAB opens no Settings, and a held ESC still leaves	code	expect screen = selftest
-SPEC-260 the benchmark step plays the set on the ordinary screens while the key script presses keys, then ends on the self-test screen with its keys written	code	the notice MSG_SELFTEST did not show
-SPEC-260 with the request none, two starts and exits leave two start_ms and two exit_ms lines and no step's keys	code	selftest.results was not written
+SPEC-260 the benchmark step plays the set on the ordinary screens while the key script presses keys, then ends on the self-test screen with its keys written	code	the browser and Search did not show in turn
 SPEC-223 SPEC-255 the manifest has three to six screenshots of exactly 320×170, each one of the approved images	images	needs three to six approved images
 SPEC-223 the store's own check, at its pinned commit, reports no error on what the manifest publishes	images	screenshots is required
 SPEC-095 the browser's keys 6, 7 and 8 are "Lists", "Fav" and "Add"; "Fav" and "Add" have no label, and do nothing, when a folder is highlighted	code	expect panel.id = pick-playlist

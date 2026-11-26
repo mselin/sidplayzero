@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// What the program needs before its screens: the folders it starts from, the lock of SPEC-200, and the start
-// and exit times a device test asks for (SPEC-260). In small, until the areas of SPEC-040, SPEC-134 and
-// SPEC-200 take them over.
+// What the program needs before its screens: the folders it starts from and the lock of SPEC-200. In
+// small, until the areas of SPEC-040, SPEC-134 and SPEC-200 take them over. What a device test asks for
+// (SPEC-260) is the composition's: src/app/compose_selftest.cpp.
 #pragma once
 
 #include <string>
@@ -30,9 +30,5 @@ private:
 
 // Milliseconds since this process was started, as the system records it (SPEC-200's start time).
 long long ms_since_process_start();
-
-// SPEC-260, in small: while a request file is in the state folder, start and exit times are appended to
-// the results file beside it.
-void record_for_selftest(const std::string& key, const std::string& value);
 
 }  // namespace spz::app

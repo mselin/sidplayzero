@@ -553,6 +553,7 @@ IndexRun Index::build(IndexReason reason, const std::function<bool()>& keep_goin
         was_complete = complete_;
     }
     bool dirty = false;
+    const Millis began = clock_ ? clock_->now_ms() : 0;
     if (!fits || reason == IndexReason::User) {
         // Step one: a record for every tune of the listing, without opening any.
         std::vector<IndexRecord> fresh;
@@ -577,7 +578,9 @@ IndexRun Index::build(IndexReason reason, const std::function<bool()>& keep_goin
         was_complete = false;
         run.rebuilt = true;
         save();
+        run.step_one_ms = clock_ ? clock_->now_ms() - began : 0;
     }
+    const Millis step_two_began = clock_ ? clock_->now_ms() : 0;
 
     // Step two: the folders of the root that are on the device.
     std::vector<OnDevice> device;
@@ -591,6 +594,7 @@ IndexRun Index::build(IndexReason reason, const std::function<bool()>& keep_goin
         for (std::size_t start = 0; start < total; start += kBatchFiles) {
             const std::size_t end = std::min(total, start + static_cast<std::size_t>(kBatchFiles));
             for (std::size_t k = start; k < end; ++k) put(read_record(to_read[k]), &cursor);
+            run.tunes_read += static_cast<int>(end - start);
             since_save += static_cast<int>(end - start);
             percent_ = std::min(99, static_cast<int>(end * 100 / total));
             if (since_save >= kSaveEvery) {
@@ -615,6 +619,7 @@ IndexRun Index::build(IndexReason reason, const std::function<bool()>& keep_goin
     }
     percent_ = 100;
     if (dirty || !was_complete) save();
+    run.step_two_ms = clock_ ? clock_->now_ms() - step_two_began : 0;
     run.complete = true;
     if (reason == IndexReason::User || reason == IndexReason::AfterSetup) run.notice = "MSG_INDEX_READY";
     return run;

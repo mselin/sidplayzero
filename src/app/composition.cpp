@@ -26,6 +26,7 @@ Composition::Composition(App* app, const Seams& seams) : app_(app), seams_(seams
     // SPEC-200, step 2, and what everything else is made from.
     make_keep();
     make_hvsc();
+    make_selftest();
     make_browse();
     make_search();
     make_lists();
@@ -60,6 +61,7 @@ void Composition::start() {
 void Composition::stop() {
     // SPEC-201: stop the sound backend, which silences it; the stream closes when the backend goes, once
     // the workers that may still hold it have stopped.
+    selftest_at_exit();
     if (player_) player_->stop();
     if (sound_) sound_->stop_render_thread();
     running_ = false;

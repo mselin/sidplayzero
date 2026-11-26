@@ -90,6 +90,7 @@ add_executable(sidplayzero
     app/compose_play.cpp
     app/compose_search.cpp
     app/compose_lists.cpp
+    app/compose_selftest.cpp
 )
 target_link_libraries(sidplayzero PRIVATE spz_ui spz_platform Threads::Threads)
 target_compile_options(sidplayzero PRIVATE ${SPZ_WARNINGS})

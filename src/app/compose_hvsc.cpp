@@ -230,6 +230,7 @@ void Composition::hvsc_at_start() {
             cleanup_at_start();
             search_at_start();
             measure_engines();
+            selftest_at_start();
         });
     });
 }
