@@ -2,8 +2,8 @@
 
 | | |
 |---|---|
-| Status | **Approved by the owner on 25 November 2026**, after independent review in which every item was closed. This is the Phase 2 artifact |
-| Date | 25 November 2026 |
+| Status | **Approved by the owner on 25 November 2026**, after independent review in which every item was closed. This is the Phase 2 artifact. Changed for FIND-015 to FIND-024, found in Phases 3 and 4; the owner accepted those of Phase 4 on 26 November 2026 |
+| Date | 25 November 2026; changed 26 November 2026 |
 | Derives from | [`requirements.md`](requirements.md), approved 25 November 2026, with the changes made for FIND-006 and FIND-010 to FIND-013 |
 | Part of it | [`keymap.tsv`](keymap.tsv), the key map (SPEC-094) |
 | Review | [`spec-review.md`](spec-review.md): 67 items over four passes, all closed |
@@ -95,8 +95,9 @@ The package does not depend on Debian's `libsidplayfp6`.
 SPEC-072.
 - Covers: REQ-051
 - Priority: Must
-- Oracle: with a stored speed measurement, each setting gives the expected engine for one-, two- and
-  three-SID fixture tunes (SPEC-072's table); the engine's name is in the screen description of the
+- Oracle: with a stored speed measurement (a `speed.ini` in the cache folder, SPEC-072), each setting gives
+  the expected engine for one-, two- and three-SID fixture tunes (SPEC-072's table), and with none `auto`
+  gives sidlite; the engine's name is in the screen description of the
   now-playing screen.
 - Level: host-unit, simulator
 - Evidence (R2, R3): on an x86-64 host the benchmark program of SPEC-262 gave, for reSIDfp, 15 to 24 times
@@ -152,8 +153,8 @@ into the listing, and a search is one pass over the index (SPEC-162). The MD5 fu
 SPEC-131). A playlist is an M3U8 file with extra comment lines (SPEC-170).
 - Covers: REQ-070, REQ-107
 - Priority: Must
-- Oracle: files written by the app are valid UTF-8 text; a file written by hand from the descriptions in
-  SPEC-130 and SPEC-170 loads.
+- Oracle: files written by the app are valid UTF-8 text; a file written by hand from the description in
+  SPEC-130 loads. Part `playlists`: the same for SPEC-170's playlist files (FIND-022).
 - Level: host-unit
 
 **SPEC-010 Fonts are built into the program.** Text is drawn with bitmap fonts generated ahead of time from
@@ -208,7 +209,7 @@ implementation in `platform` and a fake for the tests.
 | `AudioSink` | Opens a stream at a rate, pulls samples through a callback, reports loss of the device | Pulls on demand under the test's control, records what it got, can refuse to open or drop the device |
 | `SoundBackend` | SPEC-025 | A recorder that reports song ends when told |
 | `Clock` | Monotonic time, timers and sleeping | Time that moves only when the test says |
-| `Files` | Reads, writes, lists, renames, syncs, reports free space and modification times | A folder of the test's own, with delays and failures that can be injected at any operation |
+| `Files` | Reads, writes, appends, maps a file read-only, lists, renames, syncs, reports free space, the file system's block size and modification times to the nanosecond (FIND-019) | A folder of the test's own, with delays and failures that can be injected at any operation |
 | `HttpClient` | Fetches a URL to a file, with progress, range and cancel; reports the kind of failure | A table of URLs with canned answers and failures, and a log of requests |
 | `Unpacker` | Says whether it is available; lists and unpacks an archive into a folder; can be stopped | A scripted stand-in |
 | `SystemVolume` | Reads and changes the system volume and mute | A recorder holding a level |
@@ -242,8 +243,9 @@ buffer and atomic counters.
 - Priority: Must
 - Oracle: with a fake `HttpClient` that stalls a download for 30 s, the simulator opens a folder within
   300 ms‡ and a volume key reaches the fake `SystemVolume` within 100 ms‡ of the fake clock; with the index
-  build held by a slow `Files` fake and a set-up download stalled, Enter on an absent tune makes its request
-  at once; with a `Files` fake that takes 2 s to list a folder, a key is still answered within 100 ms‡; the integration level's
+  build held by a slow `Files` fake, Enter on an absent tune makes its request at once, and so it does, part
+  `releases`, while a release update's download is stalled; with a `Files` fake that takes 2 s to list a
+  folder, Tab, Down and ESC are still answered within 100 ms‡ (FIND-020); the integration level's
   ThreadSanitizer run of the simulator tests gives no report; a test build makes the audio callback abort
   if it allocates or takes a lock, and the integration tests run without that abort.
 - Level: simulator, host-integration
@@ -290,10 +292,13 @@ the collection, the queue, playlists, search or the screens names the software b
 first of these that is set: the environment variable `HVSC_BASE`, the setting `collection`, `~/C64Music`. A
 leading `~` is replaced by the home folder. The root does not have to exist. When `HVSC_BASE` is set, the
 Settings row for the collection shows its value with "(from HVSC_BASE)" and cannot be changed.
+An empty `HVSC_BASE` counts as unset, and a `~` at the start of the variable is replaced as it is in the
+setting (FIND-024).
 - Covers: REQ-001
 - Priority: Must
 - Oracle: three cases (variable set; variable unset and setting set; neither) each give the expected root;
-  changing the setting while the simulator runs makes the browser show the new root at once; with the
+  changing the setting while the program runs with `HVSC_BASE` unset makes the browser show the new root at
+  once; with the
   variable set, Enter on the row changes nothing.
 - Level: host-unit, simulator
 
@@ -312,7 +317,9 @@ shows no entries and the notice `MSG_FOLDER_UNREADABLE`.
 - Level: host-unit
 
 **SPEC-042 Order.** Folders come before tunes. Within each group the order is by name, compared without regard
-to the case of ASCII letters, with ties broken by plain byte order.
+to the case of ASCII letters, with ties broken by plain byte order. Letters are compared as lower case, so
+`_ [ ] ^` and the backtick come before letters: `Ace_2.sid` before `Aces.sid` (FIND-018). The listing, the
+index and search results use this same order.
 - Covers: REQ-002
 - Priority: Must
 - Oracle: the entries of a test folder come out in an order written down by hand in the test.
@@ -346,7 +353,8 @@ and a short ESC do nothing.
 number of rows on the screen. Home and End go to the first and last entry. The app makes its own key repeat
 and ignores the keyboard's. Repeating belongs to the action, not the key: moving in a list (`up`, `down`,
 `page_up`, `page_down`), moving the cursor and deleting in a text field, and stepping a value with Left or
-Right repeat after 400 ms, then 25 times a second, while the key is held. No other action repeats, so Up and
+Right repeat while the key is held: the first repeat comes 440 ms‡ after the press, and then one every 40 ms
+(25 a second) (FIND-017). No other action repeats, so Up and
 Down on the now-playing screen, where they step through tunes, act once for each press. The top line shows the
 highlight's position as "n/total".
 - Covers: REQ-005, REQ-003
@@ -360,6 +368,7 @@ highlight's position as "n/total".
 rested on it for 150 ms‡. For a present tune: title, author and the length of its default subtune, which the
 quick worker reads from the file: the header, and the file's MD5 for the length (SPEC-063). For an absent tune, whose header is not known: "not on device", the
 number of subtunes and the length of the first, from the listing. For a folder: nothing.
+Times are cut down to the second, never rounded: 0:03.500 shows as 0:03, as 3:55.594 shows as 3:55 (FIND-024).
 - Covers: REQ-004
 - Priority: Should
 - Oracle: highlighting the fixture tune "Commando Test" gives a screen description whose `detail` holds its
@@ -381,6 +390,8 @@ by the **empty screen**: it says no collection was found, names the root, and of
 which starts SPEC-140, and a line telling the user to copy a collection into that folder. While this screen
 shows, the quick worker looks at the root every 5 s‡, and the browser replaces the screen as soon as the root
 has an entry and no panel or help is open.
+A root that holds only HVSC's documents holds entries, its absent tunes; a folder that holds only files that
+are not entries shows "(empty)" (FIND-024).
 - Covers: REQ-007
 - Priority: Must
 - Oracle: started with an empty home folder, the screen description says `screen = empty`, holds the root's
@@ -643,8 +654,9 @@ with `--sidlite` for the light engine, `-f44100` for the other rate, and `-oN` f
 **SPEC-072 Choosing the engine automatically.** When the app first runs, and again whenever its version or the
 setting `sample_rate` has changed, the long worker measures the two engines once the browser has been showing
 for 3 s: for each engine it renders the built-in one-SID fixture tune for 0.5 s without timing, then three
-runs of 1 s each, timed with the real clock, and keeps the slowest run. The two **speed factors** (seconds of
-sound per second taken) are stored in the cache folder. With `engine = auto`, a tune that uses *n* SID chips
+runs of 1 s each, timed through the `Clock` seam (the real clock on the device), and keeps the slowest run.
+The two **speed factors** (seconds of sound per second taken) are stored in the cache folder as `speed.ini`,
+two lines `accurate = F` and `light = F`, with the version and `sample_rate` they were measured for. With `engine = auto`, a tune that uses *n* SID chips
 is played with reSIDfp when its factor divided by *n* is at least 2.5‡, and with sidlite otherwise. Until the
 measurement is done, `auto` means sidlite.
 - Covers: REQ-050, REQ-051
@@ -895,7 +907,8 @@ releasing it does not change the subtune.
 - Priority: Must
 - Oracle: with the fixture "Commando Test" playing, the screen description's `player` and `lines` equal the
   values in the fixture's header and database entry, with the subtune as "1 of 1"; for each row of the state
-  table, a script brings the player to that state and compares the lines; "Stop" leaves the player Idle with
+  table but Loading, a script brings the player to that state and compares the lines (Loading, which settling
+  passes at once, is checked at the unit level); "Stop" leaves the player Idle with
   "Stopped". Part `voices`: with voice 2 muted and the filter off, line 6 shows both.
 - Level: simulator
 
@@ -932,7 +945,7 @@ long for its box ends in "…". On the now-playing screen, lines 1 to 3 scroll s
 - TAB, Up and Down do nothing in a prompt. In the Search field, Down moves to the results.
 - A field holds at most 64 characters in Search, 40 for a playlist's name, 255 for a path or an address, and
   5 for a length. A key that would exceed the limit does nothing.
-
+A prompt opens with the cursor at the end of the text it holds (FIND-024).
 - Covers: REQ-064
 - Priority: Must
 - Oracle: sending the key codes for "hub 1985" puts exactly that text in the Search field; the codes for F,
@@ -979,6 +992,7 @@ Keys 4, 5 and 8 are "Back", "HVSC" and "About". The rows, in order, each always 
 | Address for single files | `url_files` | Always |
 | Address for the complete archive | `url_archive` | `download-all` |
 
+Stepping a value with Left or Right stops at the first and last values; it does not wrap (FIND-024).
 - Covers: REQ-070, REQ-051, REQ-052, REQ-083, REQ-018, REQ-060
 - Priority: Must
 - Oracle: a simulator script changes every row that is present, by Left, Right or the prompt as its kind
@@ -1027,6 +1041,7 @@ with SPEC-152's notice, followed, once HVSC is set up, by the copyright section 
 the nearest multiple of 10 % above or below, never below 10 % or above 100 %, and the notice `MSG_BRIGHTNESS`
 shows the level. When `Backlight` cannot change it, the notice is `MSG_BRIGHTNESS_UNAVAILABLE`. The real
 `Backlight` uses the first folder under `/sys/class/backlight` whose `brightness` file the app may write.
+Up at 100 % asks for nothing, as down at 10 % does (FIND-024).
 - Covers: REQ-129
 - Priority: Should
 - Oracle: with the fake at 50 %, up asks for 60 % and down for 40 %; at 10 % down asks for nothing; with a
@@ -1035,7 +1050,8 @@ shows the level. When `Backlight` cannot change it, the notice is `MSG_BRIGHTNES
 - Level: host-unit, simulator, device
 
 **SPEC-106 Leaving.** A press of ESC released within 500 ms‡ is "back", and acts when it is released. When
-ESC has been held for 500 ms‡ the notice `MSG_HOLD_TO_LEAVE` appears. At 1,000 ms‡ the app begins SPEC-201's
+ESC has been held for 500 ms‡ the notice `MSG_HOLD_TO_LEAVE` appears at once, in place of any notice showing,
+whatever is waiting (FIND-021). At 1,000 ms‡ the app begins SPEC-201's
 exit. Releasing between the two removes the notice and does nothing else.
 - Covers: REQ-062
 - Priority: Must
@@ -1049,6 +1065,8 @@ the key map; then the `screens` rows, if the place is a screen and has not switc
 `lists` rows, if no text is being typed there; then the `always` rows. Each line is the key's name on the
 device (SPEC-111) and the row's help words. A row whose action is `nothing`, and a row whose part is not
 built (SPEC-115), is left out. Up and Down scroll it; `fn`+H, Enter or ESC closes it.
+A help line is the key's name as it is pressed on the device (SPEC-111's last column, such as `fn+X`, or
+the key's own name), then the words of its action (FIND-024).
 - Covers: REQ-063
 - Priority: Must
 - Oracle: for every place, the help lines in the screen description are exactly those this rule gives from
@@ -1130,7 +1148,7 @@ screen update after it has been flushed. The differences are kept as a histogram
 
 **SPEC-113 Notices.** A notice is one line of text over the last row of the content band, shown for 3 s‡;
 `MSG_TOO_HEAVY`, which offers a key, shows for 10 s‡. It takes no keys: every key does what it would do
-without it. Notices wait their turn: one at a time, in the order raised, at most five waiting (the oldest is
+without it. Notices wait their turn (all but `MSG_HOLD_TO_LEAVE`, SPEC-106): one at a time, in the order raised, at most five waiting (the oldest is
 dropped). A notice with the same identifier as the one showing replaces it at once and starts its time
 again, and one with the same identifier as a waiting one replaces that, so five quick presses of a volume
 key end with the last level showing. Everything that happens by itself (a download finishing or failing,
@@ -1258,6 +1276,7 @@ player is Failed; "notice" messages by SPEC-113; "text" on the screen or in the 
 | `MSG_INDEX_READY` | notice | The search index is ready |
 | `MSG_SELFTEST` | notice | Self-test running: leave the device alone |
 
+Besides `n` and `m`, a message names what it is about as `path`, `name` or `step` (FIND-024).
 - Covers: REQ-019, REQ-044, REQ-007
 - Priority: Must
 - Oracle: a host-unit test fails if `core` can raise a message that is not in its table, if two rows share
@@ -1312,6 +1331,7 @@ highlighted; if the folder is neither on the device nor in the listing it opens 
 and the root if none is. The current entry is restored as the player's current entry, Idle. The queue is
 made again from its source: the folder's tunes, the playlist's entries, or, for `search`, the one current
 entry alone.
+`queue_place` counts from 1 (FIND-024).
 - Covers: REQ-071, REQ-121
 - Priority: Must
 - Oracle: stopping three levels down in the fixture tree and starting again gives the same folder and
@@ -1333,9 +1353,11 @@ as it lists them, from the collection's folders. A partial download is not such 
 - Level: host-unit, host-integration
 
 **SPEC-133 Settings that cannot be read.** A key the app does not know is kept and otherwise ignored. A line
-that is neither empty, a comment nor `key = value`, a known key given twice (the last wins), and a value that
-is not allowed for its key are faults; the setting concerned keeps its default. So is a file that is not
-valid UTF-8 or is larger than 64 KiB, which is not used at all. When a file had a fault, it is copied to
+that is neither empty, a comment nor `key = value`, a known key given twice, and a value that is not allowed for
+its key are faults. A key given twice takes the value of its last line; for the other two the setting
+concerned keeps its default. So is a file that is not
+valid UTF-8 or is larger than 64 KiB, which is not used at all; for such a `settings.ini` the notice is
+`MSG_SETTINGS_RESET`, not SPEC-204's `MSG_FILE_TOO_LARGE` (FIND-021). When a file had a fault, it is copied to
 `settings.ini.bad`, or `settings.ini.bad.2` and so on if that exists, before anything is written, and the
 notice `MSG_SETTINGS_RESET` is shown once at start. `state.ini` is treated the same way, without the copy and
 the notice.
@@ -1352,7 +1374,7 @@ the notice.
 | What | Folder |
 |---|---|
 | Settings | `$XDG_CONFIG_HOME/NAME`, else `~/.config/NAME` |
-| Playlists, and the `import` and `export` folders beside them | `$XDG_DATA_HOME/NAME/playlists`, else `~/.local/share/NAME/playlists` |
+| Playlists, with the `import` and `export` folders inside, as `playlists/import` and `playlists/export` | `$XDG_DATA_HOME/NAME/playlists`, else `~/.local/share/NAME/playlists` |
 | State, and the measurements of SPEC-241 | `$XDG_STATE_HOME/NAME`, else `~/.local/state/NAME` |
 | The index, the listing, the speed factors, partial downloads | `$XDG_CACHE_HOME/NAME`, else `~/.cache/NAME` |
 
@@ -1410,8 +1432,9 @@ presses, Enter and Enter on the notice; from Settings, three (SPEC-102).
 
 **SPEC-141 Fetching a tune when it is played.** To play an absent entry the app requests `url_files` followed
 by the tune's HVSC path, saving to a temporary file in the folder the tune belongs in (SPEC-132), after
-creating that folder. When the file has arrived it must pass SPEC-203's check, and its MD5 must equal the one
-the listing gives for that path. Then it is renamed to its name, the tune becomes present, it is added to the
+creating that folder. When the file has arrived its MD5 must equal the one the listing
+gives for that path, and then it must pass SPEC-203's check; the MD5 is compared first, so an answer that is
+no tune at all fails with `MSG_FETCH_MISMATCH` (FIND-021). Then it is renamed to its name, the tune becomes present, it is added to the
 index, and it is played. Otherwise it is deleted and the fetch has failed (SPEC-069). Rules:
 
 - Fetches run on the fetch worker (SPEC-022), one at a time. A request for the tune to be played cancels a
@@ -1429,7 +1452,7 @@ index, and it is played. Otherwise it is deleted and the fetch has failed (SPEC-
 - Unattended requests are limited to six in any minute‡; beyond that the player waits in Waiting for the
   next one allowed.
 - Before a request the card must have 8 MiB‡ free, else the fetch fails with `MSG_CARD_FULL`.
-
+A fetch-ahead counts towards the six requests a minute, and one beyond the limit is not started (FIND-024).
 - Covers: REQ-088, REQ-124, REQ-086, REQ-082
 - Priority: Must
 - Oracle: with the fake `HttpClient` and `Clock`: playing an absent tune with Enter makes one request at
@@ -1452,7 +1475,7 @@ table sorted by MD5. A path that is not an HVSC path (SPEC-154), a line that fit
 before it are skipped and counted; if more than one line in a hundred is skipped, or no tune is found, the
 file is refused with `MSG_LENGTHS_UNREADABLE` and there is no listing. The listing is built again when the
 database's size or modification time differs from what it records. The quick worker reads folders, lengths
-and MD5s from it; it is mapped, not loaded.
+and MD5s from it; it is mapped through `Files` (SPEC-021), not loaded.
 - Covers: REQ-088, REQ-003, REQ-013, REQ-122
 - Priority: Must
 - Oracle: the listing built from the fixture database has one record per entry, in order, with every length
@@ -1468,6 +1491,8 @@ passes over absent entries at once, without a request. A tune chosen by a key is
 If the queue has no further present entry, playback ends: → Idle with the notice `MSG_REST_ABSENT`. With
 repeat-all on, "further" goes round the whole queue once, so a queue whose only present entry is the one
 that just played plays it again.
+Only an unattended fetch or a fetch-ahead that fails starts the 60 s‡; a failed fetch of a tune chosen with
+Enter does not (FIND-024).
 - Covers: REQ-088, REQ-086
 - Priority: Must
 - Oracle: with the fake network down and 30-second songs, the queue present, absent, absent, present,
@@ -1613,8 +1638,8 @@ only a test build, also accepts `http://127.0.0.1` and a certificate authority n
 - Oracle: the real `HttpClient` against a local test server: a self-signed certificate is refused; a
   redirect to `http://` is refused; an endless answer is cut at the limit; the request as the server
   received it has the user agent and no cookie; with `url_files` and `url_archive` pointed at the local
-  server, the server's log is the complete list of requests the app made. The release build refuses
-  `http://127.0.0.1` (a test runs it with such an address).
+  server, the server's log is the complete list of requests the app made. The release build's rules refuse
+  `http://127.0.0.1` (a test applies them through `spz_tool fetch --release-rules`, FIND-020).
 - Level: host-integration
 
 **SPEC-151 The network is used only when asked.** The app makes a request only for: SPEC-140; SPEC-141, for a
@@ -1623,8 +1648,9 @@ update, and the fetch it allows when a changed tune is played; and SPEC-174. Sta
 playing present tunes that the listing agrees with, and changing settings make none.
 - Covers: REQ-086, REQ-124
 - Priority: Must
-- Oracle: a scripted session starts the app, browses, searches, plays present tunes, edits a playlist and
-  changes every setting, with a `HttpClient` that fails the test if it is called.
+- Oracle: a scripted session starts the app, browses, searches, plays present tunes and changes every
+  setting, with a `HttpClient` that fails the test if it is called. Part `playlists`: the same session also
+  edits a playlist (FIND-022).
 - Level: host-unit, simulator
 
 **SPEC-152 The notice, and the gate.** While `notice_accepted` is off, the app makes no request of any kind.
@@ -1677,8 +1703,8 @@ put in playlists like any other; they are never fetched.
 - Covers: REQ-122, REQ-123, REQ-006
 - Priority: Must
 - Oracle: a table of paths (with `..`, a doubled slash, a backslash, a control character, 256 characters, no
-  `.sid`) is each refused by the listing reader, and the same table without the length row by the playlist
-  reader, the importers and the state reader; a path with a space is refused by the listing reader and
+  `.sid`) is each refused by the listing reader, and the same table without the length row by the state reader
+  and, part `playlists`, by the playlist reader and the importers (FIND-022); a path with a space is refused by the listing reader and
   accepted by the others; with the fake `Files`, no write outside the root, and none at a path the listing
   does not name, is attempted in any of those tests. A tune of the test's own at `/My Rips/Cool Söng.sid`
   is listed, plays, and is restored as the current entry after a restart. Part `playlists`: it becomes a
@@ -1707,7 +1733,8 @@ when its format number, root or database signature differ from the present ones,
 "Rebuild the index". Step one writes a record for every tune in the listing, without opening any tune, which
 makes every path searchable. Step two walks the folders of the root that are on the device, and for each
 present tune whose record is missing or whose size or modification time differs, reads its header (and the
-whole file, for its MD5, if HVSC does not list it); records of tunes no longer there are removed. It handles
+whole file, for its MD5, if HVSC does not list it); a tune no longer there becomes absent again if the listing has it, and its record is removed if not
+(FIND-021). It handles
 200‡ files at a time, pausing 100 ms‡ between batches while a tune is playing, and rewrites the file through
 SPEC-132 after every 2,000‡ tunes, so an interrupted build continues from there. Step two also runs at every
 start, and for one folder whenever the browser lists it and finds a difference. A tune that is fetched is
@@ -1725,7 +1752,7 @@ added at once. Progress is shown on the Search and HVSC screens as a percentage,
 
 **SPEC-162 What a search matches.** The query is treated like search text and split at spaces into words. A
 tune matches when every word of the query is the beginning of some word in the tune's search text. Results
-are in order of path, and at most 500‡ are returned; the count shown is the true number of matches. A query
+are in order of path, folder by folder in SPEC-042's order, and at most 500‡ are returned; the count shown is the true number of matches. A query
 with no word gives no search. A search is one pass over the index and runs on the quick worker, limited to
 2 s‡, after which it returns what it has.
 - Covers: REQ-090
@@ -1776,6 +1803,8 @@ preceded by an optional `#EXTINF:` (the length in seconds and "author - title", 
 the collection is written as its path under the root (a collection path, SPEC-154). A tune outside it is
 written as `file://` followed by its full path, as it is. Without `subtune=` the entry means the tune's
 default subtune. Other `#` lines are kept with the entry they come before, and move with it.
+A playlist file ends each line, and the file, with a line feed; a length is written in whole seconds, cut
+down; an entry with no subtune number has its default subtune's length (FIND-024).
 - Covers: REQ-107, REQ-102
 - Priority: Should
 - Oracle: a playlist written by hand from this description, with and without the optional lines, loads and
@@ -1905,7 +1934,8 @@ Time=79                             time=6
   expected tunes and subtunes.
 - Level: host-unit
 
-**SPEC-178 Matching an imported path to a tune.** Backslashes become slashes. Then the first of these that
+**SPEC-178 Matching an imported path to a tune.** Backslashes become slashes, before SPEC-154's rule is
+applied, so an importer never meets a backslash (FIND-021). Then the first of these that
 finds a tune in the listing or under the root is used: the part after `/C64Music/`, if the path has one; the
 path as it stands, as an HVSC path; the path with a `/` put in front; the path taken relative to the folder
 of the file being imported; the same four again without regard to case; the file's name alone, if exactly
@@ -2044,6 +2074,8 @@ with `MSG_FILE_TOO_LARGE` (the song length database with `MSG_LENGTHS_UNREADABLE
 A line longer than 4,096 bytes is cut there. A zero byte ends its line. A playlist holds at most 20,000
 entries; the rest of the file is not read, and the notice `MSG_LIST_CUT` says so. Handling any such file
 takes at most 2 s‡ before the app answers keys again, because it is read on a worker.
+A line longer than its limit is cut there and the rest of it dropped; a zero byte ends its line in the same
+way (FIND-024).
 - Covers: REQ-122
 - Priority: Must
 - Oracle: fixture files one byte past each limit, with a million-character line and with zero bytes inside,
@@ -2084,6 +2116,8 @@ brightness is also put back when playback pauses or stops and when the app exits
 then cleared. If the app was killed while the screen was off, the next start finds `backlight_saved` and
 puts the brightness back. When `Backlight` cannot change the brightness, the setting's row reads "Not
 available on this device" and the setting stays 0.
+The seconds count from the last key pressed; a key that turns the screen back on also clears
+`backlight_saved` (FIND-024).
 - Covers: REQ-128, REQ-127
 - Priority: Could
 - Oracle: with the fake `Backlight` at 70 % and the setting at 10: after 10 s of the fake clock the fake is
@@ -2275,6 +2309,11 @@ as they are taken (SPEC-260). The keys are those of SPEC-240's table and these:
 | `user_groups` | The groups of the user it ran as, without the group named after the user |
 
 Nothing else is written. No value holds a name of a person, a device or a network, or an address.
+Which keys a run off the device writes, and the form of each value, are as `src/core/metrics.cpp` has
+them: `start_ms`, `exit_ms`, `app_version`, `engine_library`, `memory_check_mib`, `unpacker`,
+`card_free_mib`, `download_everything_offered` and `user_groups` at every run, the `audio_`,
+`lengths_commando`, `backlight_writable`, `framebuffer` and `keyboard` keys on the device only, and the
+rest when they are taken; `unpacker` is `yes` or `no`, and the two version keys carry their names (FIND-024).
 - Covers: REQ-050, REQ-054, REQ-055, REQ-162
 - Priority: Must
 - Oracle: a simulator run with `--metrics` writes a file whose keys are exactly those of the two tables that
@@ -2491,7 +2530,12 @@ The forms of the values:
 | `job.done`, `job.total` | Bytes, or files for "Fetch missing" and while unpacking |
 
 On the empty screen, `rows` holds one row of kind `action`, "Get HVSC", and `actions` are five empty
-strings. Where another item's oracle names a field, this is the field it means.
+strings. Where another item's oracle names a field, this is the field it means. Where it names a thing on
+the screen that has no field of its own ("No results", "Indexing n %", that a filter is set, a row of the
+Playlists screen, the now-playing star), a test reads it from `text`; the number of search results is
+`list.total`, and the Search field or a prompt's field is `fields[0]`. `help` holds every line of the help,
+not only those in view; `player` is filled on every screen, with `state` `idle` when nothing is loaded; and
+`boxes[].text` is the text as drawn. A field is added only by changing this item and its schema (FIND-023).
 - Covers: REQ-160
 - Priority: Must
 - Oracle: the description of the browser on the fixture collection, and of the now-playing screen playing
