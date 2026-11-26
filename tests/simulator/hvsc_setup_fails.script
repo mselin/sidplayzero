@@ -1,0 +1,27 @@
+# SPEC-140 with a download failing, the root is unchanged and the notice says that HVSC could not be set up; the row can be chosen again
+# fakes: fakes/hvsc_accepted
+fake http down
+key Tab
+key 5
+expect screen = hvsc
+expect rows[0].text = "Get HVSC"
+key Enter
+expect panel = null
+expect notice.id = MSG_HVSC_FAILED
+expect notice.text contains "HVSC could not be set up:"
+expect job = null
+expect-file C64Music/DOCUMENTS/Songlengths.md5 absent
+expect-file C64Music/DOCUMENTS/hv_sids.txt absent
+expect-file C64Music/DOCUMENTS absent
+expect screen = hvsc
+expect lines contains "HVSC is not set up"
+# The row is there to be chosen again, and with the network back it works.
+expect rows[0].text = "Get HVSC"
+expect rows[0].highlighted = true
+fake http up
+advance 4000
+expect notice = null
+key Enter
+expect notice.id = MSG_HVSC_READY
+expect-file C64Music/DOCUMENTS/Songlengths.md5 exists
+expect screen = browser

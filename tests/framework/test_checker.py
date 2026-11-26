@@ -12,7 +12,7 @@ from pathlib import Path
 
 from support import ROOT, run
 
-COPIED = ["docs", ".github/workflows", "tests/waiting.tsv"]
+COPIED = ["docs", ".github/workflows", "tests"]
 
 
 class CheckerCase(unittest.TestCase):
@@ -22,7 +22,7 @@ class CheckerCase(unittest.TestCase):
             source, target = ROOT / name, self.folder / name
             target.parent.mkdir(parents=True, exist_ok=True)
             if source.is_dir():
-                shutil.copytree(source, target)
+                shutil.copytree(source, target, ignore=shutil.ignore_patterns("fixtures", "__pycache__"))
             elif source.exists():
                 shutil.copy(source, target)
 
@@ -162,11 +162,36 @@ class Tests(CheckerCase):
         self.add("tests/simulator/x.script", "# just a script\nkey Enter\n")
         self.refused("a test names the SPEC or TF items it checks")
 
+    def test_name_in_one_literal(self):
+        """TF-011 a C++ test whose name goes on in a second string literal, or holds an escape, is reported"""
+        self.add("tests/unit/x_test.cpp", 'TEST_CASE("SPEC-203 the first half "\n          "and the second") {}\n')
+        self.refused("a test's name is one string literal")
+        self.add("tests/unit/x_test.cpp", 'TEST_CASE("SPEC-203 a \\"quoted\\" word") {}\n')
+        self.refused("a test's name has no backslash")
+
     def test_python_test_is_read(self):
         """TF-011 a Python test's name is its docstring, and its items are checked too"""
         self.add("tests/integration/test_x.py",
                  'import unittest\n\nclass X(unittest.TestCase):\n    def test_a(self):\n        """TF-999 x"""\n')
         self.refused("TF-999 is not defined")
+
+
+    def test_item_without_a_test(self):
+        """SPEC-256 an item with no test at one of its levels is reported, and one with tests at all of them is not"""
+        self.assertEqual(self.check()[0], 0)
+        for path in (self.folder / "tests").rglob("*"):
+            if path.is_file() and "SPEC-097" in path.read_text(encoding="utf-8", errors="replace"):
+                if path.name != "waiting.tsv":
+                    path.unlink()
+        status, output = self.check()
+        self.assertNotEqual(status, 0)
+        self.assertIn("SPEC-097 has no test at the host-unit level (SPEC-256)", output)
+        self.assertIn("SPEC-097 has no test at the simulator level (SPEC-256)", output)
+
+    def test_device_item_needs_the_checklist(self):
+        """SPEC-256 SPEC-260 an item with the device level is reported when the device checklist does not name it"""
+        self.change("docs/device-checklist.md", "SPEC-207", "SPEC-2O7", count=99)
+        self.refused("SPEC-207 has no test at the device level (SPEC-256)")
 
 
 class Music(CheckerCase):
@@ -181,6 +206,40 @@ class Music(CheckerCase):
         self.add("tests/fixtures/MANIFEST", "tunes/a.sid\tabc\n")
         status, output = self.check()
         self.assertEqual(status, 0, output)
+
+
+class Private(CheckerCase):
+    def test_private_address(self):
+        """TF-023 SPEC-225 a file with a private network address is reported"""
+        self.add("docs/notes.md", "the device is at 192." + "168.1.20\n")
+        self.refused("private network address")
+
+    def test_home_path(self):
+        """TF-023 SPEC-225 a path into one person's home folder is reported, and /home/u/ is allowed"""
+        self.add("docs/ok.md", "an example: /home/u/C64Music/a.sid\n")
+        self.assertEqual(self.check()[0], 0)
+        self.add("docs/notes.md", "copied from /home/" + "somebody/C64Music\n")
+        self.refused("a path into one person's home folder")
+
+    def test_private_term(self):
+        """TF-023 SPEC-225 a private term is reported as a whole word, by file and line and never by the term"""
+        self.add("docs/notes.md", "the falconry club\nmy host is Falcon\n")
+        process = run(["python3", ROOT / "tools" / "check_repo.py"],
+                      env={"SIDPLAYZERO_CHECK_ROOT": str(self.folder), "PRIVATE_TERMS": "falcon"})
+        self.assertNotEqual(process.returncode, 0)
+        self.assertIn("docs/notes.md:2: private term", process.stdout)
+        self.assertNotIn("notes.md:1", process.stdout)
+        self.assertNotIn("alcon", process.stdout.replace("falconry", ""))
+
+    def test_nothing_publishes(self):
+        """TF-023 SPEC-226 a workflow or script that names the store's login or publish command is reported"""
+        self.add(".github/workflows/release.yml", "jobs:\n  ship:\n    steps:\n      - run: czdev " + "publish\n")
+        self.refused("names the store's login or publish command")
+
+    def test_documents_may_state_the_rule(self):
+        """TF-023 SPEC-226 a document may say that nothing runs the publish command"""
+        self.add("docs/rule.md", "Nothing here runs czdev " + "publish.\n")
+        self.assertEqual(self.check()[0], 0)
 
 
 class Workflow(CheckerCase):

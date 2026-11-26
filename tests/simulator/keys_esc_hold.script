@@ -1,0 +1,27 @@
+# SPEC-106 ESC held for 500 ms shows MSG_HOLD_TO_LEAVE; released before 1,000 ms, the notice goes and nothing else happens
+# fixture: tunes/commando_test.sid C64Music/A_Commando.sid
+# fixture: tunes/three_subtunes.sid C64Music/B_Three.sid
+# fixture: tunes/two_sid.sid C64Music/C_Two.sid
+expect screen = browser
+key Tab
+key 8
+expect stack = ["browser","settings","about"]
+press Esc
+advance 490
+expect notice = null
+advance 20
+expect notice.id = MSG_HOLD_TO_LEAVE
+expect notice.text = "Keep holding ESC to leave"
+advance 190
+expect notice.id = MSG_HOLD_TO_LEAVE
+expect screen = about
+release Esc
+expect notice = null
+expect screen = about
+expect stack = ["browser","settings","about"]
+hold Esc 700
+expect notice = null
+expect stack = ["browser","settings","about"]
+hold Esc 990
+expect notice = null
+expect stack = ["browser","settings","about"]

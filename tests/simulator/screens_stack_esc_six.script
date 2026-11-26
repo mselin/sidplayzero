@@ -1,0 +1,35 @@
+# SPEC-090 SPEC-114 with a panel and help open over the fifth screen, six short presses of ESC reach the browser
+# fixture: tunes/commando_test.sid C64Music/A_Commando.sid
+# fixture: tunes/three_subtunes.sid C64Music/B_Three.sid
+# fixture: tunes/two_sid.sid C64Music/C_Two.sid
+expect screen = browser
+key 5
+type test
+key Enter
+expect place = search-results
+key P
+key Tab
+key 5
+expect stack = ["browser","search","playing","settings","hvsc"]
+expect rows[0].text = "Get HVSC"
+expect rows[0].highlighted = true
+key Enter
+expect panel.id = notice-panel
+key Help
+expect place = help
+expect panel.id = notice-panel
+# help and the panel are not part of the stack
+expect stack = ["browser","search","playing","settings","hvsc"]
+key Esc
+expect help = null
+expect panel.id = notice-panel
+key Esc
+expect panel = null
+expect stack = ["browser","search","playing","settings","hvsc"]
+key Esc
+key Esc
+key Esc
+expect stack = ["browser","search"]
+key Esc
+expect stack = ["browser"]
+expect-requests 0

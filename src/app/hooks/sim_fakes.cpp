@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "app/hooks/sim_fakes.h"
 
+#include <cstdlib>
 #include <fstream>
 #include <sstream>
 
@@ -25,6 +26,14 @@ std::vector<std::string> split(const std::string& line, char separator) {
 }
 
 }  // namespace
+
+std::string SimFakes::resolve(const std::string& name) const {
+    if (name.compare(0, 9, "fixtures/") == 0) {
+        const char* fixtures = std::getenv("SPZ_FIXTURES");
+        return std::string(fixtures ? fixtures : "tests/fixtures") + name.substr(8);
+    }
+    return folder.empty() ? name : folder + "/" + name;
+}
 
 bool SimFakes::set(const std::string& name, const std::string& value, std::string* why) {
     try {
@@ -84,7 +93,7 @@ bool SimFakes::load(const std::string& from, const std::string&, std::string* wh
             return false;
         }
         if (cells[2] != "-") {
-            std::ifstream body(folder + "/" + cells[2], std::ios::binary);
+            std::ifstream body(resolve(cells[2]), std::ios::binary);
             if (!body) { *why = "http.tsv line " + std::to_string(number) + ": no file " + cells[2]; return false; }
             answer.body.assign(std::istreambuf_iterator<char>(body), std::istreambuf_iterator<char>());
         }

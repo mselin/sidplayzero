@@ -1,0 +1,15 @@
+# SPEC-102 with a newer release found and room to unpack, the rows are Check for a newer release, Update to #85, Download everything and Rebuild the index, in that order
+# parts: releases download-all
+# fakes: fakes/hvsc_archive
+# fixture: collections/84/C64Music/DOCUMENTS C64Music/DOCUMENTS
+key Tab
+key 5
+key Enter
+expect panel.id = notice-panel
+key Enter
+expect notice.id = MSG_HVSC_NEWER
+expect rows[0].text = "Check for a newer release"
+expect rows[1].text = "Update to #85"
+expect rows[2].text = "Download everything"
+expect rows[3].text = "Rebuild the index"
+expect rows matches ^\[\{[^{}]*\},\{[^{}]*\},\{[^{}]*\},\{[^{}]*\}\]$

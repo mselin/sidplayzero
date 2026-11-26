@@ -1,0 +1,22 @@
+# SPEC-107 help in Settings lists the screen's own rows and then the `screens` rows without TAB, which Settings switches off
+# fixture: tunes/commando_test.sid C64Music/A_Commando.sid
+# fixture: tunes/three_subtunes.sid C64Music/B_Three.sid
+# fixture: tunes/two_sid.sid C64Music/C_Two.sid
+expect screen = browser
+key Tab
+expect screen = settings
+key Help
+expect place = help
+# the place's own rows, in the key map's order; the row of TAB, whose action is "nothing", is left out
+expect help[0] matches "^[Ee][Nn][Tt][Ee][Rr]\W.*Change$"
+expect help[1] matches "^fn\+Z\W.*Previous value$"
+expect help[2] matches "^fn\+C\W.*Next value$"
+expect help[3] matches "^4\W.*Back$"
+expect help[4] matches "^5\W.*HVSC$"
+expect help[5] matches "^8\W.*About$"
+# then the `screens` rows: Space and P, and no line for TAB before them
+expect help[6] matches "^[Ss][Pp][Aa][Cc][Ee]\W.*Play or pause$"
+expect help[7] matches "^[Pp]\W.*Now playing$"
+key Esc
+expect help = null
+expect screen = settings

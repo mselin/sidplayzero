@@ -1,0 +1,11 @@
+# SPEC-133 started with a settings.ini of random bytes, the app starts, shows the notice, and settings.ini.bad holds the original bytes
+# fixture: keep/settings_noise.ini .config/sidplayzero/settings.ini
+# fixture: keep/settings_noise.ini original.ini
+expect screen = empty
+expect notice.id = MSG_SETTINGS_RESET
+expect-file .config/sidplayzero/settings.ini.bad equals original.ini
+expect-file .config/sidplayzero/settings.ini.bad.2 absent
+# Nothing of the file is used: the settings are the defaults.
+key Tab
+expect screen = settings
+expect text contains 3:30

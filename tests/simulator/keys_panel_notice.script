@@ -1,0 +1,34 @@
+# SPEC-114 SPEC-152 the notice panel opens on the first thing that would use the network, ESC cancels and Enter accepts, and the keys 4 to 8 do nothing while it is open
+# fakes: fakes/keys_setup_stalled
+expect screen = empty
+key Enter
+expect panel.id = notice-panel
+expect place = notice-panel
+expect panel.text matches "^SidPlayZero can fetch music from the High Voltage SID Collection"
+# ESC cancels what was asked for: no request is made
+key Esc
+expect panel = null
+expect screen = empty
+expect job = null
+expect-requests 0
+key Enter
+expect panel.id = notice-panel
+# the keys 4 to 8 do nothing while the panel is open
+key 4
+key 5
+key 6
+key 7
+key 8
+expect panel.id = notice-panel
+expect screen = empty
+expect stack = ["empty"]
+# Up and Down scroll, and the panel stays
+key Down
+key Up
+expect panel.id = notice-panel
+expect-requests 0
+# Enter accepts: what was asked for goes on
+key Enter
+expect panel = null
+expect job.kind = setup
+expect screen = hvsc

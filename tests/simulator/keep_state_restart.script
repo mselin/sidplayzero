@@ -1,0 +1,30 @@
+# SPEC-131 stopping three levels down in the fixture tree and starting again gives the same folder, highlight and current entry
+# fixture: collections/85/C64Music C64Music
+# args: --backend fake
+key End
+key Enter
+expect title = /MUSICIANS
+key End
+key Enter
+expect title = /MUSICIANS/T
+key Enter
+expect title = /MUSICIANS/T/Tester_Tom
+expect position = 1/7
+key Enter
+expect player.state = playing
+expect player.path = /MUSICIANS/T/Tester_Tom/Changed.sid
+key Esc
+expect screen = browser
+key Down
+key Down
+expect position = 3/7
+expect rows[2].text = New_Chip.sid
+expect rows[2].highlighted = true
+restart
+expect screen = browser
+expect title = /MUSICIANS/T/Tester_Tom
+expect position = 3/7
+expect rows[2].text = New_Chip.sid
+expect rows[2].highlighted = true
+expect player.state = idle
+expect player.path = /MUSICIANS/T/Tester_Tom/Changed.sid

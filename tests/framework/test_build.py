@@ -51,8 +51,15 @@ class UnitProgram(unittest.TestCase):
         if shutil.which("unshare") is None or run(["unshare", "-rn", "true"]).returncode != 0:
             self.skipTest("this machine does not allow making a network namespace")
         program = unit_build() / "tests" / "unit" / "spz_unit_tests"
-        process = run(["unshare", "-rn", program, "--test-case-exclude=*[canary-fails*"])
-        self.assertEqual(process.returncode, 0, process.stdout[-800:])
+        # The same tests pass and fail with no network as with one: the tests that wait for code fail either way.
+        def failed(prefix):
+            out = run([*prefix, program, "--test-case-exclude=*[canary-fails*", "--reporters=junit"]).stdout
+            cases = re.findall(r'<testcase [^>]*name="([^"]*)"[^>]*?(/?)>', out)
+            return sorted(name for name, closed in cases if not closed), len(cases)
+        without, count = failed(["unshare", "-rn"])
+        with_network, _ = failed([])
+        self.assertGreater(count, 10)
+        self.assertEqual(without, with_network)
 
 
 class Pins(unittest.TestCase):

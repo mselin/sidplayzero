@@ -36,11 +36,8 @@ if(_spz_use_sdl)
 endif()
 
 # --- ui: screens and drawing. May use core and LVGL; not the engine, not the sound library ---------------
-add_library(spz_ui STATIC
-    ui/describe.cpp
-    ui/png.cpp
-    ui/stub_screen.cpp
-)
+file(GLOB _ui_sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/ui/*.cpp")
+add_library(spz_ui STATIC ${_ui_sources})
 target_include_directories(spz_ui PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 target_link_libraries(spz_ui PUBLIC spz_core lvgl)
 target_compile_options(spz_ui PRIVATE ${SPZ_WARNINGS})
@@ -68,6 +65,10 @@ if(SIDPLAYZERO_TEST_HOOKS)
     target_sources(sidplayzero PRIVATE app/hooks/script.cpp app/hooks/sim_fakes.cpp)
     target_include_directories(sidplayzero PRIVATE "${CMAKE_SOURCE_DIR}/tests/fakes")
     target_compile_definitions(sidplayzero PRIVATE SPZ_TEST_HOOKS=1)
+    # The integration tests' way into the `platform` layer (see app/hooks/tool_main.cpp).
+    add_executable(spz_tool app/hooks/tool_main.cpp)
+    target_link_libraries(spz_tool PRIVATE spz_platform)
+    target_compile_options(spz_tool PRIVATE ${SPZ_WARNINGS})
 else()
     target_compile_definitions(sidplayzero PRIVATE SPZ_TEST_HOOKS=0)
 endif()

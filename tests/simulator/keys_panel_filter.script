@@ -1,0 +1,30 @@
+# SPEC-114 the filter panel opens on "Filter" in the results of Search, ESC cancels it, and the keys 4 to 8 do nothing while it is open
+# parts: filters
+# fixture: tunes/commando_test.sid C64Music/A_Commando.sid
+# fixture: tunes/three_subtunes.sid C64Music/B_Three.sid
+# fixture: tunes/two_sid.sid C64Music/C_Two.sid
+expect screen = browser
+key 5
+type test
+key Enter
+expect place = search-results
+expect actions[2] = Filter
+key 6
+expect panel.id = filter
+expect place = filter
+key 4
+key 5
+key 6
+key 7
+key 8
+expect panel.id = filter
+expect screen = search
+expect stack = ["browser","search"]
+key Esc
+expect panel = null
+expect place = search-results
+key 6
+expect panel.id = filter
+key Enter
+expect panel = null
+expect place = search-results

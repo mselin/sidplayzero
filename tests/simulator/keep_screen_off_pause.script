@@ -1,0 +1,16 @@
+# SPEC-207 with the screen turned off by the app, pausing puts the brightness back
+# parts: screen-off
+# fixture: collections/85/C64Music C64Music
+# fixture: keep/settings_screen_off_10.ini .config/sidplayzero/settings.ini
+# fakes: fakes/keep_backlight_70
+# args: --backend fake
+key Enter
+key Enter
+key Enter
+expect player.state = playing
+advance 10000
+expect-log backlight contains "set 0"
+# The sound device goes for good: the player pauses by itself, with no key pressed (SPEC-078).
+fake backend device_gone
+expect player.state = paused
+expect-log backlight contains "set 70"

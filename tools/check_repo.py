@@ -339,6 +339,13 @@ def tests_in(rel, text):
                 break
     elif rel.endswith(".cpp"):
         for n, line in enumerate(text.split("\n"), 1):
+            # The test runners read a name from its one line, as it is written: a name continued in a
+            # second string literal, or with an escape in it, would be reported as a test that did not run.
+            for whole in re.finditer(r'TEST_CASE\(\s*"((?:[^"\\]|\\.)*)"\s*(\S?)', line):
+                if whole.group(2) != ")" and whole.group(2) != ",":
+                    fail(rel, n, "a test's name is one string literal, on the line of its TEST_CASE")
+                elif "\\" in whole.group(1):
+                    fail(rel, n, "a test's name has no backslash or other escape in it")
             for name in CPP_TEST.findall(line):
                 parts = TEST_PARTS.search(name)
                 found.append((n, name, parts.group(1).replace(",", " ").split() if parts else []))
@@ -362,9 +369,54 @@ def tests_in(rel, text):
     return found
 
 
+# SPEC-256: from the Phase 4 gate on, every item has a test at each of its levels other than the device,
+# and each item with the device level is named in the device checklist. Switched on when Phase 4's tests
+# are all written (25 November 2026); `--untested` lists what is missing at any time.
+EVERY_ITEM_HAS_A_TEST = True
+
+TEST_LEVELS = (  # the first folder that fits decides
+    ("tests/framework/sim/", "simulator"),
+    ("tests/framework/integration/", "host-integration"),
+    ("tests/framework/fuzz/", "host-integration"),
+    ("tests/framework/race/", "host-integration"),
+    ("tests/framework/package/", "host-package"),
+    ("tests/framework/", "host-unit"),
+    ("tests/unit/", "host-unit"),
+    ("tests/simulator/", "simulator"),
+    ("tests/integration/", "host-integration"),
+    ("tests/fuzz/", "host-integration"),
+    ("tests/package/", "host-package"),
+)
+
+
+def untested(files):
+    """The (item, level) pairs of the specification that no test is for, as a sorted list."""
+    spec = read_text("docs/spec.md") or ""
+    wanted = set()
+    for block in re.split(r"(?m)^(?=\*\*SPEC-\d+ )", spec)[1:]:
+        number = re.match(r"\*\*SPEC-(\d+)", block).group(1)
+        level = re.search(r"(?m)^- Level: (.*)$", block)
+        if level:
+            wanted |= {(number, name.strip()) for name in level.group(1).split(",")}
+    have = set()
+    for rel in files:
+        level = next((name for folder, name in TEST_LEVELS if rel.startswith(folder)), None)
+        text = read_text(rel) if level else None
+        if text is None:
+            continue
+        for _, name, _ in tests_in(rel, text):
+            have |= {(number, level) for kind, number in TEST_ITEM.findall(name) if kind == "SPEC"}
+    checklist = read_text("docs/device-checklist.md") or ""
+    have |= {(number, "device") for number in re.findall(r"SPEC-(\d+)", checklist)}
+    return sorted(wanted - have, key=lambda pair: (int(pair[0]), pair[1]))
+
+
 def check_tests(files, specs, tasks):
     """Every test names items that exist and parts that exist. Returns how many tests were read."""
     count = 0
+    if EVERY_ITEM_HAS_A_TEST:
+        for number, level in untested(files):
+            fail("docs/spec.md", 0, f"SPEC-{number} has no test at the {level} level (SPEC-256)")
     for rel in files:
         if not rel.startswith("tests/") or rel.startswith("tests/fixtures/"):
             continue
@@ -491,6 +543,11 @@ def main():
     tests = check_tests(files, specs, tasks)
     check_music(files)
     check_workflow()
+    if "--untested" in sys.argv[1:]:
+        missing = untested(files)
+        for number, level in missing:
+            print(f"SPEC-{number}\t{level}")
+        print(f"{len(missing)} item-and-level pairs have no test yet")
     if "--matrix" in sys.argv[1:] and covered is not None:
         for i in sorted(reqs, key=int):
             print(f"REQ-{i}: " + ", ".join(f"SPEC-{x}" for x in covered.get(i, [])))

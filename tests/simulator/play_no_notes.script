@@ -1,0 +1,17 @@
+# SPEC-097 with no STIL file, Notes says "No notes for this tune"
+# parts: notes
+# fixture: play/C64Music/QUEUE C64Music
+# args: --backend fake
+expect screen = browser
+key Enter
+expect screen = playing
+key 8
+expect panel.id = more-playing
+key End
+key Enter
+expect panel.id = text
+expect panel.text = "No notes for this tune"
+key Esc
+expect panel = null
+expect screen = playing
+expect player.state = playing

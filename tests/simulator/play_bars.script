@@ -1,0 +1,31 @@
+# SPEC-080 the voice display: each bar is as high as its voice's frequency high byte divided by 8, lit while the gate bit is set, and it stands still while paused (tests/simulator/test_play.py compares the two dumps)
+# parts: bars
+# fixture: play/C64Music/QUEUE C64Music
+# args: --backend fake
+expect screen = browser
+key Enter
+expect screen = playing
+expect player.state = playing
+# The first chip's registers: frequency high bytes 80, 160 and 240 (registers 1, 8 and 15), and the
+# control registers 4, 11 and 18 with the gate bit on, off and on.
+fake backend registers 1 1 80
+fake backend registers 1 4 33
+fake backend registers 1 8 160
+fake backend registers 1 11 32
+fake backend registers 1 15 240
+fake backend registers 1 18 33
+advance 100
+expect voices[0].height = 10
+expect voices[0].lit = true
+expect voices[1].height = 20
+expect voices[1].lit = false
+expect voices[2].height = 30
+expect voices[2].lit = true
+# Paused: two descriptions a second apart are equal.
+key Enter
+expect player.state = paused
+advance 100
+dump bars_paused_1
+advance 1000
+dump bars_paused_2
+expect player.state = paused

@@ -1,0 +1,47 @@
+# SPEC-096 SPEC-074 with voice 2 muted and the filter off, line 6 of the now-playing screen shows both; they hold across the tune's subtunes, and the next tune has everything on again
+# parts: voices
+# fixture: play/C64Music/QUEUE C64Music
+# args: --backend fake
+expect screen = browser
+key Down
+key Enter
+expect player.path = /B_Three.sid
+expect player.subtune = 2
+expect lines[5] contains "Voices 1 2 3"
+expect player.muted[0][1] = false
+expect player.filter[0] = true
+key 2
+key 9
+expect player.muted[0][0] = false
+expect player.muted[0][1] = true
+expect player.muted[0][2] = false
+expect player.filter[0] = false
+expect lines[5] contains Voices
+expect lines[5] contains "Filter off"
+expect player.state = playing
+# The choices hold for the tune: across its subtunes.
+key Right
+expect player.subtune = 3
+expect player.muted[0][1] = true
+expect player.filter[0] = false
+expect lines[5] contains "Filter off"
+# Loading another tune puts everything on again.
+key Down
+expect player.path = /C_Two_Chips.sid
+expect player.muted[0][1] = false
+expect player.filter[0] = true
+expect lines[5] contains "Voices 1 2 3"
+# A tune for two chips: the chip key chooses which chip the voice keys act on.
+expect player.chips = 2
+expect player.chip = 1
+expect lines[5] contains "Chip 1"
+key 0
+expect player.chip = 2
+expect lines[5] contains "Chip 2"
+key 3
+expect player.muted[1][2] = true
+expect player.muted[0][2] = false
+key 3
+expect player.muted[1][2] = false
+key 0
+expect player.chip = 1

@@ -1,0 +1,35 @@
+# SPEC-113 SPEC-114 a download that finishes while a text prompt is open leaves the prompt and its text as they were, and is told by a notice
+# fakes: fakes/keys_setup_stalled
+# fixture: tunes/commando_test.sid C64Music/A_Commando.sid
+expect screen = browser
+key Tab
+key 5
+expect screen = hvsc
+expect rows[0].text = "Get HVSC"
+key Enter
+expect panel.id = notice-panel
+key Enter
+expect panel = null
+expect job.kind = setup
+# ESC closes the HVSC screen and leaves the job running
+key Esc
+expect screen = settings
+expect job.kind = setup
+key End
+key Enter
+expect panel.id = prompt
+key End
+type abc
+expect panel.fields matches "abc.[,}]"
+fake http release https://hvsc.c64.org/download/C64Music/DOCUMENTS/Songlengths.md5
+fake http release https://hvsc.c64.org/download/C64Music/DOCUMENTS/STIL.txt
+fake http release https://hvsc.c64.org/download/C64Music/DOCUMENTS/HVSC.txt
+fake http release https://hvsc.c64.org/download/C64Music/DOCUMENTS/BUGlist.txt
+fake http release https://hvsc.c64.org/download/C64Music/DOCUMENTS/hv_sids.txt
+expect notice.id = MSG_HVSC_READY
+expect panel.id = prompt
+expect place = prompt
+expect typing = true
+expect panel.fields matches "abc.[,}]"
+expect screen = settings
+expect stack = ["browser","settings"]

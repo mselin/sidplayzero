@@ -235,11 +235,13 @@ sitting() {
   install_package "$deb"
   ANSWERS="${ANSWERS}package_files = $(dpkg -L sidplayzero 2>/dev/null | grep -c .)"$'\n'
   # 2
-  step_with_app keys "Step 2. Start SidPlayZero from the launcher. Press each key the screen asks for, then hold ESC to leave." "$WAIT"
+  ask launcher_shows_app "Step 2. Does the launcher show SidPlayZero, with its icon? (yes/no)"
+  step_with_app keys "Start SidPlayZero from the launcher. Press each key the screen asks for, then hold ESC to leave." "$WAIT"
   if ! [ -f "$RESULTS" ]; then
     remove_package
     stop "the app wrote no results to $STATE: the launcher starts apps as another user than the one running this script"
   fi
+  ask esc_hold_returns "Did holding ESC bring the launcher back, within about a second? (yes/no)"
   # 3
   step_with_app engines "Step 3. Start SidPlayZero again and wait until it says Done. Then hold ESC to leave." 600
   # 4
@@ -267,10 +269,12 @@ sitting() {
   ask levels_as_before "Are the launcher's volume and the brightness what they were before? (yes/no)"
   # 11
   gather "$out" "the whole sitting"
-  local config="${XDG_CONFIG_HOME:-$HOME/.config}/sidplayzero" kept=yes
+  local config="${XDG_CONFIG_HOME:-$HOME/.config}/sidplayzero" kept=yes removed=yes
   remove_package
   [ -d "$config" ] || kept=no
+  [ ! -e /usr/bin/sidplayzero ] || removed=no
   say "user_files_kept_after_removal = $kept" >> "$out"
+  say "package_removed_cleanly = $removed" >> "$out"
   say ""
   if [ "$FAULTS" -eq 0 ]; then
     say "The sitting is done. What it found is in $out."

@@ -6,6 +6,7 @@ list (SPEC-256, TF-012) and prints what was not in order.
 """
 
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -144,10 +145,27 @@ def judge(results, waiting):
 
 
 def first_line(text):
-    for line in text.strip().split("\n"):
-        if line.strip():
-            return line.strip()[:300]
-    return ""
+    """The line of a failure that says the most: "not built yet: ..." if it is there, else the first line
+    that is not just a place in a file."""
+    lines = [line.strip() for line in text.strip().split("\n") if line.strip()]
+    for line in lines:
+        if "not built yet" in line:
+            return line[line.index("not built yet"):].rstrip('"')[:300]
+    for line in lines:
+        if not re.fullmatch(r"\S+:\d+:", line):
+            return line[:300]
+    return lines[0][:300] if lines else ""
+
+
+def proposed_words(message):
+    """What a new line of the waiting list would give as the words of a failure: the stub that was
+    reached, or for a script the line that did not hold."""
+    if "not built yet" in message:
+        return "not built yet"
+    for line in message.split("\n"):
+        if line.startswith("line: "):
+            return line[len("line: "):].strip()
+    return first_line(message)
 
 
 def report(level, results, waiting, waiting_faults=()):
@@ -160,6 +178,17 @@ def report(level, results, waiting, waiting_faults=()):
     for result in results:
         if result.outcome == SKIPPED:
             say(f"   skipped: {result.label()}: {result.message}")
+    propose = os.environ.get("SIDPLAYZERO_PROPOSE_WAITING")
+    if propose:
+        # For whoever keeps tests/waiting.tsv: every test that failed and is not listed, as lines to look
+        # at and, if the reason is the right one, to add.
+        seen = set()
+        with open(propose, "a", encoding="utf-8") as out:
+            for result in results:
+                if result.outcome == FAILED and result.name not in waiting and result.name not in seen \
+                        and CANARY_FAILS not in result.name:
+                    seen.add(result.name)
+                    out.write(f"{result.name}\tcode\t{proposed_words(result.message)}\n")
     if verdict.faults:
         say(f"NOT IN ORDER ({len(verdict.faults)}):")
         for label, why in verdict.faults:

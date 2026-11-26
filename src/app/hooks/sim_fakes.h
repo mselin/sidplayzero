@@ -23,6 +23,9 @@ struct SimFakes {
     std::int64_t list_delay_ms = 0;
     std::size_t samples_saved = 0;       // how much of sink.received `save-samples` has written out
 
+    // Where a file a script names is: "fixtures/..." is under tests/fixtures (the SPZ_FIXTURES variable),
+    // anything else under the --fakes folder.
+    std::string resolve(const std::string& name) const;
     // Reads fakes.ini and http.tsv from the folder. False, with the reason, if one cannot be read.
     bool load(const std::string& folder, const std::string& home, std::string* why);
     // `fake NAME VALUE` for the values of fakes.ini. False if there is no such value.

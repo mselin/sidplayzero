@@ -1,0 +1,25 @@
+# SPEC-131 with the remembered folder removed, the nearest parent that is there opens, and the root if none is, as the browser shows it
+# fixture: tunes/commando_test.sid C64Music/One/Two/Three/Deep.sid
+# fixture: tunes/two_sid.sid C64Music/One/Two/Beside.sid
+# fixture: tunes/three_sid.sid C64Music/Top.sid
+#
+# A collection with no song length database: a folder is there only if it is on the device.
+expect screen = browser
+expect rows[0].text = One
+key Enter
+expect title = /One
+key Enter
+expect title = /One/Two
+expect rows[0].text = Three
+key Enter
+expect title = /One/Two/Three
+expect rows[0].text = Deep.sid
+remove C64Music/One/Two/Three
+restart
+expect screen = browser
+expect title = /One/Two
+remove C64Music/One
+restart
+expect screen = browser
+expect title = /
+expect rows[0].text = Top.sid

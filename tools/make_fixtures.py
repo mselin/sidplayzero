@@ -264,11 +264,32 @@ def make_collections(out):
 MAKERS = [make_tunes, make_collections]
 
 
+def more_makers():
+    """The makers of tools/fixture_makers/*.py: each module has make(out, kit), where `out` is the dict of
+    {relative path: bytes} to add to, and `kit` is this module, for psid(), good_tunes(), collection() and
+    the rest. A fixture belongs beside the tests that use it, so each area of tests has a module there."""
+    import importlib.util
+    found = []
+    for path in sorted((ROOT / "tools" / "fixture_makers").glob("*.py")):
+        spec = importlib.util.spec_from_file_location(f"fixture_makers_{path.stem}", path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        found.append(module.make)
+    return found
+
+
 def build():
     """Everything, as {relative path: bytes}."""
     out = {}
+    kit = sys.modules[__name__]
     for maker in MAKERS:
         maker(out)
+    for maker in more_makers():
+        before = dict(out)
+        maker(out, kit)
+        changed = [name for name, data in before.items() if out.get(name) != data]
+        if changed:
+            raise SystemExit(f"a fixture maker changed fixtures that were there already: {changed}")
     return out
 
 

@@ -1,0 +1,26 @@
+# SPEC-090 from the stack browser, Search, now playing, Settings, HVSC, four short presses of ESC reach the browser
+# fixture: tunes/commando_test.sid C64Music/A_Commando.sid
+# fixture: tunes/three_subtunes.sid C64Music/B_Three.sid
+# fixture: tunes/two_sid.sid C64Music/C_Two.sid
+expect screen = browser
+key 5
+type test
+key Enter
+expect place = search-results
+key P
+key Tab
+key 5
+expect stack = ["browser","search","playing","settings","hvsc"]
+key Esc
+expect stack = ["browser","search","playing","settings"]
+key Esc
+expect stack = ["browser","search","playing"]
+key Esc
+expect stack = ["browser","search"]
+expect screen = search
+key Esc
+expect stack = ["browser"]
+expect screen = browser
+# on the browser, at the root, ESC closes nothing more
+key Esc
+expect stack = ["browser"]

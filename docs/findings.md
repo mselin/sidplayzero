@@ -15,6 +15,137 @@ brief the project started from, so the findings below are raised against that br
 
 ## Open
 
+### FIND-017 Holding a key gave one row more in its first second than the oracle counts
+- Phase: 4, tests
+- Observed: SPEC-045 has a held arrow repeat "after 400 ms, then 25 times a second", and its oracle has
+  Down held for one second move 16 rows. Repeats at 400, 440, … 1,000 ms are sixteen, plus the press: 17.
+- Concerns: SPEC-045, SPEC-093
+- Resolution (proposed): the first repeat comes 440 ms after the press, then one every 40 ms, so that the
+  oracle's 16 rows hold. The tests are written so.
+- Status: open; a change of behaviour of 40 ms, for the owner to confirm
+
+### FIND-018 The order of names did not say which way letters are folded
+- Phase: 4, tests
+- Observed: SPEC-042 sorts "without regard to the case of ASCII letters" and does not say whether letters
+  are compared as lower or upper case. The two give different places to `_ [ ] ^` and the backtick:
+  `Ace_2.sid` comes before or after `Aces.sid`. HVSC uses `_` everywhere, and `listing.bin` follows the same
+  order.
+- Concerns: SPEC-042, SPEC-142, SPEC-162
+- Resolution (proposed): ASCII letters are compared as lower case, as `tools/make_fixtures.py` already
+  does; SPEC-162's "in order of path" is that same order, folder by folder.
+- Status: open; for the owner to confirm
+
+### FIND-019 Things the layers cannot do as the specification has them
+- Phase: 4, tests
+- Observed: the `Files` seam (SPEC-021) and the rule that `core` uses only the C++ library (SPEC-020)
+  leave no way to do four things the specification asks of `core`: map `listing.bin` (SPEC-142, "it is
+  mapped, not loaded"); ask for the file system's block size (SPEC-146); append lines to `selftest.results`
+  (SPEC-241, SPEC-260); see a change within the same second, since `FileInfo` keeps whole seconds and the
+  folder cache goes by modification time (SPEC-043).
+- Concerns: SPEC-020, SPEC-021, SPEC-043, SPEC-142, SPEC-146, SPEC-241
+- Resolution (proposed): `Files` gains `map`, `block_size` and `append`, and `FileInfo` keeps nanoseconds
+  as the file system gives them. The fake does each in memory. No behaviour a user sees changes. Made in
+  Phase 5 with the code, because the fakes and the tests that use `Files` change together.
+- Status: open
+
+### FIND-020 Some clauses could not be tested as written, and were tested another way
+- Phase: 4, tests
+- Observed:
+  - SPEC-022's oracle wants an index build held and a set-up download stalled at once; both are jobs of the
+    long worker, which runs one at a time. Its third clause wants a volume key answered within 100 ms while
+    a folder takes 2 s to list, but volume is on the same quick worker as the listing.
+  - SPEC-040's "changing the setting makes the browser show the new root" needs `HVSC_BASE` unset, and the
+    runner sets it for every script.
+  - SPEC-096's "for each row of the state table a script brings the player to that state" cannot reach
+    Loading: settling finishes a load at once, and no fake holds a read back.
+  - SPEC-004 and SPEC-079 need "a stored speed measurement" in a script, and neither the file nor its form
+    is named.
+  - SPEC-150's "the release build refuses `http://127.0.0.1`" cannot be seen, since only a test build has
+    a way in.
+  - SPEC-072 times the engines "with the real clock" in tests that use the fake one.
+- Concerns: SPEC-004, SPEC-022, SPEC-040, SPEC-072, SPEC-079, SPEC-096, SPEC-150
+- Resolution (proposed): each oracle is reworded to what the tests do: SPEC-022 holds the index build in one
+  script and stalls a release update (part `releases`) in another, and uses Tab, Down and ESC for the keys
+  that must answer; SPEC-040's clause is a test that starts the program with `HVSC_BASE` unset; SPEC-096's
+  Loading row is checked at the unit level; SPEC-072 names the file, `speed.ini` in the cache folder with
+  `accurate = F` and `light = F`, and measures through the `Clock` seam; SPEC-150's clause is checked
+  through `spz_tool fetch --release-rules`, which uses the release build's rules. No behaviour changes.
+- Status: open
+
+### FIND-021 Two items said different things about the same case
+- Phase: 4, tests
+- Observed:
+  - SPEC-133: a known key given twice is a fault "(the last wins)", and "the setting concerned keeps its
+    default".
+  - SPEC-133 and SPEC-204: a `settings.ini` over 64 KiB gives `MSG_SETTINGS_RESET` by one and
+    `MSG_FILE_TOO_LARGE` by the other.
+  - SPEC-154 and SPEC-178: the importers refuse a backslash, and turn backslashes into slashes.
+  - SPEC-141 and SPEC-203: a fetched file that is no tune at all is `MSG_FETCH_MISMATCH` by one and
+    `MSG_INVALID_SID` by the other.
+  - SPEC-106 and SPEC-113: notices wait their turn, so `MSG_HOLD_TO_LEAVE` could wait longer than the one
+    second after which the app has left.
+  - SPEC-161: "records of tunes no longer there are removed" and "a record for every tune in the listing".
+  - SPEC-134: "the `import` and `export` folders beside them" is read as inside the playlists folder by one
+    area and could be read as beside it.
+- Concerns: SPEC-106, SPEC-113, SPEC-133, SPEC-134, SPEC-141, SPEC-154, SPEC-161, SPEC-178, SPEC-203, SPEC-204
+- Resolution (proposed), as the tests have it: the last of two lines wins, and the file is still a fault;
+  a `settings.ini` over the limit is `MSG_SETTINGS_RESET`; importers turn backslashes into slashes first
+  and then apply SPEC-154; the MD5 is compared first, so a page that is no tune is `MSG_FETCH_MISMATCH`;
+  `MSG_HOLD_TO_LEAVE` shows at once, in place of any notice; a tune HVSC lists whose file is gone becomes
+  absent again, and only a tune no listing has loses its record; the folders are
+  `playlists/import` and `playlists/export`.
+- Status: open; for the owner to confirm
+
+### FIND-022 Must items whose oracles need a part
+- Phase: 4, tests
+- Observed: SPEC-009, SPEC-151 and SPEC-154 are Must, but clauses of their oracles need the part
+  `playlists` (playlist files, importers, editing a playlist) without saying "Part". A test of a Must item
+  may not need a part (SPEC-115).
+- Concerns: SPEC-009, SPEC-151, SPEC-154
+- Resolution (proposed): those clauses are marked "Part `playlists`", and their tests carry that part, as
+  they already do.
+- Status: open
+
+### FIND-023 The screen description has no field for some things the oracles look at
+- Phase: 4, tests
+- Observed: SPEC-254 names no field for the number of search results, "No results", "Indexing n %", that a
+  filter is set, a row of the Playlists screen (name and count), the star on the now-playing screen, or the
+  name of a prompt's or the Search field's text field. Nor does it say whether `help` holds every line,
+  whether `player` is filled on every screen, and whether `boxes[].text` is the text as drawn.
+- Concerns: SPEC-254, SPEC-091, SPEC-098, SPEC-100, SPEC-107, SPEC-164, SPEC-172
+- Resolution (proposed): where no field is named for a thing on screen, a test reads it from `text`, the
+  number of results is `list.total`, the search field's text is `fields[0]`, `help` holds every line,
+  `player` is filled on every screen (`state = idle` with nothing loaded) and `boxes[].text` is the text as
+  drawn. Phase 5 may add a field only by changing SPEC-254 and its schema.
+- Status: open
+
+### FIND-024 Details the tests had to choose
+- Phase: 4, tests
+- Observed: the specification is silent on these, and each test had to pick one. Each choice is in the test
+  and in a comment in the header the test uses.
+  - SPEC-040: an empty `HVSC_BASE` counts as unset; `~` is replaced in it as in the setting.
+  - SPEC-046 and SPEC-096: times are cut down, not rounded: 0:03.500 shows as 0:03, as 3:55.594 is 3:55.
+  - SPEC-048: a root with only HVSC's documents holds entries (the absent tunes); a folder with only other
+    files shows "(empty)".
+  - SPEC-099: a prompt opens with the cursor at the end of its text.
+  - SPEC-101: stepping a setting stops at the ends, and does not wrap.
+  - SPEC-104: brightness "up" at 100 % sets nothing, as "down" at 10 % does.
+  - SPEC-107: a help line is the key's name as SPEC-111 writes it on the device (`fn+X`), then the words.
+  - SPEC-116: the names of what a message is about are `n`, `m`, `path`, `name` and `step`.
+  - SPEC-131: `queue_place` counts from 1.
+  - SPEC-141: a fetch-ahead counts towards the six fetches a minute.
+  - SPEC-143: a failed Enter does not start the 60 s pause.
+  - SPEC-170: playlist files end lines with a line feed and the file with one; seconds are cut down;
+    an entry without a subtune number takes its default subtune's length.
+  - SPEC-204: a line past the limit is cut and the rest of it dropped; a zero byte ends its line likewise.
+  - SPEC-207: a key that turns the screen back on clears `backlight_saved`; the seconds count from the
+    last key.
+  - SPEC-241: which keys a run off the device writes, and the form of each value, are the table in
+    `src/core/metrics.cpp` (`yes`/`no` for `unpacker`; the version keys with their names).
+- Concerns: the items named above
+- Resolution (proposed): the specification states each of these where its item is.
+- Status: open; for the owner to confirm
+
 ### FIND-007 USBSID-Pico needs a newer engine library than the device's system has
 - Phase: 1, requirements
 - Observed: USBSID-Pico support came in libsidplayfp 2.16.0. Debian trixie, which the device runs, has 2.12.0.
@@ -25,9 +156,27 @@ brief the project started from, so the findings below are raised against that br
 - Resolution so far: the licence is GPL-3 (REQ-144, CON-21), and the specification builds a library version
   that has USBSID support into the package, with that support switched off until the header's licence is
   cleared with its author (R9).
-- Status: open; it matters only when REQ-111 is taken up
+- Observed again in phase 4, tests: in libsidplayfp 3.1.2 it is not one header. The driver itself,
+  `src/builders/usbsid-builder/driver/src/USBSID.cpp` and `USBSID.h`, says "version 2" with no "or any later
+  version", as the exSID files do; the builder around it does not. So SPEC-011's test fails for a build with
+  the part `usbsid` until those two files are cleared. Also, the setting `output` that SPEC-191 uses is in
+  neither SPEC-101's rows nor SPEC-130's keys.
+- Status: open; it matters only when REQ-111 is taken up. The part `usbsid` stays out of every build until then
 
 ## Closed
+
+### FIND-016 The key step did not say in which order it asks for keys, or how
+- Phase: 4, tests
+- Observed: SPEC-260's oracle has a script "feed the keys asked for with one wrong". A script is a list of
+  lines and cannot read the screen to choose its next key, so it can only be written if the order of the
+  keys is known. The item said "one key at a time, from SPEC-111's table and the characters", and nothing
+  about the order, about what the screen shows for the key asked for, or about what counts as a wrong
+  answer.
+- Concerns: SPEC-260
+- Resolution: SPEC-260 has a paragraph on the key step: 67 keys in the order of SPEC-111's table and then
+  the six characters, the line "Key n/67: NAME", one answer for each key, and what `key_codes_wrong` holds.
+  The key step is seen only in the device test; nothing a user of the app sees changes.
+- Status: closed. A gap in the specification filled in; to be confirmed by the owner at the Phase 4 gate
 
 ### FIND-015 The test commands were required to be in the README
 - Phase: 4, tests

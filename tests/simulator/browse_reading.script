@@ -1,0 +1,33 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPEC-043 a folder whose entries take more than 150 ms to arrive says "Reading…" meanwhile, and shows them when they arrive
+# fixture: collections/85/C64Music C64Music
+
+expect screen = browser
+expect title = /
+expect rows[0].text = DEMOS
+expect text matches ^(?![\s\S]*Reading)
+
+# From now on the file system takes 400 ms of the fake clock to list a folder.
+fake files.list_delay_ms 400
+key Enter
+advance 100
+expect text matches ^(?![\s\S]*Reading)
+advance 60
+expect text contains Reading…
+expect screen = browser
+advance 300
+expect text matches ^(?![\s\S]*Reading)
+expect title = /DEMOS
+expect rows[0].text = A-F
+expect rows[0].highlighted = true
+expect position = 1/1
+
+# With a file system that answers at once, nothing says "Reading…" at any time.
+fake files.list_delay_ms 0
+key Left
+expect title = /
+key End
+key Enter
+expect title = /MUSICIANS
+expect text matches ^(?![\s\S]*Reading)
+expect rows[0].text = H

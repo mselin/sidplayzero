@@ -1,0 +1,38 @@
+# SPEC-099 Backspace removes the character before the cursor and Delete the one after it, and Left, Right, Home and End move the cursor
+# fixture: tunes/commando_test.sid C64Music/A_Commando.sid
+# fixture: tunes/three_subtunes.sid C64Music/B_Three.sid
+# fixture: tunes/two_sid.sid C64Music/C_Two.sid
+expect screen = browser
+key 5
+expect place = search-field
+type commando
+expect fields matches "cursor.:8[,}]"
+key Backspace
+expect fields contains ""text":"command""
+expect fields matches "cursor.:7[,}]"
+key Home
+expect fields matches "cursor.:0[,}]"
+key Delete
+expect fields contains ""text":"ommand""
+expect fields matches "cursor.:0[,}]"
+key Right
+key Right
+key Backspace
+expect fields contains ""text":"omand""
+expect fields matches "cursor.:1[,}]"
+key End
+expect fields matches "cursor.:5[,}]"
+key Left
+key X
+expect fields contains ""text":"omanxd""
+expect fields matches "cursor.:5[,}]"
+# at the ends there is nothing to remove and nowhere to go
+key Home
+key Backspace
+key Left
+expect fields matches "cursor.:0[,}]"
+key End
+key Delete
+key Right
+expect fields contains ""text":"omanxd""
+expect fields matches "cursor.:6[,}]"

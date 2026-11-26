@@ -1,0 +1,45 @@
+# SPEC-107 fn+H opens help over the place under it; Up and Down scroll it; fn+H, Enter or ESC closes it
+# fixture: tunes/commando_test.sid C64Music/A_Commando.sid
+# fixture: tunes/three_subtunes.sid C64Music/B_Three.sid
+# fixture: tunes/two_sid.sid C64Music/C_Two.sid
+expect screen = browser
+expect help = null
+key Help
+expect place = help
+expect help != null
+expect screen = browser
+expect stack = ["browser"]
+expect help[0] contains "Open the folder, or play the tune"
+# Up and Down scroll it, and it stays
+key Down
+key Down
+key Up
+key PageDown
+expect place = help
+expect help != null
+# the keys of the screen under it do not act while it is open
+key 5
+key Tab
+expect place = help
+expect screen = browser
+expect stack = ["browser"]
+# fn+H closes it
+key Help
+expect help = null
+expect place = browser
+# Enter closes it, and does not act on the screen under it
+key Help
+expect place = help
+key Enter
+expect help = null
+expect screen = browser
+expect stack = ["browser"]
+# ESC closes it, and closes nothing else
+key Tab
+expect screen = settings
+key Help
+expect place = help
+key Esc
+expect help = null
+expect screen = settings
+expect stack = ["browser","settings"]

@@ -19,3 +19,6 @@ sidplayzero-probe-*.txt
 *.swp
 .vscode/
 .idea/
+
+# Worktrees of helpers working on this checkout
+/.claude/worktrees/

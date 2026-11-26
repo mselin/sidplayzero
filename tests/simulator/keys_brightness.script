@@ -1,0 +1,24 @@
+# SPEC-104 with the fake backlight at 50 %, the brighter key asks for 60 % and the darker key for 40 %, and the notice shows the level
+# parts: brightness
+# fixture: tunes/commando_test.sid C64Music/A_Commando.sid
+# fixture: tunes/three_subtunes.sid C64Music/B_Three.sid
+# fixture: tunes/two_sid.sid C64Music/C_Two.sid
+expect screen = browser
+fake backlight.level 50
+key BrightnessUp
+expect notice.id = MSG_BRIGHTNESS
+expect notice.text = "Brightness 60 %"
+expect-log backlight contains "set 60"
+fake backlight.level 50
+key BrightnessDown
+expect notice.id = MSG_BRIGHTNESS
+expect notice.text = "Brightness 40 %"
+expect-log backlight contains "set 40"
+# a level between two tens goes to the nearest ten above or below
+fake backlight.level 55
+key BrightnessUp
+expect notice.text = "Brightness 60 %"
+fake backlight.level 55
+key BrightnessDown
+expect notice.text = "Brightness 50 %"
+expect-log backlight contains "set 50"

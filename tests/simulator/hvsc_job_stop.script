@@ -1,0 +1,28 @@
+# SPEC-147 SPEC-114 Stop asks "Stop the download?" in a confirm panel: ESC lets the job go on, Enter stops it, and nothing of it is left
+# fakes: fakes/hvsc_held
+key Tab
+key 5
+key Enter
+expect job.kind = setup
+expect-requests 1
+key 5
+expect panel.id = confirm
+expect place = confirm
+expect text contains "Stop the download?"
+key Esc
+expect panel = null
+expect job.kind = setup
+expect screen = hvsc
+key 5
+expect panel.id = confirm
+key Enter
+expect panel = null
+expect job = null
+expect-requests 1
+expect-file C64Music/DOCUMENTS/Songlengths.md5 absent
+expect-file C64Music/DOCUMENTS absent
+expect-file .cache/sidplayzero/listing.bin absent
+# The HVSC screen has its list again, and the row can be chosen again.
+expect screen = hvsc
+expect rows[0].text = "Get HVSC"
+expect lines contains "HVSC is not set up"

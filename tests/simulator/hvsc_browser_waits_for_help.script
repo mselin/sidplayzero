@@ -1,0 +1,23 @@
+# SPEC-140 SPEC-113 when the set-up ends on the HVSC screen with help open, the notice shows and the browser opens once help is closed
+# fakes: fakes/hvsc_held
+key Tab
+key 5
+key Enter
+expect job.kind = setup
+key Help
+expect help != null
+expect place = help
+fake http release https://hvsc.c64.org/download/C64Music/DOCUMENTS/Songlengths.md5
+fake http release https://hvsc.c64.org/download/C64Music/DOCUMENTS/STIL.txt
+fake http release https://hvsc.c64.org/download/C64Music/DOCUMENTS/HVSC.txt
+fake http release https://hvsc.c64.org/download/C64Music/DOCUMENTS/BUGlist.txt
+fake http release https://hvsc.c64.org/download/C64Music/DOCUMENTS/hv_sids.txt
+expect job = null
+expect notice.id = MSG_HVSC_READY
+expect help != null
+expect screen = hvsc
+key Help
+expect help = null
+expect screen = browser
+expect title = /
+expect rows[2].text = MUSICIANS

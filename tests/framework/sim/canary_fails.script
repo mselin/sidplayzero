@@ -1,2 +1,2 @@
-# TF-042 canary: a script that expects a wrong title [canary-fails]
+# TF-042 SPEC-250 canary: a script that expects a wrong title [canary-fails]
 expect title = "Some other app"

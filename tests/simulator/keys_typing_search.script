@@ -1,0 +1,21 @@
+# SPEC-099 the key codes for "hub 1985" put exactly that text in the Search field, and the codes for F, X, Z and C are typed there
+# fixture: tunes/commando_test.sid C64Music/A_Commando.sid
+# fixture: tunes/three_subtunes.sid C64Music/B_Three.sid
+# fixture: tunes/two_sid.sid C64Music/C_Two.sid
+expect screen = browser
+key 5
+expect place = search-field
+expect typing = true
+type hub 1985
+expect fields contains ""text":"hub 1985""
+expect fields matches "cursor.:8[,}]"
+key F
+key X
+key Z
+key C
+expect fields contains ""text":"hub 1985fxzc""
+expect place = search-field
+expect screen = search
+# while text is typed the action bar shows these two instead of its labels
+expect text contains "Enter: OK"
+expect text contains "ESC: cancel"

@@ -1,0 +1,53 @@
+# SPEC-096 SPEC-061 SPEC-062 on the now-playing screen Left and Right step through subtunes and Up and Down through tunes, P does nothing, and Browse shows the tune in the browser while it plays on
+# fixture: play/C64Music/QUEUE C64Music
+# args: --backend fake
+expect screen = browser
+expect rows[1].text = B_Three.sid
+key Down
+key Enter
+expect screen = playing
+expect player.path = /B_Three.sid
+# The three-subtune fixture starts at its default subtune, 2.
+expect player.subtune = 2
+expect player.subtunes = 3
+expect lines[3] contains "2 of 3"
+key Right
+expect player.subtune = 3
+expect player.state = playing
+expect lines[3] contains "3 of 3"
+key Left
+key Left
+expect player.subtune = 1
+expect lines[3] contains "1 of 3"
+# Previous from the first subtune is "previous tune".
+key Left
+expect player.path = /A_One.sid
+expect player.subtune = 1
+expect player.state = playing
+# Down is "next tune", Up "previous tune".
+key Down
+expect player.path = /B_Three.sid
+expect player.subtune = 2
+key Down
+expect player.path = /C_Two_Chips.sid
+# Next from the last subtune of the last entry, like next tune there, stops playback.
+key Right
+expect player.state = idle
+expect player.path = /C_Two_Chips.sid
+expect lines[5] contains Stopped
+key Up
+expect player.path = /B_Three.sid
+expect player.state = playing
+# P opens this screen from elsewhere; here it does nothing.
+key P
+expect screen = playing
+expect player.state = playing
+# Browse: the browser, at this tune, and the tune plays on.
+expect actions[0] = Browse
+key 4
+expect screen = browser
+expect rows[1].text = B_Three.sid
+expect rows[1].highlighted = true
+expect rows[1].marks contains playing
+expect player.state = playing
+expect player.path = /B_Three.sid

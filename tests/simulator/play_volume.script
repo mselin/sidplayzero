@@ -1,0 +1,23 @@
+# SPEC-076 the volume keys set the system volume to the nearest multiple of 5 % above or below, Mute toggles the mute, and the notice MSG_VOLUME shows the new level or "Muted"
+# fakes: fakes/play_volume
+key VolumeUp
+expect notice.id = MSG_VOLUME
+expect notice.text = "Volume 45 %"
+expect-log volume contains "set 45"
+key VolumeDown
+expect notice.id = MSG_VOLUME
+expect notice.text = "Volume 40 %"
+expect-log volume contains "set 40"
+key Mute
+expect notice.id = MSG_VOLUME
+expect notice.text = Muted
+expect-log volume contains toggle_mute
+key Mute
+expect notice.text = "Volume 40 %"
+# A notice takes no keys and changes no screen.
+expect screen = empty
+# If the system's volume cannot be changed, the notice says so.
+fake volume.works no
+key VolumeUp
+expect notice.id = MSG_VOLUME_FAILED
+expect notice.text = "The volume could not be changed"

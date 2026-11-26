@@ -1,0 +1,9 @@
+# SPEC-207 with a backlight that cannot be changed, the setting's row reads "Not available on this device"
+# parts: screen-off
+# fakes: fakes/keep_no_backlight
+key Tab
+expect screen = settings
+# The row is among the last of the list.
+key End
+expect text contains "Screen off while playing"
+expect text contains "Not available on this device"

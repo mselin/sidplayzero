@@ -1,0 +1,85 @@
+# SPEC-172 SPEC-171 Add from the now-playing screen's More panel adds the playing subtune, Add in the browser adds the tune without a number, an entry that is already there gives MSG_ALREADY_THERE, and Fav and Add act on a search result
+# parts: playlists
+# fixture: lists/small/C64Music C64Music
+# args: --backend fake
+#
+# The collection has two tunes, each alone in its folder: Commando.sid and Three_Songs.sid, which has
+# three subtunes and starts at the second.
+expect screen = browser
+expect rows[0].text = MUSICIANS
+key Enter
+key Down
+key Enter
+key Enter
+expect title = /MUSICIANS/T/Tester_Tom
+expect rows[0].text = Three_Songs.sid
+
+# On the now-playing screen, "More" offers "Add to playlist": the entry is the playing subtune.
+key Enter
+expect screen = playing
+expect player.subtune = 2
+key Right
+expect player.subtune = 3
+expect actions[4] = More
+key 8
+expect panel.id = more-playing
+expect place = more-playing
+expect panel.rows[0].text = Add to playlist
+key Enter
+expect panel.id = pick-playlist
+expect panel.rows[0].text contains Favourites
+key Enter
+expect panel = null
+expect notice.id = MSG_ADDED
+expect-file .local/share/sidplayzero/playlists/Favourites.m3u8 contains "#SIDTUNE:subtune=3 md5=d06b7955032f0cc8cd8cb358935291f6"
+advance 3000
+
+# The same entry again adds nothing.
+key 8
+expect panel.id = more-playing
+key Enter
+expect panel.id = pick-playlist
+key Enter
+expect panel = null
+expect notice.id = MSG_ALREADY_THERE
+advance 3000
+
+# In the browser the entry is the tune without a subtune number: another entry, once.
+key Esc
+expect screen = browser
+expect rows[0].text = Three_Songs.sid
+key 8
+expect panel.id = pick-playlist
+key Enter
+expect notice.id = MSG_ADDED
+advance 3000
+key 8
+key Enter
+expect notice.id = MSG_ALREADY_THERE
+advance 3000
+put fixtures/lists/expected lists-expected
+expect-file .local/share/sidplayzero/playlists/Favourites.m3u8 equals lists-expected/favourites_two.m3u8
+
+# In Search, "Fav" and "Add" act on the highlighted result, without a subtune number.
+key 5
+expect screen = search
+type commando
+key Enter
+expect place = search-results
+expect rows[0].text = Commando.sid
+expect rows[0].marks = []
+expect actions[3] = Fav
+expect actions[4] = Add
+key 7
+expect notice.id = MSG_FAV_ADDED
+expect rows[0].marks contains favourite
+advance 3000
+key 8
+expect panel.id = pick-playlist
+key Enter
+expect notice.id = MSG_ALREADY_THERE
+advance 3000
+key 7
+expect notice.id = MSG_FAV_REMOVED
+expect rows[0].marks = []
+expect-file .local/share/sidplayzero/playlists/Favourites.m3u8 equals lists-expected/favourites_two.m3u8

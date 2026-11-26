@@ -1,0 +1,55 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPEC-100 SPEC-165 a query that matches nothing says "No results", and nothing is asked of HVSC's site; ESC closes Search from the list and from the field
+# fixture: collections/85/C64Music C64Music
+
+expect screen = browser
+expect title = /
+
+# ESC in the list closes the screen.
+key 5
+expect screen = search
+type tester
+key Enter
+expect place = search-results
+expect list.total = 7
+expect position = 1/7
+expect rows[0].text = Changed.sid
+expect rows[1].text = Needs_BASIC.sid
+expect rows[2].text = New_Chip.sid
+expect rows[3].text = Renamed.sid
+expect rows[4].text = Three_Chips_3SID.sid
+expect text matches ^(?![\s\S]*No results)
+key Esc
+expect screen = browser
+expect stack = ["browser"]
+expect title = /
+
+# ESC in the field closes it too, whatever has been typed.
+key 5
+expect screen = search
+expect place = search-field
+type hub
+key Esc
+expect screen = browser
+
+# A query that no tune matches. Whatever the field held when the screen opened is taken out first.
+key 5
+expect place = search-field
+key End
+key Backspace
+key Backspace
+key Backspace
+key Backspace
+key Backspace
+key Backspace
+expect fields matches "text":""[,}]
+type zzzz
+expect fields matches "text":"zzzz"[,}]
+key Enter
+expect screen = search
+expect text contains "No results"
+key Esc
+expect screen = browser
+
+# Searching, with results or without, has asked nothing of the network.
+expect-requests 0

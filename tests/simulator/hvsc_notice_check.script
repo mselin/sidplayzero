@@ -1,0 +1,21 @@
+# SPEC-152 SPEC-148 with the notice not accepted, Check for a newer release opens the notice panel and makes no request; ESC makes none; Enter makes the request
+# parts: releases
+# fakes: fakes/hvsc_server
+# fixture: collections/84/C64Music/DOCUMENTS C64Music/DOCUMENTS
+key Tab
+key 5
+expect rows[0].text = "Check for a newer release"
+key Enter
+expect panel.id = notice-panel
+expect-requests 0
+key Esc
+expect panel = null
+expect-requests 0
+expect notice = null
+key Enter
+expect panel.id = notice-panel
+key Enter
+expect panel = null
+expect-requests 1
+expect-request 1 https://hvsc.c64.org/download/C64Music/DOCUMENTS/hv_sids.txt
+expect notice.id = MSG_HVSC_NEWER

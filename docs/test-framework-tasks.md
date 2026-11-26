@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | **Built.** This is the Phase 3 artifact: the list of what the test framework is made of, with the state of each task at its end. The gate awaits one thing: the device level's two canaries, run on the device (TF-081) |
+| Status | **Built and merged on 25 November 2026**, on the owner's word. One part of its gate is still owed: the device level's two canaries have not been run on the device (TF-081). This is the Phase 3 artifact: the list of what the test framework is made of, with the state of each task |
 | Date | 25 November 2026 |
 | Derives from | [`spec.md`](spec.md), approved 25 November 2026, section 15 above all |
 | Gate | Every level runs one passing and one deliberately failing test with one command |

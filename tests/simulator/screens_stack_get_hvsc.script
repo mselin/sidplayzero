@@ -1,0 +1,15 @@
+# SPEC-090 "Get HVSC" on the empty screen opens the HVSC screen over it
+# fakes: fakes/keys_setup_stalled
+expect screen = empty
+expect stack = ["empty"]
+key Enter
+expect panel.id = notice-panel
+expect stack = ["empty"]
+key Enter
+expect panel = null
+expect screen = hvsc
+expect stack = ["empty","hvsc"]
+expect place = hvsc
+key Esc
+expect screen = empty
+expect stack = ["empty"]

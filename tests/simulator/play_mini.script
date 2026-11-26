@@ -1,0 +1,45 @@
+# SPEC-109 the mini player on the browser, Search and Settings shows the state, the title and the elapsed time while a tune plays or is paused, and the failed mark with the file's name when it cannot be played
+# parts: mini
+# fixture: play/C64Music/BAD C64Music
+# args: --backend fake
+expect screen = browser
+expect rows[0].text = A_Good.sid
+key Enter
+expect screen = playing
+expect player.state = playing
+advance 2000
+# The browser.
+key 4
+expect screen = browser
+expect mini.state = playing
+expect mini.title matches "^Bad F"
+expect mini.elapsed = 0:02
+# Search.
+key 5
+expect screen = search
+expect mini.state = playing
+expect mini.title matches "^Bad F"
+expect mini.elapsed = 0:02
+key Esc
+expect screen = browser
+# Settings, and the time goes on.
+key Tab
+expect screen = settings
+expect mini.state = playing
+expect mini.title matches "^Bad F"
+advance 1000
+expect mini.elapsed = 0:03
+key Esc
+expect screen = browser
+# Paused.
+key PlayPause
+expect player.state = paused
+expect mini.state = paused
+advance 1000
+expect mini.elapsed = 0:03
+# Failed: the next tune is a file cut short, whose title is not known.
+key Next
+expect player.state = failed
+expect mini.state = failed
+expect mini.title matches "^B_Bad"
+expect screen = browser

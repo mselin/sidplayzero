@@ -1,0 +1,17 @@
+# SPEC-099 a sequence with Shift and the sym codes types ~/C64_Music.2, and a letter is a capital only while Shift is down
+# fixture: tunes/commando_test.sid C64Music/A_Commando.sid
+# fixture: tunes/three_subtunes.sid C64Music/B_Three.sid
+# fixture: tunes/two_sid.sid C64Music/C_Two.sid
+expect screen = browser
+key 5
+expect place = search-field
+type ~/C64_Music.2
+expect fields contains ""text":"~/C64_Music.2""
+press Shift
+key A
+key 1
+release Shift
+key A
+expect fields contains ""text":"~/C64_Music.2A1a""
+type !@#$%^&*()`_-+=[]{};:'<>|,.?
+expect fields contains "!@#$%^&*()`_-+=[]{};:'<>|,.?"

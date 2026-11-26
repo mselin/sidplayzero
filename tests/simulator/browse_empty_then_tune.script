@@ -1,0 +1,32 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPEC-048 a root that holds no entry gives the empty screen, and a tune put into the root makes the browser appear within 5 s
+# fixture: collections/85/C64Music/DOCUMENTS/BUGlist.txt C64Music/readme.txt
+
+# The root is there, with a text file in it and nothing the browser would show.
+expect-file C64Music/readme.txt exists
+expect screen = empty
+expect place = empty
+expect text contains /tmp/sidplayzero-test/home/C64Music
+expect rows[0].text = "Get HVSC"
+
+# Time alone changes nothing.
+advance 6000
+expect screen = empty
+
+# The quick worker looks at the root every 5 s.
+put fixtures/tunes/commando_test.sid C64Music/Commando.sid
+advance 5000
+expect screen = browser
+expect place = browser
+expect stack = ["browser"]
+expect title = /
+expect position = 1/1
+expect rows[0].text = Commando.sid
+expect rows[0].kind = tune
+expect rows[0].highlighted = true
+expect rows[0].marks = []
+expect-requests 0
+
+# And the browser stays: the empty screen does not come back by itself.
+advance 6000
+expect screen = browser

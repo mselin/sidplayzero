@@ -1,0 +1,44 @@
+# SPEC-140 SPEC-152 SPEC-048 from the empty screen, Enter and Enter on the notice set HVSC up; the browser opens on it and a chosen absent tune plays
+# fakes: fakes/hvsc_server
+# args: --backend fake
+expect screen = empty
+expect rows[0].text = "Get HVSC"
+key Enter
+expect panel.id = notice-panel
+expect-requests 0
+key Enter
+expect panel = null
+expect notice.id = MSG_HVSC_READY
+expect notice.text contains 85
+# The request log is exactly the five documents, and they are in the root as the server has them.
+expect-requests 5
+put fixtures/collections/85/C64Music/DOCUMENTS served
+expect-file C64Music/DOCUMENTS/Songlengths.md5 equals served/Songlengths.md5
+expect-file C64Music/DOCUMENTS/STIL.txt equals served/STIL.txt
+expect-file C64Music/DOCUMENTS/HVSC.txt equals served/HVSC.txt
+expect-file C64Music/DOCUMENTS/BUGlist.txt equals served/BUGlist.txt
+expect-file C64Music/DOCUMENTS/hv_sids.txt equals served/hv_sids.txt
+# The set-up ended on the screen it was started from: the browser opens at the root, with HVSC's folders.
+expect screen = browser
+expect title = /
+expect rows[0].text = DEMOS
+expect rows[1].text = GAMES
+expect rows[2].text = MUSICIANS
+expect rows matches ^\[\{[^{}]*\},\{[^{}]*\},\{[^{}]*\}\]$
+# To /MUSICIANS/H/Hubbard_Rob: the root lists DEMOS, GAMES and MUSICIANS.
+key Down
+key Down
+key Enter
+expect title = /MUSICIANS
+key Enter
+key Enter
+expect title = /MUSICIANS/H/Hubbard_Rob
+expect rows[0].text = Commando.sid
+expect rows[0].marks contains absent
+key Enter
+expect-requests 6
+expect-request 6 https://hvsc.c64.org/download/C64Music/MUSICIANS/H/Hubbard_Rob/Commando.sid
+expect-file C64Music/MUSICIANS/H/Hubbard_Rob/Commando.sid exists
+expect screen = playing
+expect player.state = playing
+expect player.path = /MUSICIANS/H/Hubbard_Rob/Commando.sid

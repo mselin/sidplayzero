@@ -1,0 +1,44 @@
+# SPEC-147 SPEC-102 with a download held open, the HVSC screen shows the job in step 3; ESC returns to Settings, the job mark goes on reporting, and a notice tells the end
+# fakes: fakes/hvsc_held
+key Tab
+key 5
+expect screen = hvsc
+expect actions[0] = Back
+key Enter
+# The first document is asked for and held back by the fake server.
+expect-requests 1
+expect job.kind = setup
+expect job.step = 3
+expect job.done = 0
+expect lines contains "HVSC is not set up"
+# The list is replaced by the progress, key 5 is "Stop", and Enter does nothing.
+expect rows matches ^(?![\s\S]*Get HVSC)
+expect actions[0] = Back
+expect actions[1] = Stop
+key Enter
+expect-requests 1
+expect job.step = 3
+expect screen = hvsc
+# ESC closes the screen and leaves the job running; the job mark is in the top line of every other screen.
+key Esc
+expect screen = settings
+expect job.kind = setup
+expect job.step = 3
+expect mini.job matches "[0-9]+ ?%"
+key Esc
+expect screen = empty
+expect mini.job matches "[0-9]+ ?%"
+key Tab
+expect screen = settings
+# The server lets the documents go: the job ends, and a notice tells it.
+fake http release https://hvsc.c64.org/download/C64Music/DOCUMENTS/Songlengths.md5
+fake http release https://hvsc.c64.org/download/C64Music/DOCUMENTS/STIL.txt
+fake http release https://hvsc.c64.org/download/C64Music/DOCUMENTS/HVSC.txt
+fake http release https://hvsc.c64.org/download/C64Music/DOCUMENTS/BUGlist.txt
+fake http release https://hvsc.c64.org/download/C64Music/DOCUMENTS/hv_sids.txt
+expect-requests 5
+expect job = null
+expect notice.id = MSG_HVSC_READY
+expect-file C64Music/DOCUMENTS/Songlengths.md5 exists
+# It ended while Settings was showing, not the HVSC screen: the screen is left alone.
+expect screen = settings

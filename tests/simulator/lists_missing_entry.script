@@ -1,0 +1,47 @@
+# SPEC-173 SPEC-069 a playlist of present, missing, present shows the missing entry with its mark, plays the first and the third, still holds three entries, and gives MSG_ENTRY_MISSING when the missing one is chosen
+# parts: playlists
+# fixture: collections/85/C64Music C64Music
+# fixture: lists/playlists/gap.m3u8 .local/share/sidplayzero/playlists/Gap.m3u8
+# args: --engine fake
+expect screen = browser
+key 6
+expect screen = playlists
+expect list.total = 2
+expect text matches Gap\D*3
+key Home
+key Down
+key Enter
+expect screen = playlist
+expect list.total = 3
+expect rows[0].marks = []
+expect rows[1].text = Nothing.sid
+expect rows[1].marks contains missing
+expect rows[2].marks = []
+
+# Played from the top: the first entry for its two seconds, then the third. The missing one is passed
+# over at once, and its message is not shown.
+key Home
+key Enter
+expect player.state = playing
+expect player.path = /DEMOS/A-F/Clock_Demo.sid
+advance 3000
+expect player.state = playing
+expect player.path = /GAMES/A-F/Either_Chip.sid
+expect player.message = null
+expect notice = null
+advance 2000
+expect player.state = idle
+
+# The playlist still holds its three entries, the missing one as it was.
+key Esc
+expect screen = playlist
+expect list.total = 3
+expect rows[1].marks contains missing
+expect-file .local/share/sidplayzero/playlists/Gap.m3u8 contains "/MUSICIANS/N/Nobody/Nothing.sid"
+
+# Chosen with Enter, the missing entry says what it is.
+key Home
+key Down
+key Enter
+expect player.state = failed
+expect player.message = MSG_ENTRY_MISSING

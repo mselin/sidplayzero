@@ -27,8 +27,12 @@ def level():
     with Timer("the program, for the tests that start and stop it"):
         build = configure_and_build(BUILD / "simulator", {
             "SIDPLAYZERO_TEST_HOOKS": "ON", "SIDPLAYZERO_DISPLAY": "window", "SIDPLAYZERO_BUILD_SIM_TESTS": "ON"})
+    with Timer("the tool for the tests of real parts, under AddressSanitizer"):
+        asan = configure_and_build(BUILD / "tool-asan", {
+            "SIDPLAYZERO_TEST_HOOKS": "ON", "SIDPLAYZERO_DISPLAY": "none", "SIDPLAYZERO_SANITIZE": "address",
+            "CMAKE_BUILD_TYPE": "Debug", "SIDPLAYZERO_BUILD_UNIT_TESTS": "OFF"}, targets=["spz_tool"])
     with Timer("integration tests"):
-        env = {"SPZ_SIM_BUILD": str(build)}
+        env = {"SPZ_SIM_BUILD": str(build), "SPZ_ASAN_TOOL": str(asan / "src" / "spz_tool")}
         results += python_results("tests/framework/integration", canaries, env)
         results += python_results("tests/integration", canaries, env)
     with Timer("the simulator's tests under ThreadSanitizer"):

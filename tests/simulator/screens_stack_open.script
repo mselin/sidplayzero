@@ -1,0 +1,58 @@
+# SPEC-090 SPEC-110 every screen that is always built opens by its keys alone, and the stack is as the item says after each
+# fixture: tunes/commando_test.sid C64Music/A_Commando.sid
+# fixture: tunes/three_subtunes.sid C64Music/B_Three.sid
+# fixture: tunes/two_sid.sid C64Music/C_Two.sid
+# args: --backend fake
+expect screen = browser
+expect stack = ["browser"]
+expect place = browser
+# P on any screen opens now playing
+key P
+expect screen = playing
+expect stack = ["browser","playing"]
+expect place = playing
+key Esc
+expect screen = browser
+expect stack = ["browser"]
+# key 5 in the browser opens Search
+key 5
+expect screen = search
+expect stack = ["browser","search"]
+expect place = search-field
+key Esc
+expect stack = ["browser"]
+# TAB on any screen opens Settings
+key Tab
+expect screen = settings
+expect stack = ["browser","settings"]
+expect place = settings
+# key 5 in Settings opens HVSC
+key 5
+expect screen = hvsc
+expect stack = ["browser","settings","hvsc"]
+expect place = hvsc
+key Esc
+expect stack = ["browser","settings"]
+# key 8 in Settings opens About
+key 8
+expect screen = about
+expect stack = ["browser","settings","about"]
+expect place = about
+key Esc
+key Esc
+expect screen = browser
+expect stack = ["browser"]
+# key 4 in the browser opens now playing once the player has a current entry
+expect actions[0] = ""
+key 4
+expect screen = browser
+key Enter
+expect screen = playing
+expect stack = ["browser","playing"]
+expect player.state = playing
+key Esc
+expect screen = browser
+expect actions[0] = Playing
+key 4
+expect screen = playing
+expect stack = ["browser","playing"]

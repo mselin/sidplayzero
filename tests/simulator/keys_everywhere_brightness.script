@@ -1,0 +1,56 @@
+# SPEC-092 SPEC-104 the brightness keys act on every screen, in a panel and in the text prompt
+# parts: brightness
+# fixture: tunes/commando_test.sid C64Music/A_Commando.sid
+# fixture: tunes/three_subtunes.sid C64Music/B_Three.sid
+# fixture: tunes/two_sid.sid C64Music/C_Two.sid
+expect screen = browser
+fake backlight.level 50
+key BrightnessUp
+expect notice.id = MSG_BRIGHTNESS
+expect notice.text = "Brightness 60 %"
+key P
+expect screen = playing
+key BrightnessUp
+expect notice.text = "Brightness 70 %"
+key Tab
+expect screen = settings
+key BrightnessUp
+expect notice.text = "Brightness 80 %"
+key 5
+expect screen = hvsc
+key BrightnessDown
+expect notice.text = "Brightness 70 %"
+key Esc
+key 8
+expect screen = about
+key BrightnessDown
+expect notice.text = "Brightness 60 %"
+# in a panel
+key 5
+expect panel.id = text
+key BrightnessDown
+expect notice.text = "Brightness 50 %"
+expect panel.id = text
+key Esc
+key Esc
+# in the text prompt
+key End
+key Enter
+expect panel.id = prompt
+key BrightnessDown
+expect notice.text = "Brightness 40 %"
+expect panel.id = prompt
+key Esc
+key Esc
+key Esc
+# in the Search field and on its results
+key 5
+expect place = search-field
+key BrightnessUp
+expect notice.text = "Brightness 50 %"
+type test
+key Enter
+expect place = search-results
+key BrightnessUp
+expect notice.text = "Brightness 60 %"
+expect-log backlight contains "set 40"

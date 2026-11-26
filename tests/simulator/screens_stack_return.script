@@ -1,0 +1,36 @@
+# SPEC-090 a key for a screen that is already in the stack returns to it and closes those above; TAB in HVSC and in About gives the stack Settings had, and TAB in Settings changes nothing
+# fixture: tunes/commando_test.sid C64Music/A_Commando.sid
+# fixture: tunes/three_subtunes.sid C64Music/B_Three.sid
+# fixture: tunes/two_sid.sid C64Music/C_Two.sid
+expect screen = browser
+key P
+key Tab
+expect stack = ["browser","playing","settings"]
+key Tab
+expect screen = settings
+expect stack = ["browser","playing","settings"]
+key 5
+expect stack = ["browser","playing","settings","hvsc"]
+key Tab
+expect screen = settings
+expect stack = ["browser","playing","settings"]
+key 8
+expect stack = ["browser","playing","settings","about"]
+key Tab
+expect screen = settings
+expect stack = ["browser","playing","settings"]
+# P from HVSC returns to now playing and closes Settings and HVSC
+key 5
+expect screen = hvsc
+key P
+expect screen = playing
+expect stack = ["browser","playing"]
+key Tab
+key 8
+expect screen = about
+key P
+expect screen = playing
+expect stack = ["browser","playing"]
+# on now playing itself P changes nothing
+key P
+expect stack = ["browser","playing"]

@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPEC-048 with help open over the empty screen, a tune put into the root makes the browser appear when help is closed, and not before
+
+expect screen = empty
+key Help
+expect place = help
+expect screen = empty
+
+put fixtures/tunes/commando_test.sid C64Music/Commando.sid
+advance 5000
+expect screen = empty
+expect place = help
+advance 10000
+expect screen = empty
+expect place = help
+
+# Help is closed by the key that opened it, and the browser takes the empty screen's place.
+key Help
+expect screen = browser
+expect place = browser
+expect title = /
+expect rows[0].text = Commando.sid
+expect rows[0].highlighted = true

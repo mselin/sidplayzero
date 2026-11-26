@@ -125,20 +125,21 @@ class DeviceScript(unittest.TestCase):
         """TF-080 SPEC-260 the whole sitting, against the stand-in, ends with an answer for every checklist line"""
         self.play_the_app()
         (self.home / ".config" / "sidplayzero").mkdir(parents=True)
-        answers = "\n".join(["", "yes", "yes", "not offered", "", "yes", "the app says it may not", "yes", "stayed on", "yes",
-                             "yes", "yes", "yes"]) + "\n"
+        answers = "\n".join(["yes", "yes", "", "yes", "yes", "not offered", "", "yes", "the app says it may not", "yes",
+                             "stayed on", "yes", "yes", "yes", "yes"]) + "\n"
         done = self.run_script(["sidplayzero_0.1.0-1_arm64.deb"], answers=answers)
         self.assertEqual(done.returncode, 0, done.stdout)
         results = self.results_file("sidplayzero-device-2*.txt")
         checklist = (ROOT / "docs" / "device-checklist.md").read_text()
         names = re.findall(r"(?m)^\| `([a-z_]+)` \|", checklist)
-        self.assertEqual(len(names), 11)
+        self.assertEqual(len(names), 13)
         for name in names:
             self.assertRegex(results, rf"(?m)^check_{name} = \S", name)
         self.assertIn("check_brightness_keys = the app says it may not", results)
         self.assertRegex(results, r"(?m)^start_ms = 790 801( 812)* 805$")   # every start, in order
         self.assertIn("speed_factor_accurate = 1.90", results)
         self.assertIn("user_files_kept_after_removal = yes", results)
+        self.assertIn("package_removed_cleanly = yes", results)
         self.assertIn("checks_not_in_order = 0", results)
 
     def test_checklist_and_script_agree(self):

@@ -1,0 +1,61 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPEC-043 the list draws only the rows that are on the screen, whatever the number of entries; an empty folder shows "(empty)" and the position 0/0
+# fixture: collections/browse_big/C64Music C64Music
+
+# The root's folders: BIG, with 1,298 tunes; EMPTY, with nothing to show; SIX, with six tunes.
+expect screen = browser
+expect title = /
+expect position = 1/3
+expect rows[0].text = BIG
+expect rows[1].text = EMPTY
+expect rows[2].text = SIX
+
+# Six entries: all of them are rows, or all but one where the detail line has the sixth row's place.
+key End
+key Enter
+expect title = /SIX
+expect list.total = 6
+expect position = 1/6
+expect list.first = 0
+expect rows[0].text = Tune_1.sid
+expect rows[4].text = Tune_5.sid
+expect rows matches ^\[(\{[^{}]*\},?){5,6}\]$
+expect list.objects > 0
+expect list.objects < 100
+
+# 1,298 entries: the same few rows, and far fewer objects than entries. test_browse.py checks that
+# the number of objects is the very same as for six entries.
+key Left
+key Home
+key Enter
+expect title = /BIG
+expect list.total = 1298
+expect position = 1/1298
+expect list.first = 0
+expect rows[0].text = Tune_0001.sid
+expect rows[4].text = Tune_0005.sid
+expect rows matches ^\[(\{[^{}]*\},?){5,6}\]$
+expect list.objects > 0
+expect list.objects < 100
+key End
+expect position = 1298/1298
+expect rows matches ^\[(\{[^{}]*\},?){5,6}\]$
+expect rows matches "text":"Tune_1298\.sid"[^{}]*"highlighted":true
+expect list.first > 1291
+expect list.objects < 100
+
+# A folder with no entry.
+key Left
+expect title = /
+key Home
+key Down
+expect rows[1].text = EMPTY
+expect rows[1].highlighted = true
+key Enter
+expect title = /EMPTY
+expect list.total = 0
+expect position = 0/0
+expect text contains (empty)
+key Left
+expect title = /
+expect rows[1].highlighted = true

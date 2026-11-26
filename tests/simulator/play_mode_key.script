@@ -1,0 +1,21 @@
+# SPEC-096 SPEC-065 the Mode key steps what happens when a song ends, round its four values, and says so with the notice MSG_MODE
+# parts: modes
+# fixture: play/C64Music/QUEUE C64Music
+# args: --backend fake
+expect screen = browser
+key Enter
+expect screen = playing
+expect player.mode = subtunes
+expect actions[2] = Mode
+key 6
+expect notice.id = MSG_MODE
+expect notice.text contains "When a song ends:"
+expect player.mode != subtunes
+expect player.state = playing
+key 6
+expect player.mode != subtunes
+key 6
+expect player.mode != subtunes
+key 6
+expect player.mode = subtunes
+expect notice.id = MSG_MODE

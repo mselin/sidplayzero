@@ -1,0 +1,23 @@
+# SPEC-102 with HVSC not set up the HVSC screen's rows are Get HVSC and Rebuild the index, the first highlighted, and opening it asks nothing of the network
+key Tab
+expect screen = settings
+expect actions[1] = HVSC
+key 5
+expect screen = hvsc
+expect stack = ["empty","settings","hvsc"]
+expect lines contains "HVSC is not set up"
+expect rows[0].text = "Get HVSC"
+expect rows[0].kind = action
+expect rows[0].highlighted = true
+expect rows[1].text = "Rebuild the index"
+expect rows[1].highlighted = false
+expect rows matches ^\[\{[^{}]*\},\{[^{}]*\}\]$
+expect actions[0] = Back
+expect job = null
+key Down
+expect rows[1].highlighted = true
+key Up
+expect rows[0].highlighted = true
+expect-requests 0
+key 4
+expect screen = settings

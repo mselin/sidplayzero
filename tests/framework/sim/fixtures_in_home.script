@@ -1,0 +1,8 @@
+# TF-041 SPEC-253 a script's header can put fixtures into its home folder, and `put` can take one from tests/fixtures
+# fixture: collections/85/C64Music C64Music
+# fixture: tunes/own_tune.sid Elsewhere/own.sid
+expect-file C64Music/DOCUMENTS/hv_sids.txt contains "Release 85"
+expect-file C64Music/MUSICIANS/H/Hubbard_Rob/Commando.sid exists
+expect-file Elsewhere/own.sid exists
+put fixtures/tunes/two_sid.sid C64Music/Added.sid
+expect-file C64Music/Added.sid exists

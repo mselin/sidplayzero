@@ -1,0 +1,25 @@
+# SPEC-078 the sound device dropped for good: the player is Paused with the notice MSG_NO_SOUND, and Play/Pause once the device is back plays on (tests/simulator/test_play.py checks that it is from the same sample)
+# fixture: play/C64Music/QUEUE C64Music
+# args: --engine fake
+expect screen = browser
+key Enter
+expect player.state = playing
+advance 1000
+# Away for four seconds: longer than the five attempts, 200 ms apart, to open it again.
+fake sink drop 4000
+advance 1500
+expect player.state = paused
+expect notice.id = MSG_NO_SOUND
+expect notice.text = "No sound device"
+expect player.path = /A_One.sid
+# The device is back after the four seconds. Nothing happens by itself.
+advance 3000
+expect player.state = paused
+key Enter
+expect player.state = playing
+advance 1000
+expect player.state = playing
+expect player.elapsed_ms > 1900
+expect player.elapsed_ms < 2100
+expect player.underrun_frames = 0
+save-samples gone

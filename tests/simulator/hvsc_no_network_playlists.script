@@ -1,0 +1,77 @@
+# SPEC-151 a session that makes a tune a favourite, makes, plays, renames and deletes a playlist, and steps what happens when a song ends, makes no request
+# parts: playlists modes
+# fixture: collections/85/C64Music C64Music
+# args: --backend fake
+# There is no http.tsv for this test, so the fake HttpClient fails the run if it is called at all.
+expect screen = browser
+key Down
+key Down
+key Enter
+key Enter
+key Enter
+expect title = /MUSICIANS/H/Hubbard_Rob
+expect rows[0].text = Commando.sid
+# A favourite, and a playlist of the user's own with the tune in it.
+key 7
+expect notice.id = MSG_FAV_ADDED
+key 8
+expect panel.id = pick-playlist
+key End
+key Enter
+expect panel.id = prompt
+type Road
+key Enter
+expect panel = null
+expect-requests 0
+# The notices of the two keys have their time.
+advance 7000
+# Play from the playlist, step the mode, let the song end.
+key 6
+expect screen = playlists
+key Down
+key Enter
+expect screen = playlist
+key Enter
+expect screen = playing
+expect player.state = playing
+expect player.path = /MUSICIANS/H/Hubbard_Rob/Commando.sid
+key 6
+expect notice.id = MSG_MODE
+key 7
+advance 1000
+fake backend song_ended
+advance 5000
+key 5
+expect player.state = idle
+expect-requests 0
+# Take the entry out again; rename the playlist; delete it.
+key 4
+key 6
+expect screen = playlists
+key Down
+key Enter
+expect screen = playlist
+key 7
+key 4
+expect screen = playlists
+key End
+key 6
+expect panel.id = prompt
+type s
+key Enter
+expect panel = null
+key End
+key 7
+expect panel.id = confirm
+key Enter
+expect panel = null
+advance 60000
+expect-requests 0
+restart
+expect screen = browser
+key 6
+expect screen = playlists
+key Enter
+expect screen = playlist
+advance 60000
+expect-requests 0

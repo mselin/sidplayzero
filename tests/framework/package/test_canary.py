@@ -20,5 +20,5 @@ class Canaries(unittest.TestCase):
         self.assertIn("/usr/bin/sidplayzero", [path for _, _, path in deb.files(DEB)])
 
     def test_fails(self):
-        """TF-071 canary: the package is expected to hold a file that is not there [canary-fails]"""
+        """TF-071 SPEC-250 canary: the package is expected to hold a file that is not there [canary-fails]"""
         self.assertIn("/usr/bin/some-other-program", [path for _, _, path in deb.files(DEB)])

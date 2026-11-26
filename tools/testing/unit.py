@@ -49,7 +49,7 @@ def doctest_results(program, where, known, canaries, must_only, env=None):
                 continue
             if CANARY_FAILS in test.name and not canaries:
                 continue
-            if must_only and test.parts:
+            if (must_only and test.parts) or "usbsid" in test.parts:    # no build of the tests has usbsid (SPEC-115)
                 results.append(Result(test.name, SKIPPED, "needs the part " + ", ".join(test.parts), where))
             elif test.name in seen:
                 results.append(Result(test.name, *seen[test.name], where))
@@ -79,9 +79,6 @@ class _Collector(unittest.TestResult):
     def _name(test):
         return test.shortDescription() or test.id()
 
-    def addSuccess(self, test):
-        self.outcomes.append((self._name(test), PASSED, ""))
-
     def addFailure(self, test, err):
         self.outcomes.append((self._name(test), FAILED, self._exc_info_to_string(err, test).strip().split("\n")[-1]))
 
@@ -91,8 +88,23 @@ class _Collector(unittest.TestResult):
     def addSkip(self, test, reason):
         self.outcomes.append((self._name(test), SKIPPED, reason))
 
+    def addSubTest(self, test, subtest, err):
+        # A failure inside self.subTest(...) belongs to the test it is part of; its success says nothing,
+        # since addSuccess still follows for a test whose parts all passed, and addFailure does not.
+        if err is not None:
+            name = self._name(test)
+            message = self._exc_info_to_string(err, subtest).strip().split("\n")[-1]
+            self.outcomes = [o for o in self.outcomes if not (o[0] == name and o[1] == PASSED)]
+            if not any(o[0] == name and o[1] == FAILED for o in self.outcomes):
+                self.outcomes.append((name, FAILED, f"{subtest._subDescription().strip()}: {message}"))
 
-def python_results(folder, canaries, env):
+    def addSuccess(self, test):
+        name = self._name(test)
+        if not any(o[0] == name and o[1] == FAILED for o in self.outcomes):
+            self.outcomes.append((name, PASSED, ""))
+
+
+def python_results(folder, canaries, env, where=""):
     """Runs the unittest files of a folder in this process. A test's name is its docstring's first line."""
     old = dict(os.environ)
     os.environ.update(env)
@@ -122,7 +134,7 @@ def python_results(folder, canaries, env):
             wanted.run(collector)
         finally:
             sys.stdout = stream
-        return [Result(name, outcome, message) for name, outcome, message in collector.outcomes]
+        return [Result(name, outcome, message, where) for name, outcome, message in collector.outcomes]
     finally:
         os.environ.clear()
         os.environ.update(old)
@@ -134,6 +146,7 @@ def level():
     known = sources.cpp_tests(["tests/unit", "tests/framework"])
     results = []
     programs = {}
+    run([sys.executable, ROOT / "tools" / "make_fixtures.py"], check=True)
     for folder, where, options in VARIANTS:
         with Timer(f"unit tests{': ' + where if where else ''}"):
             build = configure_and_build(BUILD / folder, {"SIDPLAYZERO_BUILD_APP": "OFF",
@@ -145,7 +158,9 @@ def level():
             if folder == "unit-asan" and canaries:
                 results.append(asan_canary(program, where))
     with Timer("the framework's own tests, and the tests of the checker"):
-        results += python_results("tests/framework", canaries, {"SPZ_UNIT_BUILD": str(BUILD / "unit")})
+        env = {"SPZ_UNIT_BUILD": str(BUILD / "unit")}
+        results += python_results("tests/framework", canaries, env)
+        results += python_results("tests/unit", canaries, env)     # unit-level tests that are easier in Python
     with Timer("tools/check_repo.py"):
         process = run([sys.executable, ROOT / "tools" / "check_repo.py"])
         results.append(Result("the repository's checks (tools/check_repo.py)",
