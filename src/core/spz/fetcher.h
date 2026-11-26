@@ -21,7 +21,7 @@
 #include "spz/http.h"
 #include "spz/listing.h"
 #include "spz/notice_gate.h"
-#include "spz/settings.h"
+#include "spz/settings_file.h"
 #include "spz/types.h"
 
 namespace spz {
@@ -106,7 +106,7 @@ struct FetcherParts {
     Executor* ui = nullptr;                // what came of it is posted here
     NoticeGate* gate = nullptr;
     const Listing* listing = nullptr;      // gives a path's MD5; a path it does not name is never requested
-    const Settings* settings = nullptr;    // `url_files`, read when a request is made
+    SettingsSource settings;               // `url_files`, a copy read when a request is made (A2)
     std::string root;                      // the collection root, with no slash at its end
     NewTuneListener* arrivals = nullptr;   // may be null
     ChangedTunes* changed = nullptr;       // may be null

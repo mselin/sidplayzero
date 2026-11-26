@@ -242,7 +242,7 @@ struct FetchState : std::enable_shared_from_this<FetchState> {
 
         const std::string temporary = temp_beside(target);
         HttpRequest request;
-        request.url = join_url(p.settings->url_files, path);
+        request.url = join_url(p.settings.get().url_files, path);
         request.to_path = temporary;
         request.limit_bytes = kTuneSizeLimit;
         outcome.requested = true;

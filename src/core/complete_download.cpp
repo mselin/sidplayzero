@@ -349,7 +349,7 @@ struct CompleteDownload::Impl {
         listing.open(p.files, listing_file(), database());
         const HvscStatus status = hvsc_status(p.files, listing, p.root);
         if (!status.set_up || status.release == 0) return fail_early(1);
-        std::string url = p.settings->url_archive;
+        std::string url = p.settings.get().url_archive;
         const std::string release = std::to_string(status.release);
         for (std::size_t at = url.find("{release}"); at != std::string::npos; at = url.find("{release}", at + release.size())) {
             url.replace(at, 9, release);

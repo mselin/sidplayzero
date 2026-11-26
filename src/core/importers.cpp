@@ -38,6 +38,16 @@ int subtune_of(const std::string& digits) {
     return n >= 1 && n <= 256 ? static_cast<int>(n) : 0;
 }
 
+// A text with each byte that ends a line of a playlist (LF, CR, and the zero byte: lists_text::split_lines)
+// a space: what a missing entry holds of an imported file's text is written as one line of the playlist,
+// and may not break it into more. Other control characters stay: the entry is missing, holding its text.
+std::string one_line(std::string text) {
+    for (char& c : text) {
+        if (c == '\n' || c == '\r' || c == '\0') c = ' ';
+    }
+    return text;
+}
+
 std::string trim(const std::string& s) {
     std::size_t begin = 0, end = s.size();
     while (begin < end && (s[begin] == ' ' || s[begin] == '\t')) ++begin;
@@ -666,8 +676,8 @@ ImportReport Importer::import_file(const std::string& path) {
             entry.entry.path = found;
             entry.entry.subtune = line.subtune;
         } else {
-            entry.entry.path = line.original;   // a missing entry holding the file's own text
-            report.not_found.push_back(line.original);
+            entry.entry.path = one_line(line.original);   // a missing entry holding the file's own text
+            report.not_found.push_back(entry.entry.path);
         }
         entries.push_back(entry);
     }

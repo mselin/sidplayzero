@@ -9,7 +9,7 @@
 // so and ends with status 70, and the test that asked fails with "not built yet".
 //
 //   spz_tool listing DATABASE [--path HVSC_PATH]                       tests/integration/test_hvsc.py, SPEC-142
-//   spz_tool fetch URL TO [--limit BYTES] [--ca FILE] [--release-rules]                    test_hvsc.py, SPEC-150
+//   spz_tool fetch URL TO [--limit BYTES] [--resume-from BYTE] [--ca FILE] [--release-rules]  test_hvsc.py, SPEC-150
 //   spz_tool setup --root DIR --cache DIR --url-files URL [--ca FILE]                      test_hvsc.py, SPEC-140
 //   spz_tool unpacker list ARCHIVE | unpacker unpack ARCHIVE INTO              test_hvsc.py, SPEC-007, SPEC-149
 //   spz_tool complete-download ...                                                         test_hvsc.py, SPEC-144
@@ -195,17 +195,19 @@ spz::platform::HttpRules rules_from(const Arguments& a) {
 int fetch(const std::vector<std::string>& args) {
     Arguments a;
     if (!parse(args, {"--release-rules"}, &a) || a.words.size() != 2) {
-        return usage("fetch URL TO [--limit BYTES] [--ca FILE] [--release-rules]");
+        return usage("fetch URL TO [--limit BYTES] [--resume-from BYTE] [--ca FILE] [--release-rules]");
     }
     spz::platform::CurlHttpClient http(rules_from(a));
     spz::HttpRequest request;
     request.url = a.words[0];
     request.to_path = a.words[1];
     request.limit_bytes = std::strtoull(a.value("--limit", "0").c_str(), nullptr, 10);
+    request.resume_from = std::strtoull(a.value("--resume-from", "0").c_str(), nullptr, 10);
     const spz::HttpResult result = http.fetch(request, nullptr);
     say("failure", failure_name(result.failure));
     say("status", std::to_string(result.status));
     say("bytes", std::to_string(result.bytes));
+    say("resumed", result.resumed ? "yes" : "no");
     return 0;
 }
 

@@ -216,6 +216,17 @@ std::string clean(const std::string& s) {
     return out;
 }
 
+// A tune's line as it is, but for the bytes that would end it (LF, CR, the zero byte: split_lines), each a
+// space: an entry is one line of the file, whatever its text holds (SPEC-170). A missing entry keeps any
+// other control character of its text (SPEC-154).
+std::string one_line(const std::string& s) {
+    std::string out = s;
+    for (char& c : out) {
+        if (c == '\n' || c == '\r' || c == '\0') c = ' ';
+    }
+    return out;
+}
+
 void put(Bytes* out, const std::string& line) {
     out->insert(out->end(), line.begin(), line.end());
     out->push_back('\n');
@@ -294,7 +305,7 @@ Bytes write_playlist(const Playlist& playlist) {
             }
             put(&out, line);
         }
-        put(&out, entry.entry.path);
+        put(&out, one_line(entry.entry.path));
     }
     for (const std::string& line : playlist.last_lines) put(&out, line);
     return out;

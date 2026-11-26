@@ -14,7 +14,7 @@
 #include "spz/job.h"
 #include "spz/listing.h"
 #include "spz/notice_gate.h"
-#include "spz/settings.h"
+#include "spz/settings_file.h"
 #include "spz/types.h"
 
 namespace spz {
@@ -68,7 +68,7 @@ struct HvscSetupParts {
     NoticeGate* gate = nullptr;
     Jobs* jobs = nullptr;
     NoticeSink* notices = nullptr;
-    const Settings* settings = nullptr;  // `url_files`
+    SettingsSource settings;             // `url_files`, a copy read when the job starts (A2)
     std::string root;                    // the collection root, with no slash at its end; need not exist
     std::string cache;                   // the cache folder (SPEC-134)
     HvscListener* listener = nullptr;    // may be null

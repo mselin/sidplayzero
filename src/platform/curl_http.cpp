@@ -34,12 +34,18 @@ bool starts_with(const std::string& text, const char* prefix) {
     return text.compare(0, std::strlen(prefix), prefix) == 0;
 }
 
-// http://127.0.0.1, with a port or a path or neither, and nothing else.
+// http://127.0.0.1, then a port of digits or nothing, then a path or nothing: the address's host is
+// 127.0.0.1 and nothing else. "http://127.0.0.1:x@other.host/" is refused: whatever comes before an `@`
+// is a user name, and the host is what follows it.
 bool is_loopback_http(const std::string& url) {
     const char prefix[] = "http://127.0.0.1";
     if (!starts_with(url, prefix)) return false;
-    const std::size_t at = sizeof prefix - 1;
-    return url.size() == at || url[at] == ':' || url[at] == '/';
+    std::size_t at = sizeof prefix - 1;
+    if (at < url.size() && url[at] == ':') {
+        ++at;
+        while (at < url.size() && url[at] >= '0' && url[at] <= '9') ++at;
+    }
+    return at == url.size() || url[at] == '/';
 }
 
 std::string lower(std::string text) {
@@ -70,6 +76,25 @@ std::uint64_t number(const std::string& text) {
     return any ? value : 0;
 }
 
+// A Content-Range of a 206: "bytes FIRST-LAST/TOTAL", TOTAL a number or "*". False for anything else.
+bool read_content_range(const std::string& value, std::uint64_t* first, std::uint64_t* last, std::uint64_t* total) {
+    const std::string unit = "bytes ";
+    if (lower(value.substr(0, unit.size())) != unit) return false;
+    const std::string range = trim(value.substr(unit.size()));
+    const std::size_t dash = range.find('-');
+    const std::size_t slash = range.find('/');
+    if (dash == std::string::npos || slash == std::string::npos || dash == 0 || slash < dash + 2) return false;
+    const auto digits = [](const std::string& text) {
+        return !text.empty() && text.size() <= 19 && text.find_first_not_of("0123456789") == std::string::npos;
+    };
+    const std::string a = range.substr(0, dash), b = range.substr(dash + 1, slash - dash - 1), c = range.substr(slash + 1);
+    if (!digits(a) || !digits(b) || !(c == "*" || digits(c))) return false;
+    *first = number(a);
+    *last = number(b);
+    *total = c == "*" ? 0 : number(c);
+    return *first <= *last && (*total == 0 || *last < *total);
+}
+
 // What one request gathers while it runs.
 struct Transfer {
     const HttpRequest* request = nullptr;
@@ -83,6 +108,9 @@ struct Transfer {
     HttpFailure write_failure = HttpFailure::None;
     std::string etag, last_modified;
     std::uint64_t content_length = 0, range_total = 0;
+    std::uint64_t range_first = 0, range_last = 0;
+    bool range_given = false;      // a Content-Range this answer gave, read as SPEC-150's check needs
+    bool bad_answer = false;       // a 206 that is not the rest of the file asked for: nothing of it is kept
     bool cancelled = false;
 
     std::uint64_t offset() const { return resumed ? request->resume_from : 0; }
@@ -95,6 +123,7 @@ struct Transfer {
             self->last_modified.clear();
             self->content_length = 0;
             self->range_total = 0;
+            self->range_given = false;
             return size * count;
         }
         const std::size_t colon = line.find(':');
@@ -108,8 +137,7 @@ struct Transfer {
         } else if (name == "content-length") {
             self->content_length = number(value);
         } else if (name == "content-range") {
-            const std::size_t slash = value.rfind('/');
-            if (slash != std::string::npos) self->range_total = number(value.substr(slash + 1));
+            self->range_given = read_content_range(value, &self->range_first, &self->range_last, &self->range_total);
         }
         return size * count;
     }
@@ -121,6 +149,13 @@ struct Transfer {
         curl_easy_getinfo(self->curl, CURLINFO_RESPONSE_CODE, &status);
         if (status != 200 && status != 206) return bytes;   // a page about an error is not the file
         if (!self->opened) {
+            // A 206 is kept only as the rest of the file from the byte asked for: to a request that asked
+            // for no range, or starting anywhere else, it would put the wrong bytes in the file.
+            if (status == 206 && (self->request->resume_from == 0 || !self->range_given ||
+                                  self->range_first != self->request->resume_from)) {
+                self->bad_answer = true;
+                return 0;
+            }
             self->resumed = status == 206 && self->request->resume_from > 0;
             const int flags = O_WRONLY | O_CREAT | O_CLOEXEC | (self->resumed ? O_APPEND : O_TRUNC);
             self->fd = ::open(self->request->to_path.c_str(), flags, 0644);
@@ -300,9 +335,15 @@ HttpResult CurlHttpClient::fetch(const HttpRequest& request, const Progress& pro
     } else if (status == 200) {
         result.total = transfer.content_length;
     }
+    // The rest of a file ends where its Content-Range said, and the file is then the whole of it.
+    const bool short_rest = status == 206 && (!transfer.opened ||
+                            (transfer.offset() + transfer.written != transfer.range_last + 1 ||
+                             (transfer.range_total > 0 && transfer.range_last + 1 != transfer.range_total)));
 
     if (transfer.write_failure != HttpFailure::None) {
         result.failure = transfer.write_failure;
+    } else if (transfer.bad_answer) {
+        result.failure = HttpFailure::Network;   // the server did not answer what was asked
     } else if (transfer.cancelled) {
         result.failure = HttpFailure::Cancelled;
     } else if (code != CURLE_OK) {
@@ -311,6 +352,8 @@ HttpResult CurlHttpClient::fetch(const HttpRequest& request, const Progress& pro
         result.failure = HttpFailure::NotFound;
     } else if (status != 200 && status != 206) {
         result.failure = HttpFailure::Network;
+    } else if (short_rest) {
+        result.failure = HttpFailure::Network;   // kept as it is: a later request may fetch the rest
     } else if (!transfer.opened) {
         // A success with an empty body: the file is there, and empty.
         const int fd = ::open(request.to_path.c_str(), O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0644);

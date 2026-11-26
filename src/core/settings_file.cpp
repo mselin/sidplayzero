@@ -4,7 +4,6 @@
 
 #include <atomic>
 #include <cstdint>
-#include <limits>
 #include <utility>
 
 #include "keep_lines.h"
@@ -289,7 +288,10 @@ SettingsFile::SettingsFile(Files* files, Executor* quick, std::string path)
     : files_(files), quick_(quick), path_(std::move(path)), saved_(std::make_shared<Saved>()) {}
 
 void SettingsFile::load() {
-    settings_ = Settings();
+    {
+        std::lock_guard<std::mutex> hold(lock_);
+        settings_ = Settings();
+    }
     bad_copy_.clear();
     fault_ = false;
     notice_ = false;
@@ -299,18 +301,22 @@ void SettingsFile::load() {
     Bytes data;
     std::string why;
     const FileStatus status = read_limited(files_, path_, FileKind::Settings, &data, &why);
-    if (status == FileStatus::TooLarge) {
-        // Not used at all, and copied whole as it was found (SPEC-133; FIND-021: MSG_SETTINGS_RESET).
+    const bool too_large = status == FileStatus::TooLarge;
+    if (too_large) {
+        // Not used at all (SPEC-133; FIND-021: MSG_SETTINGS_RESET), and not read: it is renamed aside
+        // below, as it was found, whatever its size (SPEC-204).
         fault_ = true;
         data.clear();
-        if (files_->read(path_, std::numeric_limits<std::size_t>::max(), &data) != FileStatus::Ok) data.clear();
     } else if (status != FileStatus::Ok) {
         return;   // not there, or not readable: every setting has its default, and nothing is written
     } else {
         keep::Lines lines;
         const SettingsRead read = read_full(data, &lines, &as_found_);
         fault_ = read.fault;
-        settings_ = read.settings;
+        {
+            std::lock_guard<std::mutex> hold(lock_);
+            settings_ = read.settings;
+        }
         for (const keep::KeptLine& line : lines.kept) kept_.emplace_back(line.key, line.raw);
     }
     if (!fault_) return;
@@ -323,10 +329,23 @@ void SettingsFile::load() {
         if (files_->info(copy, &info) == FileStatus::NotFound) break;
         copy = path_ + ".bad." + std::to_string(n);
     }
-    if (safe_write(files_, copy, data) == FileStatus::Ok) bad_copy_ = copy;
+    const FileStatus kept = too_large ? files_->rename(path_, copy) : safe_write(files_, copy, data);
+    if (kept == FileStatus::Ok) bad_copy_ = copy;
 }
 
 const Settings& SettingsFile::settings() const { return settings_; }
+
+Settings SettingsFile::copy() const {
+    std::lock_guard<std::mutex> hold(lock_);
+    return settings_;
+}
+
+Settings SettingsSource::get() const {
+    if (file_ != nullptr) return file_->copy();
+    if (fixed_ != nullptr) return *fixed_;
+    return Settings();
+}
+
 bool SettingsFile::had_fault() const { return fault_; }
 const std::string& SettingsFile::bad_copy() const { return bad_copy_; }
 
@@ -350,7 +369,12 @@ std::string SettingsFile::file_text() const {
 }
 
 bool SettingsFile::set(const std::string& key, const std::string& text) {
-    if (!set_setting(&settings_, key, text)) return false;
+    Settings changed = settings_;
+    if (!set_setting(&changed, key, text)) return false;
+    {
+        std::lock_guard<std::mutex> hold(lock_);
+        settings_ = changed;
+    }
     as_found_.erase(key);
     bool listed = false;
     for (const auto& line : kept_) listed = listed || line.first == key;

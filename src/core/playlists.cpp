@@ -84,10 +84,14 @@ bool Playlists::is_taken(const std::string& name, int except) const {
     return false;
 }
 
+// "" when no name can be had: the folder cannot be looked at (an error of Files::info() other than
+// NotFound, such as NoAccess, says nothing of whether a name is free), or every name up to
+// kMostFileNumbers is taken. The caller then saves nothing.
 std::string Playlists::free_file_name(const std::string& name, int except) {
+    const int kMostFileNumbers = 10000;
     const std::string wanted = playlist_file_name(name);
     const std::string stem = wanted.substr(0, wanted.size() - 5);
-    for (int n = 1;; ++n) {
+    for (int n = 1; n <= kMostFileNumbers; ++n) {
         const std::string candidate = n == 1 ? wanted : stem + " " + std::to_string(n) + ".m3u8";
         bool taken = false;
         for (std::size_t i = 0; i < file_names_.size() && !taken; ++i) {
@@ -99,10 +103,12 @@ std::string Playlists::free_file_name(const std::string& name, int except) {
         }
         if (!taken) {
             FileInfo info;
-            taken = files_->info(folder_ + "/" + candidate, &info) != FileStatus::NotFound;
+            const FileStatus status = files_->info(folder_ + "/" + candidate, &info);
+            if (status == FileStatus::NotFound) return candidate;
+            if (status != FileStatus::Ok) return "";
         }
-        if (!taken) return candidate;
     }
+    return "";
 }
 
 FileStatus Playlists::save(std::size_t index) {
@@ -188,6 +194,7 @@ ListsResult Playlists::create(const std::string& name, const std::vector<Playlis
     list.name = name;
     list.entries = entries;
     const std::string file = free_file_name(name, -1);
+    if (file.empty()) return not_saved(FileStatus::Failed);
     playlists_.push_back(list);
     file_names_.push_back(file);
     if (const FileStatus status = save(playlists_.size() - 1); status != FileStatus::Ok) {
@@ -209,6 +216,7 @@ ListsResult Playlists::rename(const std::string& name, const std::string& new_na
     const Playlist before = playlists_[index];
     const std::string old_file = file_names_[index];
     const std::string new_file = free_file_name(new_name, i);
+    if (new_file.empty()) return not_saved(FileStatus::Failed);
 
     playlists_[index].name = new_name;
     file_names_[index] = new_file;
