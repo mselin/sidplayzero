@@ -5,6 +5,7 @@
 #pragma once
 
 #include <functional>
+#include <set>
 #include <string>
 
 #include "spz/clock.h"
@@ -82,9 +83,31 @@ public:
     void key(int linux_code, bool pressed);
 
 private:
+    void emit(const KeyEvent& event);
+    void start_repeat(int code);
+    void repeat_once();
+    void stop_repeat();
+    void cancel_esc();
+    void cancel_right();
+
     Clock* clock_;
     Place place_;
     KeyListener* listener_;
+    std::set<int> down_;                  // the codes that are down now
+    bool shift_down_ = false;
+    // SPEC-045: the one key that repeats, the last one pressed whose action repeats.
+    int repeat_code_ = 0;
+    Clock::TimerId repeat_timer_ = 0;
+    // SPEC-106: ESC while it is down.
+    Clock::TimerId esc_notice_timer_ = 0;
+    Clock::TimerId esc_leave_timer_ = 0;
+    bool esc_notice_shown_ = false;
+    bool esc_left_ = false;
+    // SPEC-096: Right where it can be held.
+    int right_code_ = 0;                  // the code that is Right while it waits or skips: Right, or C
+    Clock::TimerId right_timer_ = 0;
+    bool right_waiting_ = false;
+    bool right_holding_ = false;
 };
 
 }  // namespace spz

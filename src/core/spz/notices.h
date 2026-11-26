@@ -37,6 +37,10 @@ public:
     // the one that has waited longest is dropped.
     void raise(const std::string& id, const std::string& text);
 
+    // SPEC-106, FIND-021: MSG_HOLD_TO_LEAVE does not wait its turn. It shows at once, in place of the one
+    // showing, which goes back to the head of the line and has its turn again, from the start, after it.
+    void show_now(const std::string& id, const std::string& text);
+
     // Takes a notice away before its time is up, whether it shows or waits: MSG_HOLD_TO_LEAVE when ESC is
     // let go (SPEC-106). The next in line then has its turn. Does nothing if there is no such notice.
     void remove(const std::string& id);
@@ -50,7 +54,16 @@ public:
     void on_change(std::function<void()> fn);
 
 private:
+    void show_next();
+    void start_timer();
+    void changed();
+
     Clock* clock_;
+    bool has_showing_ = false;
+    Notice showing_;
+    std::vector<Notice> waiting_;
+    Clock::TimerId timer_ = 0;
+    std::function<void()> on_change_;
 };
 
 }  // namespace spz

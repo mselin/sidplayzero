@@ -9,4 +9,4 @@ target_include_directories(spz_core PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 target_compile_definitions(spz_core
     PUBLIC ${SPZ_PART_DEFINITIONS}
     PRIVATE "SPZ_VERSION=\"${SPZ_VERSION}\"")
-target_compile_options(spz_core PRIVATE ${SPZ_WARNINGS})
+target_compile_options(spz_core PRIVATE ${SPZ_SOURCE_WARNINGS})

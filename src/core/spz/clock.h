@@ -17,6 +17,9 @@ public:
     virtual std::int64_t now_ms() const = 0;
     // Seconds since 1970, for file names and for the shuffle seed.
     virtual std::int64_t wall_time_s() const = 0;
+    // Milliseconds since 1970, of the same clock as wall_time_s(): for a file name that carries them
+    // (SPEC-108). A clock that cannot say gives whole seconds.
+    virtual std::int64_t wall_time_ms() const { return wall_time_s() * 1000; }
     // Waits. Never called on the UI thread.
     virtual void sleep_ms(std::int64_t ms) = 0;
     // Calls `fn` once, on the UI thread, when `ms` have passed. Returns a handle for cancel().

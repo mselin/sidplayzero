@@ -4,9 +4,11 @@
 // worker, asks a TuneFetcher for tunes that are not on the device, and tells a listener what changed.
 #pragma once
 
+#include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <map>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -14,11 +16,15 @@
 #include "spz/engine.h"
 #include "spz/engine_choice.h"
 #include "spz/executor.h"
+#include "spz/fetcher.h"
 #include "spz/files.h"
+#include "spz/lifetime.h"
 #include "spz/listing.h"
 #include "spz/player_fetcher.h"
 #include "spz/player_roms.h"
+#include "spz/queue.h"
 #include "spz/settings.h"
+#include "spz/shuffle.h"
 #include "spz/sound_backend.h"
 #include "spz/tune.h"
 #include "spz/types.h"
@@ -40,7 +46,8 @@ enum class PlayerState {
 const Millis kStepWaitMs = 700;        // a tune stepped to is requested once it has been current this long
 const Millis kFailedWaitMs = 2000;     // unattended, a failed entry is left after this long
 const int kBadFilesInARow = 5;         // after this many, unattended playback stops
-const Millis kFetchAheadMs = 10000;    // the next entry is fetched when the song has this long to go, or less
+// kFetchAheadMs (spz/fetcher.h): the next entry is fetched when the song has this long to go, or less. One
+// definition for the two headers, so that a file may include both.
 const Millis kLightOfferMs = 10000;    // how long MSG_TOO_HEAVY's offer of the L key stands
 const int kSlowSeconds = 3;            // underruns in this many separate seconds ...
 const Millis kSlowWindowMs = 10000;    // ... within this long mean the engine cannot keep up
@@ -110,7 +117,9 @@ struct PlayerOptions {
 class Player : public SoundBackendListener {
 public:
     // Makes itself the backend's listener. `settings` is read whenever a setting is needed, so a change
-    // takes effect at the next thing it governs; settings_changed() is for what takes effect at once.
+    // takes effect at the next thing it governs; settings_changed() is for what takes effect at once. It is
+    // read on the UI thread only, the thread that changes it (SettingsFile::settings()): a load job on the
+    // worker gets the values it needs copied into it when it is posted.
     Player(const PlayerSeams& seams, const PlayerOptions& options, const Settings* settings);
     ~Player() override;
 
@@ -165,9 +174,136 @@ public:
     void failed(const std::string& reason) override;
 
 private:
+    // How the current entry was reached, which decides what is done when it is absent or fails (SPEC-069,
+    // SPEC-141): a key that plays it at once (Enter, Play/Pause, Restart), a key that steps to it (it is
+    // fetched after the wait), or playback by itself (a song's end, or the unattended wait).
+    enum class Reach { Key, Step, Unattended };
+
+    // What became of a fetch-ahead (SPEC-141), for the entry it was for.
+    struct Ahead {
+        std::string path;                 // "" when there is none
+        bool in_flight = false;
+        bool done = false;                // answered: `fetched` and `message` say how
+        bool fetched = false;
+        std::string message;
+        std::uint64_t token = 0;
+    };
+
+    struct LoadJob;                       // what the worker is given, and what it gives back
+    struct LoadResult;
+    // The worker's part of a load. False, with nothing to post, when the player has moved on before it began.
+    static bool run_load(const LoadJob& job, Files* files, SoundBackend* backend,
+                         const std::atomic<std::uint64_t>& current, LoadResult* out);
+
+    void notify();
+    void notice(const std::string& id);
+    // Moves to a new generation: every job, answer and timer of the one before is left to come to nothing.
+    void new_generation();
+    void cancel_timer(Clock::TimerId* id);
+    Clock::TimerId timer(Millis ms, void (Player::*fn)());
+    bool loaded() const;                  // Playing or Paused: the backend has the subtune
+    void unload();                        // stop() to the backend if it has a subtune
+    void give_up_fetches();               // cancels the fetches in flight, and forgets the fetch-ahead
+    bool refuse_while_off();              // SPEC-144: true, with MSG_UNPACKING, while playing is off
+
+    // The current entry becomes the queue's current one, and it is played: `subtune` 0 for the entry's own.
+    void go_to_entry(Reach reach, int subtune);
+    // Loads the current entry's file again: Loading, and a job for the worker.
+    void load_current(int subtune);
+    void loaded_result(const LoadResult& result);
+    void absent(const LoadResult& result);
+    void missing();
+    void request(bool attended);          // asks the fetcher for the current entry: Fetching
+    void ask_unattended();                // an unattended entry that is absent: may it be requested?
+    void fetch_answer(std::uint64_t generation, std::uint64_t token, const FetchResult& result);
+    void ahead_answer(std::uint64_t token, const FetchResult& result);
+    void ahead_checked(std::uint64_t generation, const std::string& path, bool present, bool listed);
+    void fail(const std::string& message);
+    void stop_playback(const std::string& notice_id);   // → Idle, from playback by itself
+    bool drives_backend() const;                        // the last player made on the backend is this one
+    // Playback by itself moves on: to the next entry (SPEC-062, SPEC-065), passing over what it must.
+    void pass_over();
+    void next_unattended();
+    void wait_over();                     // Waiting is over
+    void unattended_wait_over();          // SPEC-069's 2 s in Failed are over
+    void started(bool fresh);             // the subtune is playing (from its start, or again after a pause)
+    void paused();                        // Playing is left: its timers stop
+    bool shuffle_on() const;              // the settings, as far as their parts are built (SPEC-115)
+    bool repeat_all() const;
+    WhenSongEnds when_song_ends() const;
+    void arm_ahead();
+    void ahead_due();
+    void tick();                          // SPEC-079: once a second while Playing
+    void too_slow();
+    void reload_light();
+    void send_controls();                 // mutes and filters to the backend after a load
+    void reset_tune_choices();
+    int entry_subtune() const;            // the subtune the current entry names, if the tune has it; else 0
+    bool next_is_subtune() const;         // what follows the song by SPEC-065 is the tune's next subtune
+    std::string full_path(const std::string& path) const;
+
     PlayerSeams seams_;
     PlayerOptions options_;
     const Settings* settings_ = nullptr;
+    Lifetime lifetime_;
+    std::shared_ptr<std::atomic<std::uint64_t>> generation_shared_;   // read by the worker's jobs
+
+    ShuffleGenerator generator_;
+    Queue queue_{&generator_};
+    const Listing* listing_ = nullptr;
+    SpeedFactors factors_;
+    Roms roms_;
+    bool playing_off_ = false;
+
+    PlayerState state_ = PlayerState::Idle;
+    bool has_entry_ = false;
+    Entry entry_;
+    std::string message_;
+    bool tune_known_ = false;
+    TuneInfo info_;
+    int subtune_ = 0;
+    int subtunes_ = 0;
+    Millis length_ms_ = 0;
+    int sample_rate_ = 0;
+    EngineKind engine_ = EngineKind::Light;
+    int chips_ = 1;
+    SidModel model_ = SidModel::Mos6581;
+    C64Clock c64_clock_ = C64Clock::Pal;
+    bool model_forced_ = false, clock_forced_ = false;
+
+    std::uint64_t generation_ = 0;
+    Reach reach_ = Reach::Key;
+    int want_subtune_ = 0;                // the subtune the load in progress is for; 0: the entry's own
+    bool just_fetched_ = false;           // the file was fetched, so it must be there now
+    std::string loaded_path_;             // the tune whose choices (mutes, engine) hold
+    std::uint64_t length_samples_ = 0;    // what set_length() was given
+    bool skipping_ = false;
+    Clock::TimerId wait_timer_ = 0, failed_timer_ = 0, ahead_timer_ = 0, tick_timer_ = 0;
+
+    // Fetching.
+    bool fetch_in_flight_ = false;        // fetch() or fetch_ahead() asked, not answered or cancelled
+    std::uint64_t fetch_token_ = 0;       // of the latest fetch() or fetch_ahead()
+    Ahead ahead_;
+    bool ahead_asked_ = false;            // the fetch-ahead of this song has been decided
+
+    // Playback by itself (SPEC-069, SPEC-143).
+    int bad_files_ = 0;
+    bool failed_for_network_ = false;     // the failure in Failed is one of SPEC-143's
+    bool present_only_ = false;           // after a fetch that failed for the network: absent entries are passed over
+    std::size_t passed_ = 0;              // entries passed over in a row
+    bool notice_needed_said_ = false;
+
+    // Choices that hold for the tune (SPEC-074, SPEC-079).
+    bool muted_[3][3] = {};
+    bool filter_on_[3] = {true, true, true};
+    int chip_ = 1;
+    bool controls_sent_ = false;          // the backend was told something is off
+    bool light_for_tune_ = false;
+    bool acted_slow_ = false;
+    int light_from_chips_ = 0;            // after MSG_SWITCHED_LIGHT, `auto` uses sidlite from this many chips
+    Millis offer_until_ = -1;             // MSG_TOO_HEAVY's offer of the L key stands until then
+    std::uint64_t last_underruns_ = 0;
+    std::vector<Millis> slow_seconds_;    // when the underrun counter was seen to rise
 };
 
 }  // namespace spz

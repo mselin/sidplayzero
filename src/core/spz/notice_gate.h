@@ -35,10 +35,12 @@ public:
 // the same (SPEC-103).
 const std::string& hvsc_notice_text();
 
+// One gate for every part of `core` that asks (FetchMissing of SPEC-174 included, through pass()), so that
+// the notice is shown once whoever asks first.
 class NoticeGate {
 public:
     NoticeGate(NoticeRecord* record, NoticePanel* panel);
-    ~NoticeGate();
+    virtual ~NoticeGate();
     NoticeGate(const NoticeGate&) = delete;
     NoticeGate& operator=(const NoticeGate&) = delete;
 
@@ -57,6 +59,15 @@ public:
     // ESC in the panel: leaves `notice_accepted` off and runs the `cancelled` that was kept, if there was
     // one. What was asked for does not happen. Nothing if not asking.
     void cancel();
+
+    // As ask(), without saying whether `go` ran at once: calls `go` at once if the notice has been
+    // accepted; if not, opens the notice panel: Enter accepts and calls `go`; ESC calls `cancelled`, and
+    // what was asked for does not happen. A test's stand-in overrides it.
+    virtual void pass(std::function<void()> go, std::function<void()> cancelled);
+
+protected:
+    // For a stand-in that overrides pass() and needs nothing else.
+    NoticeGate();
 
 private:
     struct Impl;

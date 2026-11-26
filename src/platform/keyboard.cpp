@@ -11,11 +11,11 @@
 #if SPZ_DISPLAY_WINDOW
 #include <SDL2/SDL.h>
 #else
-#include <dirent.h>
 #include <fcntl.h>
 #include <linux/input.h>
-#include <sys/ioctl.h>
 #include <unistd.h>
+
+#include "platform/input_setup.h"
 #endif
 
 namespace spz::platform {
@@ -101,54 +101,19 @@ void Keyboard::poll(const Handler& handler) {
 
 #else  // the device, or a build with no window: Linux input events
 
-namespace {
-
-const char kCardputerKeyboard[] = "/dev/input/by-path/platform-3f804000.i2c-event";
-
-bool has_letters(int fd) {
-    unsigned long bits[(KEY_MAX + 8 * sizeof(unsigned long)) / (8 * sizeof(unsigned long))] = {};
-    if (ioctl(fd, EVIOCGBIT(EV_KEY, sizeof bits), bits) < 0) return false;
-    for (int code : {KEY_A, KEY_Z, KEY_Q, KEY_M}) {
-        if (!(bits[code / (8 * sizeof(unsigned long))] & (1UL << (code % (8 * sizeof(unsigned long)))))) return false;
-    }
-    return true;
-}
-
-int open_first_keyboard() {
-    DIR* folder = opendir("/dev/input");
-    if (folder == nullptr) return -1;
-    int found = -1;
-    while (const dirent* entry = readdir(folder)) {
-        if (std::strncmp(entry->d_name, "event", 5) != 0) continue;
-        const std::string path = std::string("/dev/input/") + entry->d_name;
-        const int fd = ::open(path.c_str(), O_RDONLY | O_NONBLOCK | O_CLOEXEC);
-        if (fd < 0) continue;
-        if (has_letters(fd)) { found = fd; break; }
-        ::close(fd);
-    }
-    closedir(folder);
-    return found;
-}
-
-}  // namespace
-
 Keyboard::~Keyboard() {
     if (fd_ >= 0) ::close(fd_);
 }
 
 bool Keyboard::open(std::string* why) {
     const char* named = std::getenv("SIDPLAYZERO_KEYBOARD");
-    if (named && *named) {
-        fd_ = ::open(named, O_RDONLY | O_NONBLOCK | O_CLOEXEC);
-    } else {
-        fd_ = ::open(kCardputerKeyboard, O_RDONLY | O_NONBLOCK | O_CLOEXEC);
-        if (fd_ < 0) fd_ = open_first_keyboard();
-    }
+    const std::string path = choose_keyboard(list_input_devices(), named ? named : "");
+    if (!path.empty()) fd_ = ::open(path.c_str(), O_RDONLY | O_NONBLOCK | O_CLOEXEC);
     if (fd_ < 0) {
         if (why) *why = "no keyboard could be opened";
         return false;
     }
-    return true;   // never grabbed: the launcher and other apps read the same device
+    return true;   // never taken for this app alone: the launcher and other apps read the same device
 }
 
 void Keyboard::poll(const Handler& handler) {

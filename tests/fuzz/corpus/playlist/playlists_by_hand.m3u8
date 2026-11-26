@@ -1,0 +1,16 @@
+#EXTM3U
+#PLAYLIST:Loading tunes
+#EXTINF:3,Test Author - Commando Test
+#SIDTUNE:subtune=1 md5=c87c5ccd81d598c95b2e250c1f33b74d
+/MUSICIANS/H/Hubbard_Rob/Commando.sid
+#EXTINF:3,Test Author - Three Subtunes
+#SIDTUNE:subtune=3
+/MUSICIANS/T/Tester_Tom/Three_Songs.sid
+#SIDTUNE:md5=d06b7955032f0cc8cd8cb358935291f6
+/MUSICIANS/T/Tester_Tom/Three_Songs.sid
+#EXTVLCOPT:network-caching=1000
+/DEMOS/A-F/Clock_Demo.sid
+# a note that travels with the tune below
+#EXTGRP:games
+/GAMES/A-F/Either_Chip.sid
+file:///home/u/Music/My Rips/Cool Söng.sid

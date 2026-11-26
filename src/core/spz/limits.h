@@ -28,10 +28,14 @@ enum class FileKind {
     ArchiveListing,   // what 7z prints of an archive         64 MiB
 };
 
-// A line longer than this many bytes is cut there.
+// A line longer than this many bytes is cut there: every reader of lines (the song length database, STIL,
+// playlists, imports, the kept files) cuts them here.
 const std::size_t kLineLimit = 4096;
+// A playlist's file, and a file being imported, is read at most this far: size_limit() of FileKind::Playlist
+// and FileKind::Import.
+const std::size_t kPlaylistFileLimit = 4 * 1024 * 1024;
 // A playlist holds at most this many entries; the rest of its file is not read (MSG_LIST_CUT).
-const int kPlaylistEntryLimit = 20000;
+const std::size_t kPlaylistEntryLimit = 20000;
 
 // The most bytes a file of this kind may have.
 std::size_t size_limit(FileKind kind);

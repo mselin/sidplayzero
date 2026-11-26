@@ -9,7 +9,11 @@
 // (spz/settings.h). In a build without a part (SPEC-115), that part's settings keep their defaults.
 #pragma once
 
+#include <memory>
+#include <mutex>
+#include <set>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "spz/executor.h"
@@ -59,9 +63,15 @@ public:
     // no fault: every setting has its default, and nothing is made or written. When the file has a fault it
     // is copied, as it was found, to PATH.bad, or to PATH.bad.2, PATH.bad.3 and so on, the first of these
     // names that no file has; the copy is there before this returns and so before anything is written.
+    // A file larger than SPEC-204's 64 KiB is never read into memory: it is renamed to that name instead,
+    // which keeps its bytes as they were found however large it is, and leaves no PATH behind.
     void load();
 
+    // The settings in force, for the thread that calls load() and set() (the UI thread) only: set()
+    // changes them in place.
     const Settings& settings() const;
+    // A copy of the settings in force, taken under a lock: for any thread, at any time (SPEC-022).
+    Settings copy() const;
 
     // Whether the file read by load() had a fault, and where its copy is ("" if there was none).
     bool had_fault() const;
@@ -79,11 +89,41 @@ public:
     FileStatus last_save() const;
 
 private:
+    struct Saved;   // how the last save ended, shared with the save on the quick worker
+    std::string file_text() const;
+
     Files* files_;
     Executor* quick_;
     std::string path_;
+    mutable std::mutex lock_;   // held by load() and set() while they change settings_, and by copy()
     Settings settings_;
     std::string bad_copy_;
+    bool fault_ = false;
+    bool notice_ = false;
+    // What the file is written back from: (key, line) for each line kept; a known key is written with the
+    // value in force, any other line as it was found.
+    std::vector<std::pair<std::string, std::string>> kept_;
+    // Known keys whose lines are written as they were found: a value of a part this build leaves out
+    // (SPEC-115), which keeps its default here and is kept for a build that has the part.
+    std::set<std::string> as_found_;
+    std::shared_ptr<Saved> saved_;
+};
+
+// Where a job on a worker reads the settings it needs (`url_files`, `url_archive`) from: each get() is a
+// copy, taken when it is called, so a worker never reads the settings while the UI thread changes them.
+// Made from a SettingsFile, it reads SettingsFile::copy(). Made from a plain Settings, it reads that, as
+// it is: for one that nobody changes while a job runs (a test's). Made from nothing, get() gives the
+// defaults.
+class SettingsSource {
+public:
+    SettingsSource() = default;
+    SettingsSource(const SettingsFile* file) : file_(file) {}          // NOLINT: converts on purpose
+    SettingsSource(const Settings* fixed) : fixed_(fixed) {}           // NOLINT: converts on purpose
+    Settings get() const;
+
+private:
+    const SettingsFile* file_ = nullptr;
+    const Settings* fixed_ = nullptr;
 };
 
 }  // namespace spz

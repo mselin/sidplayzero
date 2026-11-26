@@ -4,22 +4,21 @@
 
 #include "lvgl.h"
 #include "spz/json.h"
+#include "ui/draw.h"
 
 namespace spz::ui {
 
-// The bands of SPEC-091.
-const int kScreenWidth = 320;
-const int kScreenHeight = 170;
-const int kTopLineBottom = 15;
-const int kContentBottom = 135;
+// The last row of pixels of the top line and of the content band (SPEC-091): a box is in the band its top
+// row is in.
+const int kTopLineBottom = kContentTop - 1;
+const int kContentBottom = kActionTop - 1;
 
 // A description with every field of SPEC-254, each null, for a screen to fill in.
 Json blank_description();
 
-// Gives a drawn label the name it has in the description's `boxes`.
-void name_box(lv_obj_t* label, const char* id);
-
-// Fills in `text` and `boxes` from the labels that are drawn on the active screen, in reading order.
+// Fills in `text` and `boxes` from the labels that are drawn on the active screen, in reading order. A
+// label made by make_label() (ui/draw.h) gives its name, the width its whole text needs, and whether it
+// was cut to fit.
 void describe_drawn(Json* description);
 
 }  // namespace spz::ui

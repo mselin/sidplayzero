@@ -22,10 +22,13 @@
 #define LV_USE_ASSERT_NULL 1
 #define LV_USE_ASSERT_MALLOC 1
 
-/* Until the app's own fonts exist (SPEC-010, Phase 5), the stub uses LVGL's. */
+/* The app's own fonts (SPEC-010, src/ui/fonts) are LVGL's default too, so that nothing in the program
+ * draws with a font of LVGL's. Montserrat 12 is still compiled into LVGL's library for the framework's
+ * canary test (tests/framework/sim), which asks it for a glyph; the program does not link it. */
 #define LV_FONT_MONTSERRAT_12 1
-#define LV_FONT_MONTSERRAT_14 1
-#define LV_FONT_DEFAULT &lv_font_montserrat_12
+#define LV_FONT_MONTSERRAT_14 0
+#define LV_FONT_CUSTOM_DECLARE LV_FONT_DECLARE(spz_font_dejavu_sans_12)
+#define LV_FONT_DEFAULT &spz_font_dejavu_sans_12
 
 #define LV_USE_THEME_DEFAULT 1
 #define LV_THEME_DEFAULT_DARK 1

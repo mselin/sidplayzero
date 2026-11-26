@@ -937,4 +937,131 @@ TEST_CASE("SPEC-149 text that is not a listing of 7z is not read as one [parts: 
                                      "Path = C64Music/a.sid\nSize = lots\nAttributes = A -rw-r--r--\n\n", &entries));
 }
 
+namespace {
+
+// The start of what `7z l -slt` prints, up to the line that ends the archive's own block, with these lines
+// in that block.
+std::string listing_head(const std::string& archive_block) {
+    return "\n7-Zip 23.01 (x64) : Copyright (c) 1999-2023 Igor Pavlov : 2023-06-20\n\n"
+           "Listing archive: /tmp/x/a.7z\n\n--\nPath = /tmp/x/a.7z\n" + archive_block + "\n----------\n";
+}
+
+const char kSevenZipBlock[] = "Type = 7z\nPhysical Size = 247\nHeaders Size = 234\nMethod = LZMA2:12\nSolid = +\nBlocks = 1\n";
+
+}  // namespace
+
+TEST_CASE("SPEC-149 a listing is read only if 7z reports the archive as of type 7z: a tar under a 7z name is not (FIND-026) [parts: download-all]") {
+    const std::string entry = "Path = C64Music/a.sid\nSize = 5\nAttributes = A -rw-r--r--\n\n";
+    std::vector<ArchiveEntry> entries;
+    REQUIRE(spz::read_7z_listing(listing_head(kSevenZipBlock) + entry, &entries));
+    CHECK(entries.size() == 1);
+
+    // What 7-Zip 23.01 prints of a tar named "t.7z" when it is not told the type: its links are given as a
+    // mode and a Symbolic Link line, with no attributes at all.
+    const std::string tar =
+        listing_head("Open WARNING: Cannot open the file as [7z] archive\nType = tar\nPhysical Size = 10240\n"
+                     "Headers Size = 9728\nCode Page = UTF-8\nCharacteristics = GNU ASCII\n") +
+        "Path = C64Music/l.sid\nFolder = -\nSize = 11\nPacked Size = 0\nModified = 2026-11-26 14:03:53\n"
+        "Mode = lrwxrwxrwx\nUser = root\nGroup = root\nSymbolic Link = /etc/passwd\nHard Link = \n\n";
+    CHECK_FALSE(spz::read_7z_listing(tar, &entries));
+    CHECK(entries.empty());
+    // No type at all, a type spelled otherwise, or a second archive of another type in the block.
+    CHECK_FALSE(spz::read_7z_listing(listing_head("Physical Size = 247\n") + entry, &entries));
+    CHECK_FALSE(spz::read_7z_listing(listing_head("Type = 7Z\n") + entry, &entries));
+    CHECK_FALSE(spz::read_7z_listing(listing_head("Type = zip\n") + entry, &entries));
+    CHECK_FALSE(spz::read_7z_listing(listing_head("Type = 7z\nType = tar\n") + entry, &entries));
+    CHECK_FALSE(spz::read_7z_listing(listing_head("Type = tar\nType = 7z\n") + entry, &entries));
+    // A "Type = " line among the entries does not make the archive one.
+    CHECK_FALSE(spz::read_7z_listing(listing_head("Physical Size = 247\n") + "Path = C64Music/a.sid\nType = 7z\n\n", &entries));
+}
+
+TEST_CASE("SPEC-149 a link or a special file is known by anything the listing says of it, and an entry of a kind the reader does not know is refused (FIND-026) [parts: download-all]") {
+    struct Row {
+        const char* lines;      // the entry's lines after its Path and Size
+        const char* kind;       // "file", "folder", "link" or "special" (a special file, or a kind not known)
+    };
+    const std::vector<Row> rows = {
+        {"Attributes = A -rw-r--r--\n", "file"},
+        {"Attributes = A\n", "file"},
+        {"Attributes = RA\n", "file"},
+        {"Attributes = A_ -rw-r--r--\n", "file"},
+        {"Attributes = A 00100000 -rw-r--r--\n", "file"},            // bits 7-Zip has no letter for
+        {"Mode = -rw-r--r--\nSymbolic Link = \nHard Link = \n", "file"},
+        {"Folder = -\nMode = -rw-r--r--\n", "file"},
+        {"Attributes = D\n", "folder"},
+        {"Attributes = D drwxr-xr-x\n", "folder"},
+        {"Folder = +\nMode = drwxr-xr-x\n", "folder"},
+        {"Mode = drwxr-xr-x\n", "folder"},
+        {"Attributes = A lrwxrwxrwx\n", "link"},
+        {"Attributes = AL\n", "link"},                                // a reparse point: Windows's link
+        {"Mode = lrwxrwxrwx\n", "link"},
+        {"Mode = -rw-r--r--\nSymbolic Link = /etc/passwd\n", "link"},
+        {"Attributes = A -rw-r--r--\nSymbolic Link = ../../outside\n", "link"},
+        {"Mode = -rw-r--r--\nHard Link = C64Music/other.sid\n", "link"},
+        {"Attributes = A -rw-r--r--\nHard Link = /etc/shadow\n", "link"},
+        {"Attributes = A prw-r--r--\n", "special"},
+        {"Attributes = A srwxr-xr-x\n", "special"},
+        {"Mode = brw-rw----\n", "special"},
+        {"Mode = crw-rw----\n", "special"},
+        {"Attributes = Ad\n", "special"},                             // a device
+        {"Mode = -rw-r--r--\nDevice Major = 8\nDevice Minor = 1\n", "special"},
+        {"Attributes = A ?rw-r--r--\n", "special"},                   // a kind 7-Zip could not name
+        {"Mode = ?rw-r--r--\n", "special"},
+        {"Mode = 0644\n", "special"},
+        {"Attributes = A something\n", "special"},
+        {"Attributes = Q\n", "special"},
+        {"Folder = maybe\n", "special"},
+    };
+    for (const Row& row : rows) {
+        CAPTURE(row.lines);
+        const std::string text = listing_head(kSevenZipBlock) + "Path = C64Music/a.sid\nSize = 0\n" + row.lines +
+                                 "\nPath = C64Music/b.sid\nSize = 5\nAttributes = A -rw-r--r--\n\n";
+        std::vector<ArchiveEntry> entries;
+        REQUIRE(spz::read_7z_listing(text, &entries));
+        REQUIRE(entries.size() == 2);
+        const ArchiveEntry& e = entries[0];
+        const std::string kind = e.is_link ? "link" : e.is_special ? "special" : e.is_folder ? "folder" : "file";
+        CHECK(kind == row.kind);
+        CHECK_FALSE((entries[1].is_link || entries[1].is_special || entries[1].is_folder));
+        const ArchiveFault fault = spz::check_archive(entries);
+        if (kind == "link") CHECK(fault == ArchiveFault::Link);
+        if (kind == "special") CHECK(fault == ArchiveFault::Special);
+        if (kind == "file" || kind == "folder") CHECK(fault == ArchiveFault::None);
+    }
+}
+
+TEST_CASE("SPEC-144 SPEC-149 SPEC-154 only paths HVSC's rules allow, and HVSC's documents, are moved into the collection: hidden names and anything else stay out (FIND-026) [parts: download-all]") {
+    Complete c;
+    const fs::path top = fs::path(c.tree) / "C64Music";
+    const spz::Bytes tune = fixture("tunes/own_tune.sid");
+    const std::vector<std::string> kept_out = {
+        ".hidden.sid",                                  // a hidden name at the top
+        ".config/autostart/evil.desktop",               // a hidden folder
+        "MUSICIANS/H/.Dot_Folder/Tune.sid",            // a hidden folder deeper down
+        "MUSICIANS/H/Hubbard_Rob/.Commando.sid",
+        "MUSICIANS/H/Hubbard_Rob/notes.txt",           // not a tune
+        "MUSICIANS/H/Hubbard_Rob/run.sh",
+        "My Tunes/With Spaces.sid",                      // characters HVSC's rules do not allow
+        "MUSICIANS/H/Hubbard_Rob/K\xC3\xA4se.sid",
+        "DOCUMENTS/.hidden",                             // hidden among the documents
+        "DOCUMENTS/With Space.txt",
+        "readme.txt",
+    };
+    for (const std::string& name : kept_out) write_file((top / name).string(), tune);
+    // A document HVSC might add, under DOCUMENTS, is moved as the others are.
+    write_file((top / "DOCUMENTS/Update_Rules.txt").string(), bytes("rules\n"));
+    c.expected["DOCUMENTS/Update_Rules.txt"] = bytes("rules\n");
+    c.unpacker.entries = entries_of(c.tree);
+    REQUIRE(spz::check_archive(c.unpacker.entries) == ArchiveFault::None);   // the archive itself passes
+
+    REQUIRE(c.download->start());
+    c.run();
+    c.check_finished();                                  // the root holds what is expected, and nothing else
+    for (const std::string& name : kept_out) {
+        CAPTURE(name);
+        CHECK_FALSE(exists(c.root + "/" + name));
+    }
+    CHECK(exists(c.root + "/DOCUMENTS/Update_Rules.txt"));
+}
+
 #endif  // SPZ_PART_DOWNLOAD_ALL

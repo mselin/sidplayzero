@@ -14,7 +14,7 @@ has passed.
 | 2 | Specification | [`docs/spec.md`](docs/spec.md), and an independent review of it, [`docs/spec-review.md`](docs/spec-review.md) | Every review item closed; then the owner approves | Approved 25 November 2026 |
 | 3 | Test framework | [`docs/test-framework-tasks.md`](docs/test-framework-tasks.md), then the framework | Every level runs one passing and one deliberately failing test with one command | Built and merged 25 November 2026; the device level's proof is still owed |
 | 4 | Tests | `tests/`, each test tracing to the specification | Every item has a test; the tests fail for the right reasons against stubs | Gate passed 26 November 2026: the tests merged, and FIND-016 to FIND-024 accepted by the owner and carried into the specification |
-| 5 | Implementation | `src/` | All tests pass on the host and in the simulator; the device checklist passes | Not started |
+| 5 | Implementation | `src/` | All tests pass on the host and in the simulator; the device checklist passes | Built 26 November 2026: every host and simulator test passes but four that wait on the owner (FIND-025, the store's screenshots); code-quality and security reviews done and fixed. The device sitting is owed |
 
 ## Rules that hold throughout
 
@@ -60,12 +60,12 @@ tools/test package
 `tools/test host` runs the unit, integration, fuzz and package levels in turn. `tools/test device` builds the
 package and says what to copy to a CardputerZero and what to run there.
 
-| Level | What it runs | Needs, on Debian or Ubuntu, besides `cmake` 3.31 or newer, `ninja-build`, `g++`, `python3` and `git` |
+| Level | What it runs | Needs, on Debian or Ubuntu, besides `cmake` 3.31 or newer, `ninja-build`, `g++`, `python3`, `git`, `make` and `libcurl4-openssl-dev` |
 |---|---|---|
 | unit | `core` against fakes, in three builds; the framework's own tests; the repository's checks | Nothing more |
 | simulator | The program drawing its screens with no display, driven by scripts | `libsdl2-dev`, `xvfb` |
-| integration | The pinned engine and reference player, the real program, a local server, a real `7z`, ThreadSanitizer | `libsdl2-dev`, `xvfb`, `7zip`, `pkg-config`, `make`, `curl`, `openssl` |
-| fuzz | The fuzz targets, 15 s each | `clang`, `libclang-rt-dev` |
+| integration | The pinned engine and reference player, the real program, a local server, a real `7z`, ThreadSanitizer | `libsdl2-dev`, `xvfb`, `7zip`, `pkg-config`, `curl`, `openssl` |
+| fuzz | The fuzz targets, 15 s each, the engine's among them | `clang`, `libclang-rt-dev` |
 | package | The `.deb` for the device and every check on it, with an install in an emulated Debian arm64 container | `g++-aarch64-linux-gnu`, `qemu-user-static` (`qemu-user-binfmt` on newer releases), `docker`, `pkg-config`, `make`, `curl` |
 
 Each level has a test that is built to fail, left out of a normal run. `tools/test prove` runs each level

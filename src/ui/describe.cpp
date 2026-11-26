@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/describe.h"
 
+#include "ui/draw.h"
+
 #include <algorithm>
 #include <string>
 #include <vector>
@@ -17,14 +19,11 @@ Json blank_description() {
     return d;
 }
 
-void name_box(lv_obj_t* label, const char* id) {
-    lv_obj_set_user_data(label, const_cast<char*>(id));
-}
-
 namespace {
 
 struct Box {
     std::string id, band, text;
+    std::string whole;
     int x, y, w, h, text_x, text_w;
     bool clipped;
 };
@@ -40,17 +39,33 @@ void collect(lv_obj_t* object, std::vector<Box>* boxes) {
                          lv_obj_get_style_text_letter_space(object, LV_PART_MAIN),
                          lv_obj_get_style_text_line_space(object, LV_PART_MAIN), LV_COORD_MAX, LV_TEXT_FLAG_NONE);
         Box box;
-        const char* id = static_cast<const char*>(lv_obj_get_user_data(object));
-        box.id = id ? id : "";
+        int full_width = 0;
+        bool cut = false;
+        std::string whole;
+        const bool recorded = label_record(object, &box.id, &full_width, &cut, &whole);
         box.text = text ? text : "";
+        // SPEC-254: `boxes[].text` is the text as drawn (FIND-023); `text` is all the text on the screen, so it
+        // holds a cut label's whole text.
+        box.whole = recorded ? whole : box.text;
         box.x = area.x1;
         box.y = area.y1;
         box.w = area.x2 - area.x1 + 1;
         box.h = area.y2 - area.y1 + 1;
         box.band = box.y <= kTopLineBottom ? "top" : box.y <= kContentBottom ? "content" : "actions";
         box.text_x = box.x;
-        box.text_w = size.x;
-        box.clipped = box.text_w > box.w;
+        if (recorded && label_scrolls(object)) {
+            // SPEC-098: a text that scrolls: its box is the one that clips it, and the text starts where it
+            // has scrolled to.
+            lv_area_t clip;
+            lv_obj_get_coords(lv_obj_get_parent(object), &clip);
+            box.x = clip.x1;
+            box.y = clip.y1;
+            box.w = clip.x2 - clip.x1 + 1;
+            box.h = clip.y2 - clip.y1 + 1;
+            box.band = box.y <= kTopLineBottom ? "top" : box.y <= kContentBottom ? "content" : "actions";
+        }
+        box.text_w = recorded ? std::max(full_width, static_cast<int>(size.x)) : static_cast<int>(size.x);
+        box.clipped = cut || box.text_w > box.w;
         boxes->push_back(box);
     }
     const std::uint32_t children = lv_obj_get_child_count(object);
@@ -82,9 +97,9 @@ void describe_drawn(Json* description) {
         item.set("text_w", box.text_w);
         item.set("clipped", box.clipped);
         list.push(item);
-        if (!box.text.empty()) {
+        if (!box.whole.empty()) {
             if (!text.empty()) text += "\n";
-            text += box.text;
+            text += box.whole;
         }
     }
     description->set("boxes", list);

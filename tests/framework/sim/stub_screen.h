@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// STUB (TF-005). The one screen the stub draws: the empty screen of SPEC-048, without its behaviour.
-// Phase 5 replaces this file with the app's screens.
+// The test framework's own stand-in screen (TF-005): the empty screen of SPEC-048, drawn alone, without
+// the app around it. The app does not use it; the framework's C++ tests (tests/framework/sim, TF-043 and
+// TF-044) draw it to check the screen description and the pictures without starting the app.
 #pragma once
 
 #include <string>

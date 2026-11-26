@@ -1,0 +1,23 @@
+# SPEC-201 SPEC-022 at exit the quick worker still writes the settings it was asked to save, and drops the other work that waits there: a screenshot asked for while it was busy is never written
+# parts: screenshot
+# fixture: collections/85/C64Music C64Music
+# fakes: fakes/structure_threads_slow
+# args: --backend fake
+#
+# The quick worker is busy with the root's folder for two seconds of the fake clock (SPEC-253's slow
+# listing). The screenshot and the save of a setting wait behind it when the app is told to leave.
+expect screen = browser
+advance 200
+expect text contains Reading
+key Tab
+expect screen = settings
+key Down
+expect rows[1].highlighted = true
+expect rows[1].kind = setting
+key Right
+key Esc
+expect screen = browser
+key PrintScreen
+quit
+expect-file Pictures absent
+expect-file .config/sidplayzero/settings.ini exists

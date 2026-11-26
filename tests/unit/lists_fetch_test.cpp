@@ -23,7 +23,7 @@ namespace {
 const char* const kUrlFiles = "https://hvsc.c64.org/download/C64Music";   // the setting `url_files` (SPEC-130)
 
 // The fetcher: one worker that takes requests as they come, as the fetch worker does (SPEC-022).
-class FakeFetcher : public spz::TuneFetcher {
+class FakeFetcher : public spz::PlaylistTuneFetcher {
 public:
     FakeFetcher(spz::fake::HttpClient* http, spz::fake::Clock* clock, const std::string& root)
         : http_(http), clock_(clock), root_(root) {}

@@ -16,7 +16,7 @@
 #include "spz/hvsc_setup.h"
 #include "spz/job.h"
 #include "spz/notice_gate.h"
-#include "spz/settings.h"
+#include "spz/settings_file.h"
 #include "spz/system.h"
 
 namespace spz {
@@ -50,10 +50,15 @@ DownloadOffer download_offer(const HvscStatus& status, Files* files, Unpacker* u
 
 // --- SPEC-149: the archive is checked before anything is unpacked -----------------------------------
 
-// Reads what `7z l -slt` prints into entries: each block's Path, Size and Attributes. A folder has "D"
-// in its attributes; a link or a special file is known by the first letter of the Unix mode there ("l";
-// "b", "c", "p", "s"). False if the text is not such a listing, or an entry's size is not a number.
-// This is the reader the real Unpacker uses, and the fuzz target of SPEC-205.
+// Reads what `7z l -slt` prints into entries: each block's Path, Size and kind. A folder has "D" in its
+// attributes, a "d" mode or "Folder = +". A link is known by anything the listing says (FIND-026): an "l"
+// mode in its attributes or on a Mode line, an "L" (a reparse point) in its attributes, or a Symbolic Link
+// or Hard Link line with a value. A special file has a "b", "c", "p" or "s" mode, a "d" (device) or "8"
+// in its attributes, or a device number. An entry of a kind the reader does not know (a mode or an
+// attribute word it cannot read) is marked special too, so that the check refuses it. False if the text
+// is not such a listing, if the archive's own block does not say "Type = 7z" (and no other type), or if
+// an entry's size is not a number. This is the reader the real Unpacker uses, and the fuzz target of
+// SPEC-205.
 bool read_7z_listing(const std::string& text, std::vector<ArchiveEntry>* out);
 
 enum class ArchiveFault {
@@ -117,7 +122,7 @@ struct CompleteDownloadParts {
     NoticeGate* gate = nullptr;
     Jobs* jobs = nullptr;
     NoticeSink* notices = nullptr;
-    const Settings* settings = nullptr;    // `url_archive`
+    SettingsSource settings;               // `url_archive`, a copy read when the job starts (A2)
     std::string root;                      // the collection root; HVSC is set up there
     std::string cache;                     // listing.bin, install.state, listing.old and the archive are here
     PlaySwitch* play = nullptr;
@@ -138,8 +143,10 @@ public:
     //   4  Unpacker::list, check_archive, and room_for_unpacking against the free space (MSG_NEED_ROOM)
     //   5  Unpacker::unpack into `.sidplayzero-staging` beside the root, removed first if it is there
     //   6  no link or special file in the staging folder; its song length file gives a listing
-    //   7  listing.bin is copied to listing.old; every file of the staging folder's C64Music is renamed
-    //      over its place under the root, DOCUMENTS last; each file listing.old names and the new song
+    //   7  listing.bin is copied to listing.old; every file of the staging folder's C64Music whose path
+    //      HVSC's rules allow (is_hvsc_path), or that is one of HVSC's documents under DOCUMENTS, with no
+    //      part that begins with a dot, is renamed over its place under the root, DOCUMENTS last (nothing
+    //      else is moved: it goes with the staging folder); each file listing.old names and the new song
     //      length file does not is removed if its MD5 is still listing.old's. No stopping from here on.
     //   8  the listing is built again; the archive, the staging folder, listing.old and the marker are
     //      deleted; the notice MSG_DOWNLOAD_DONE

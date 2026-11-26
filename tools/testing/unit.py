@@ -42,8 +42,13 @@ def doctest_results(program, where, known, canaries, must_only, env=None):
                 failure = case.find("failure")
                 error = case.find("error")
                 bad = failure if failure is not None else error
-                seen[case.get("name")] = (FAILED, (bad.get("message", "") + "\n" + (bad.text or "")).strip()) \
+                outcome = (FAILED, (bad.get("message", "") + "\n" + (bad.text or "")).strip()) \
                     if bad is not None else (PASSED, "")
+                seen[case.get("name")] = outcome
+                # doctest writes each SUBCASE of a test as "test/subcase": the test passes only if all of them do.
+                parent = case.get("name", "").split("/", 1)[0]
+                if parent != case.get("name") and seen.get(parent, (PASSED, ""))[0] == PASSED:
+                    seen[parent] = outcome
         for test in known:
             if ASAN_CANARY in test.name:
                 continue
@@ -79,11 +84,18 @@ class _Collector(unittest.TestResult):
     def _name(test):
         return test.shortDescription() or test.id()
 
+    def _message(self, test, err):
+        """The traceback's last line, as before, and the exception's own first line, which says which check
+        failed when an assertion's message (a program's output, say) runs over several lines."""
+        last = self._exc_info_to_string(err, test).strip().split("\n")[-1]
+        first = f"{err[0].__name__}: " + (str(err[1]).strip().split("\n") or [""])[0]
+        return last if first in last or last in first else f"{last} [{first[:300]}]"
+
     def addFailure(self, test, err):
-        self.outcomes.append((self._name(test), FAILED, self._exc_info_to_string(err, test).strip().split("\n")[-1]))
+        self.outcomes.append((self._name(test), FAILED, self._message(test, err)))
 
     def addError(self, test, err):
-        self.outcomes.append((self._name(test), FAILED, self._exc_info_to_string(err, test).strip().split("\n")[-1]))
+        self.outcomes.append((self._name(test), FAILED, self._message(test, err)))
 
     def addSkip(self, test, reason):
         self.outcomes.append((self._name(test), SKIPPED, reason))
@@ -104,7 +116,7 @@ class _Collector(unittest.TestResult):
             self.outcomes.append((name, PASSED, ""))
 
 
-def python_results(folder, canaries, env, where=""):
+def python_results(folder, canaries, env, where="", must_only=False):
     """Runs the unittest files of a folder in this process. A test's name is its docstring's first line."""
     old = dict(os.environ)
     os.environ.update(env)
@@ -113,6 +125,11 @@ def python_results(folder, canaries, env, where=""):
         for extra in (str(ROOT / folder), str(ROOT / "tools")):   # the tests' own helpers, and the tools
             if extra not in sys.path:
                 sys.path.insert(0, extra)
+        # Helpers the tests import (such as test_keys_support) are read afresh for each run: the simulator
+        # level runs a folder's tests once for each build, and a helper reads its build when it is imported.
+        for name, module in list(sys.modules.items()):
+            if str(getattr(module, "__file__", "") or "").startswith(str(ROOT / folder) + os.sep):
+                del sys.modules[name]
         for path in sorted((ROOT / folder).glob("test_*.py")):
             spec = importlib.util.spec_from_file_location(f"spz_{folder.replace('/', '_')}_{path.stem}", path)
             module = importlib.util.module_from_spec(spec)
@@ -134,7 +151,16 @@ def python_results(folder, canaries, env, where=""):
             wanted.run(collector)
         finally:
             sys.stdout = stream
-        return [Result(name, outcome, message, where) for name, outcome, message in collector.outcomes]
+        results = []
+        for name, outcome, message in collector.outcomes:
+            parts = sources.parts_of(name)
+            # A test of a part runs only in a build that has it (SPEC-115): none has usbsid, and the Must-only
+            # build has no part at all.
+            if parts and (must_only or "usbsid" in parts):
+                results.append(Result(name, SKIPPED, "needs the part " + ", ".join(parts), where))
+            else:
+                results.append(Result(name, outcome, message, where))
+        return results
     finally:
         os.environ.clear()
         os.environ.update(old)

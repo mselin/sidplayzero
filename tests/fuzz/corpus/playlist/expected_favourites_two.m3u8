@@ -1,0 +1,8 @@
+#EXTM3U
+#PLAYLIST:Favourites
+#EXTINF:3,Test Author - Three Subtunes
+#SIDTUNE:subtune=3 md5=d06b7955032f0cc8cd8cb358935291f6
+/MUSICIANS/T/Tester_Tom/Three_Songs.sid
+#EXTINF:2,Test Author - Three Subtunes
+#SIDTUNE:md5=d06b7955032f0cc8cd8cb358935291f6
+/MUSICIANS/T/Tester_Tom/Three_Songs.sid

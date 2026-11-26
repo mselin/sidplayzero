@@ -1,0 +1,8 @@
+#EXTM3U
+#PLAYLIST:Loading tunes
+#EXTINF:3,Test Author - Commando Test
+/MUSICIANS/H/Hubbard_Rob/Commando.sid
+#EXTINF:3,Test Author - Three Subtunes
+/MUSICIANS/T/Tester_Tom/Three_Songs.sid?3
+#EXTINF:2,Test Author - Sixty Hertz
+/DEMOS/A-F/Clock_Demo.sid

@@ -37,7 +37,8 @@ public:
 
 private:
     std::size_t limit_;
-    std::string text_;
+    std::u32string chars_;        // one element for each character
+    std::size_t cursor_ = 0;
 };
 
 }  // namespace spz

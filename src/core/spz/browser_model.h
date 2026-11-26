@@ -4,12 +4,17 @@
 // as a message on the UI thread; the screen draws only the rows it shows, asking for each by its number.
 #pragma once
 
+#include <cstdint>
+#include <list>
+#include <map>
+#include <memory>
 #include <string>
 #include <vector>
 
 #include "spz/clock.h"
 #include "spz/collection.h"
 #include "spz/executor.h"
+#include "spz/lifetime.h"
 #include "spz/types.h"
 
 namespace spz {
@@ -90,6 +95,37 @@ public:
     // SPEC-043: a tune has become present, or has stopped being so, through the app (a fetch, SPEC-141).
     // Its folder is listed again when it is next opened, whatever its modification time says.
     void tune_changed(const std::string& path);
+
+private:
+    struct Kept {                 // one of the last folders listed (SPEC-043)
+        FolderListing listing;
+    };
+    void ask(const std::string& folder, bool have_kept, std::int64_t kept_s, std::int32_t kept_ns);
+    void arrived(std::uint64_t request, FolderListing listing, bool unchanged);
+    void keep(const FolderListing& listing);
+    Kept* kept(const std::string& folder);
+    void place_highlight(const std::string& wanted);
+    void remember_highlight();
+    void changed();
+
+    Collection* collection_;
+    Executor* quick_;
+    Executor* ui_;
+    Clock* clock_;
+    BrowserListener* listener_ = nullptr;
+
+    std::string folder_ = "/";
+    std::vector<FolderEntry> rows_;
+    bool loaded_ = false;                 // rows_ are the open folder's
+    std::int64_t asked_at_ = 0;           // when its entries were asked for
+    bool waiting_ = false;                // an answer from the quick worker is awaited
+    std::uint64_t request_ = 0;           // the latest request; older answers are dropped
+    std::string wanted_;                  // the entry to highlight when the rows arrive
+    int highlight_ = -1;
+    int rows_on_screen_ = 6;
+    std::list<Kept> kept_;                // the most recently used first
+    std::map<std::string, std::string> last_highlight_;   // folder -> name of the entry last highlighted in it
+    Lifetime lifetime_;                 // for jobs that come back after the model is gone
 };
 
 }  // namespace spz

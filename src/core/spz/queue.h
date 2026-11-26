@@ -54,11 +54,19 @@ public:
     bool shuffled() const;
 
 private:
+    // Puts order_ in the order that places_ gives, as places in original_.
+    void arrange();
+    // A whole new round of a shuffled queue: every entry permuted from its original order.
+    std::vector<std::size_t> new_round();
+
     ShuffleGenerator* generator_ = nullptr;
     std::vector<Entry> original_;
     std::vector<Entry> order_;
+    std::vector<std::size_t> places_;       // for each entry of order_, its place in original_
     std::size_t place_ = 0;
     bool shuffled_ = false;
+    bool round_made_ = false;               // peek_next() has made the next round already: it is next_round_
+    std::vector<std::size_t> next_round_;
 };
 
 }  // namespace spz

@@ -8,6 +8,8 @@
 
 #include <cstdint>
 #include <functional>
+#include <map>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -78,6 +80,18 @@ public:
     std::string text() const;
     // Writes text() to a file: the file `--metrics` names.
     FileStatus write(Files* files, const std::string& path) const;
+
+private:
+    // The value of one of the three key_to_screen_ measurements; "" with no key answered. With mutex_ held.
+    std::string key_figure(const std::string& key) const;
+    std::string value_held(const std::string& key) const;   // with mutex_ held
+
+    // Measurements are taken on more than one thread.
+    mutable std::mutex mutex_;
+    std::map<std::string, std::string> values_;
+    std::map<Millis, std::uint64_t> answered_;   // how many key events were answered in each time
+    std::uint64_t answered_count_ = 0;
+    Taken taken_;
 };
 
 }  // namespace spz

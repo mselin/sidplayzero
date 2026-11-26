@@ -1,0 +1,11 @@
+[SIDPLAY/Windows Playlist]
+Format=1
+BaseDir=C:\c64music\
+[1]
+Filename=MUSICIANS\T\Tester_Tom\Three_Songs.sid
+Subsong=3
+Time=79
+[2]
+Filename=MUSICIANS\H\Hubbard_Rob\Commando.sid
+Subsong=1
+Time=3

@@ -87,6 +87,13 @@ public:
     ImportReport import_file(const std::string& path);
 
 private:
+    struct Names;   // the listing's tunes by path without regard to case, and by file name
+    // Whether one form of a path finds a tune in the listing or under the root, with or without regard
+    // to case; gives the tune's own collection path.
+    bool find_tune(const std::string& form, bool any_case, Names* names, std::string* path) const;
+    bool match_with(const std::string& text, const std::string& folder_of_file, Names* names,
+                    std::string* path) const;
+
     Files* files_;
     std::string root_;
     std::string import_folder_;

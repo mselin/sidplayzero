@@ -15,6 +15,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools"))
 
 from testing import simulator  # noqa: E402
+from test_keys_support import parts_built  # noqa: E402
 
 PROGRAM = Path(os.environ.get("SPZ_SIM_BUILD", ROOT / "build" / "simulator")) / "src" / "sidplayzero"
 BESIDE = ROOT / "tests" / "simulator"
@@ -108,7 +109,7 @@ class SelfTest(unittest.TestCase):
         text = " ".join(turns)
         self.assertRegex(text, r"browser( \w+)* search( \w+)* browser", "the browser and Search did not show in turn")
         self.assertIn("settings", turns, "the key script did not open Settings")
-        typed = {field["text"] for d in playing if d["screen"] == "search" for field in (d.get("fields") or [])}
+        typed = {field["text"] for d in playing if d["screen"] == "search" for field in (d.get("fields") or {}).values()}
         self.assertIn("hub 1985", typed, "the key script did not type its first query")
         self.assertIn("galway ark", typed, "the key script did not type its second query")
         titles = {d["title"] for d in playing if d["screen"] == "browser"}
@@ -134,6 +135,8 @@ class SelfTest(unittest.TestCase):
         pairs = lines_of(results)
         keys = [key for key, _ in pairs]
         wanted = [key for key in budget_keys() if key not in ("start_ms", "exit_ms", "hvsc_setup_s")]
+        if "detail" not in parts_built():
+            wanted.remove("detail_ms_max")      # the detail line, and so its time, is the part `detail`'s
         for number in range(1, 5):
             wanted += [f"bench_{number}_engine", f"bench_{number}_render_load_percent"]
         for key in wanted:

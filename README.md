@@ -7,18 +7,21 @@ normally the [High Voltage SID Collection](https://hvsc.c64.org) (HVSC), and pla
 
 ## Where it stands
 
-**The app is not finished, and there is no release to install yet.** What can be built today is a stub: a
-program that starts, draws one screen and leaves again. The tests of the whole design are written and fail
-against it, as they should until the app is written to pass them.
+**The app is written, and there is no release to install yet.** Every screen and feature of the design is
+built, and its tests pass on a desktop and in the simulator of the device's screen. What is left before a
+first release is the device itself: one sitting with the app on a CardputerZero, which checks what only
+the device can show (its keys, its sound, the speed of its two engines), and the screenshots for the app
+store.
 
 | Done | Not done yet |
 |---|---|
-| What the app has to do ([requirements](docs/requirements.md)) | The app itself |
-| How it does it ([the design](docs/spec.md), reviewed independently) | A release |
-| The machinery its tests run on, and the tests of every item of the design | |
+| What the app has to do ([requirements](docs/requirements.md)) | The sitting on the device ([checklist](docs/device-checklist.md)) |
+| How it does it ([the design](docs/spec.md), reviewed independently) | The store's screenshots |
+| The tests of every item of the design, and the app, which passes them | A release |
+| Independent reviews of the code's quality and security, and their fixes | |
 
-Everything below under "Using it" describes the app as its design has it. It is there so that the plan can
-be read in one place, and it will be corrected to what the app really does when the app exists.
+Everything below under "Using it" describes the app as its design has it. Until the sitting on the device,
+what it says about the device has been tried only in the simulator.
 
 ## Using it
 
@@ -83,8 +86,8 @@ the app ships none.
 
 ## Building it
 
-What builds today is the stub. On Debian or Ubuntu you need `cmake` 3.31 or newer, `ninja-build`, `g++`,
-`git` and `libsdl2-dev`.
+On Debian or Ubuntu you need
+`cmake` 3.31 or newer, `ninja-build`, `g++`, `make`, `git`, `libsdl2-dev` and `libcurl4-openssl-dev`.
 
 For a desktop, in a window of the device's size:
 
