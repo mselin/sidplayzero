@@ -8,47 +8,43 @@
 #include <unistd.h>
 
 #include <cstdlib>
-#include <filesystem>
 #include <fstream>
 #include <sstream>
+#include <string>
 
+#include "platform/real_files.h"
+#include "spz/folders.h"
 
 namespace spz::app {
 
 namespace {
 
-std::string home() {
-    const char* value = std::getenv("HOME");
-    return value && *value ? value : "/";
+std::string variable(const char* name) {
+    const char* value = std::getenv(name);
+    return value ? value : "";
+}
+
+// The lock's path: in SPEC-134's state folder, worked out from the environment as the composition works
+// it out for state.ini (src/app/compose_keep.cpp).
+std::string lock_file() {
+    Environment environment;
+    environment.home = variable("HOME");
+    environment.xdg_config_home = variable("XDG_CONFIG_HOME");
+    environment.xdg_data_home = variable("XDG_DATA_HOME");
+    environment.xdg_state_home = variable("XDG_STATE_HOME");
+    environment.xdg_cache_home = variable("XDG_CACHE_HOME");
+    return lock_path(app_folders(environment));
 }
 
 }  // namespace
 
-std::string home_folder() { return home(); }
-
-bool root_from_variable() {
-    const char* base = std::getenv("HVSC_BASE");
-    return base && *base;
-}
-
-std::string collection_root() {
-    const char* base = std::getenv("HVSC_BASE");
-    if (base && *base) return base;
-    return home() + "/C64Music";
-}
-
-std::string state_folder() {
-    const char* state = std::getenv("XDG_STATE_HOME");
-    if (state && *state) return std::string(state) + "/sidplayzero";
-    return home() + "/.local/state/sidplayzero";
-}
-
 Lock::~Lock() { release(); }
 
 bool Lock::take() {
-    std::error_code ec;
-    std::filesystem::create_directories(state_folder(), ec);
-    fd_ = ::open((state_folder() + "/lock").c_str(), O_RDWR | O_CREAT | O_CLOEXEC, 0600);
+    const std::string path = lock_file();
+    platform::RealFiles files;
+    files.make_folders(path.substr(0, path.rfind('/')));   // for the user only (SPEC-134)
+    fd_ = ::open(path.c_str(), O_RDWR | O_CREAT | O_CLOEXEC | O_NOFOLLOW, 0600);
     if (fd_ < 0) return true;   // a state folder that cannot be written is no reason not to start
     if (::flock(fd_, LOCK_EX | LOCK_NB) != 0) {
         ::close(fd_);

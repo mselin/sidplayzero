@@ -26,6 +26,15 @@ set(SIDPLAYZERO_DISPLAY "window" CACHE STRING "Where the program draws: window (
 set_property(CACHE SIDPLAYZERO_DISPLAY PROPERTY STRINGS window framebuffer none)
 set(SIDPLAYZERO_SANITIZE "" CACHE STRING "Build with a sanitizer: address (with undefined) or thread")
 
+# The package for the device is built without the tests' hooks and without a sanitizer (SPEC-253): either
+# would put into it a program that takes a script, or one built to be slow and verbose. Refused before
+# anything is fetched or built.
+if(SIDPLAYZERO_PACKAGE AND (SIDPLAYZERO_TEST_HOOKS OR NOT SIDPLAYZERO_SANITIZE STREQUAL ""))
+    message(FATAL_ERROR
+        "SIDPLAYZERO_PACKAGE=ON cannot be built with SIDPLAYZERO_TEST_HOOKS=ON or with SIDPLAYZERO_SANITIZE "
+        "set: the package must hold the program as released. Build the package with both off.")
+endif()
+
 include(cmake/fetch.cmake)
 include(cmake/parts.cmake)
 

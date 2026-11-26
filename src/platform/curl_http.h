@@ -6,7 +6,9 @@
 // within 15 s, or runs slower than 1 KiB/s for 30 s. A body past the request's limit fails it as too large.
 // The request names the app and its version as its user agent and sends nothing else about anybody: no
 // cookies. A body is written to the request's file only when the answer is a success (200, or 206 for a
-// range); a file that is not HTTPS is refused before anything is sent.
+// range); a file that is not HTTPS is refused before anything is sent. A 206 is kept only when its
+// Content-Range starts at the byte the request asked for, and the request fails, keeping what it wrote,
+// unless the file then ends where Content-Range said and that is the whole file's size.
 //
 // A test build (SIDPLAYZERO_TEST_HOOKS), and only a test build, may also be told to accept
 // http://127.0.0.1 and a certificate authority named by the test, beside the system's. In any other

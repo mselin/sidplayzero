@@ -150,7 +150,7 @@ void Composition::make_hvsc() {
     releases.gate = gate_.get();
     releases.jobs = &jobs_;
     releases.notices = notices_.get();
-    releases.settings = &settings_->settings();
+    releases.settings = settings_.get();
     releases.root = root_.path;
     releases.cache = folders_.cache;
     releases.listener = hvsc_events_.get();
@@ -164,7 +164,7 @@ void Composition::make_hvsc() {
     fetcher.ui = app()->ui();
     fetcher.gate = gate_.get();
     fetcher.listing = listing_.get();
-    fetcher.settings = &settings_->settings();
+    fetcher.settings = settings_.get();
     fetcher.root = root_.path;
     fetcher.arrivals = arrivals_.get();
     fetcher.changed = part_built("releases") ? releases_.get() : nullptr;
@@ -180,7 +180,7 @@ void Composition::make_hvsc() {
     setup.gate = gate_.get();
     setup.jobs = &jobs_;
     setup.notices = notices_.get();
-    setup.settings = &settings_->settings();
+    setup.settings = settings_.get();
     setup.root = root_.path;
     setup.cache = folders_.cache;
     setup.listener = hvsc_events_.get();
@@ -196,7 +196,7 @@ void Composition::make_hvsc() {
     download.gate = gate_.get();
     download.jobs = &jobs_;
     download.notices = notices_.get();
-    download.settings = &settings_->settings();
+    download.settings = settings_.get();
     download.root = root_.path;
     download.cache = folders_.cache;
     download.play = hvsc_events_.get();

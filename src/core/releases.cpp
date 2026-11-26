@@ -118,7 +118,7 @@ void Releases::check() {
             const ReleasesParts& p = s->p;
             const std::string download = p.cache + "/hv_sids.check";
             HttpRequest request;
-            request.url = join_url(p.settings->url_files, std::string("/") + kHvSids);
+            request.url = join_url(p.settings.get().url_files, std::string("/") + kHvSids);
             request.to_path = download;
             request.limit_bytes = kDocumentLimitBytes;
             const HttpResult result = p.http->fetch(request, nullptr);
@@ -158,7 +158,7 @@ bool Releases::update() {
             // The listing in use, kept open: its mapping stays as it is when listing.bin is replaced.
             Listing old_listing;
             old_listing.open(p.files, p.cache + "/listing.bin", p.root + "/" + kSongLengths);
-            const SetupOutcome outcome = run_setup_steps(p.files, p.http, p.jobs, p.settings->url_files, p.root, p.cache);
+            const SetupOutcome outcome = run_setup_steps(p.files, p.http, p.jobs, p.settings.get().url_files, p.root, p.cache);
             if (outcome.failed_step == 0) {
                 if (old_listing.is_open()) s->sort_out_tunes(old_listing);
                 s->newer = 0;
