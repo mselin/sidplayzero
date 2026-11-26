@@ -36,7 +36,7 @@ class Worker : public Executor {
 public:
     // With `finish_on_exit`, the jobs that wait when it is destroyed still run (the quick worker's saves).
     explicit Worker(std::string name, bool finish_on_exit = false);
-    // Lets the job that runs finish, drops those that wait (or runs them, as above), and joins the thread.
+    // stop(), if it has not been called.
     ~Worker() override;
     Worker(const Worker&) = delete;
     Worker& operator=(const Worker&) = delete;
@@ -44,11 +44,17 @@ public:
     void post(std::function<void()> job) override;
     void post_first(std::function<void()> job);
 
+    // Lets the job that runs finish, drops those that wait (or runs them, as above), and joins the thread.
+    // Later posts are dropped.
+    void stop();
+
     // No job waits and none runs.
     bool idle() const;
     // A job runs now.
     bool running() const;
     const std::string& name() const { return name_; }
+    // The worker's thread.
+    std::thread::id id() const { return id_; }
 
 private:
     void loop();
@@ -61,6 +67,7 @@ private:
     bool running_ = false;
     bool stopping_ = false;
     std::thread thread_;
+    std::thread::id id_;
 };
 
 }  // namespace spz::app

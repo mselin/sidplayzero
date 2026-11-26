@@ -45,6 +45,8 @@ private:
 
 // "libsidplayfp 3.1.2": the library built in, as `sidplayzero --version` names it (SPEC-002).
 const char* engine_library_version();
+// "libresidfp 1.3.0": the reSIDfp library built in with it (SPEC-002, SPEC-103).
+const char* residfp_library_version();
 
 // The sanitizer the engine library was compiled with: "address", "thread", or "" for none. The library is
 // compiled with the flags of the build it is in (cmake/engine.cmake).

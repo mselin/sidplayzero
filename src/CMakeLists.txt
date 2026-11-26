@@ -82,6 +82,14 @@ add_executable(sidplayzero
     app/app.cpp
     app/workers.cpp
     app/screens.cpp
+    # The composition (SPEC-020 to SPEC-024): one file for its order, and one for each area.
+    app/composition.cpp
+    app/compose_keep.cpp
+    app/compose_hvsc.cpp
+    app/compose_browse.cpp
+    app/compose_play.cpp
+    app/compose_search.cpp
+    app/compose_lists.cpp
 )
 target_link_libraries(sidplayzero PRIVATE spz_ui spz_platform Threads::Threads)
 target_compile_options(sidplayzero PRIVATE ${SPZ_WARNINGS})

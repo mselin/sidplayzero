@@ -16,6 +16,7 @@
 #include <string>
 #include <vector>
 
+#include "spz/text_field.h"
 #include "spz/types.h"
 
 namespace spz {
@@ -26,8 +27,8 @@ const std::size_t kPlaylistFileLimit = 4 * 1024 * 1024;
 const std::size_t kPlaylistEntryLimit = 20000;
 // SPEC-204: a line longer than this many bytes is cut there.
 const std::size_t kPlaylistLineLimit = 4096;
-// SPEC-172: a playlist's name is 1 to this many characters.
-const std::size_t kPlaylistNameLimit = 40;
+// SPEC-172: a playlist's name is 1 to this many characters: kPlaylistNameLimit, in spz/text_field.h (one
+// definition for the two headers, so that a file may include both).
 // SPEC-171: the playlist that always exists.
 extern const char* const kFavouritesName;   // "Favourites"
 

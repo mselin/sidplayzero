@@ -16,6 +16,7 @@ struct Record {
     std::string full_text;   // the whole text, before it was cut to fit
     int full_width = 0;
     bool cut = false;
+    bool scrolls = false;
 };
 
 // The marker of a label made here: its user data points at a Record, freed when the label goes.
@@ -85,6 +86,24 @@ lv_obj_t* make_label(lv_obj_t* parent, const std::string& id, const std::string&
     owned->record.full_text = text;
     owned->record.full_width = text_width(text, font);
     std::string shown = text;
+    if (style.scroll >= 0 && owned->record.full_width > w) {
+        // SPEC-098: the whole text, moved within a box of its own that clips it.
+        owned->record.cut = true;
+        owned->record.scrolls = true;
+        lv_obj_t* box = make_area(parent, x, y, w, h);
+        lv_obj_t* label = lv_label_create(box);
+        lv_label_set_long_mode(label, LV_LABEL_LONG_MODE_CLIP);
+        lv_obj_set_pos(label, -style.scroll, 0);
+        lv_obj_set_size(label, owned->record.full_width + 2, h);
+        lv_obj_set_style_text_font(label, font, LV_PART_MAIN);
+        lv_obj_set_style_text_color(label, style.dim ? colour_dim() : colour_text(), LV_PART_MAIN);
+        const int pad = (h - static_cast<int>(lv_font_get_line_height(font))) / 2;
+        if (pad > 0) lv_obj_set_style_pad_top(label, pad, LV_PART_MAIN);
+        lv_label_set_text(label, text.c_str());
+        lv_obj_set_user_data(label, owned);
+        lv_obj_add_event_cb(label, forget, LV_EVENT_DELETE, nullptr);
+        return label;
+    }
     if (owned->record.full_width > w) {
         owned->record.cut = true;
         const std::string ellipsis = has_glyph(font, 0x2026) ? "\xE2\x80\xA6" : "...";
@@ -158,6 +177,22 @@ bool label_record(lv_obj_t* label, std::string* id, int* full_width, bool* cut, 
     *cut = owned->record.cut;
     if (full_text) *full_text = owned->record.full_text;
     return true;
+}
+
+bool label_scrolls(lv_obj_t* label) {
+    const Owned* owned = static_cast<const Owned*>(lv_obj_get_user_data(label));
+    return owned != nullptr && owned->magic == kMagic && owned->record.scrolls;
+}
+
+int scroll_offset(int overflow, std::int64_t now_ms) {
+    if (overflow <= 0) return 0;
+    const std::int64_t rest = 1000;
+    const std::int64_t move = static_cast<std::int64_t>(overflow) * 1000 / 25;   // 25 pixels a second
+    const std::int64_t cycle = rest + move + rest;
+    const std::int64_t t = now_ms % cycle;
+    if (t < rest) return 0;
+    if (t < rest + move) return static_cast<int>((t - rest) * 25 / 1000);
+    return overflow;
 }
 
 }  // namespace spz::ui

@@ -34,16 +34,21 @@ bool UiQueue::empty() const {
 
 Worker::Worker(std::string name, bool finish_on_exit) : name_(std::move(name)), finish_on_exit_(finish_on_exit) {
     thread_ = std::thread([this] { loop(); });
+    id_ = thread_.get_id();
 }
 
-Worker::~Worker() {
+Worker::~Worker() { stop(); }
+
+void Worker::stop() {
+    std::deque<std::function<void()>> dropped;
     {
         std::lock_guard<std::mutex> lock(mutex_);
         stopping_ = true;
-        if (!finish_on_exit_) jobs_.clear();
+        if (!finish_on_exit_) dropped.swap(jobs_);
     }
     wake_.notify_all();
     if (thread_.joinable()) thread_.join();
+    // What the dropped jobs hold goes here, on the thread that stops the worker, not under its lock.
 }
 
 void Worker::post(std::function<void()> job) {

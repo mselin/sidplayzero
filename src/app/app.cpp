@@ -9,13 +9,11 @@
 #include <exception>
 #include <utility>
 
-#include "app/start.h"
+#include "app/composition.h"
 #include "spz/brightness.h"
-#include "spz/folders.h"
 #include "spz/help.h"
 #include "spz/keymap.h"
 #include "spz/messages.h"
-#include "spz/settings_file.h"
 #include "ui/describe.h"
 #include "ui/draw.h"
 #include "ui/panel.h"
@@ -35,11 +33,6 @@ const std::map<std::string, std::string> kOpens = {
     {"open_playing", "playing"}, {"open_search", "search"},  {"open_playlists", "playlists"},
     {"open_settings", "settings"}, {"open_hvsc", "hvsc"},    {"open_about", "about"},
 };
-
-std::string getenv_or_empty(const char* name) {
-    const char* value = std::getenv(name);
-    return value ? value : "";
-}
 
 // Hides the labels of the content band that the notice covers (SPEC-091: it covers the last row).
 void hide_under_notice(lv_obj_t* object) {
@@ -65,65 +58,83 @@ const ScreenMaker* ScreenList::find(const std::string& name) const {
 
 App::App(const Seams& seams)
     : seams_(seams), notices_(seams.clock), keys_(seams.clock, [this] { return place(); }, this) {
-    services_.files = seams.files;
-    services_.backlight = seams.backlight;
-    services_.libraries = seams.libraries;
-    services_.home = home_folder();
-    services_.collection = collection_root();
-    services_.collection_from_variable = root_from_variable();
     add_screens(&list_);
-    start_settings();
     notices_.on_change([this] { redraw(); });
+    // SPEC-200, step 2: the settings and the state, and everything made from them.
+    parts_.reset(new Composition(this, seams_));
 
-    // The bottom of the stack: the browser, or in its place the empty screen (SPEC-048). Until the browser
-    // is built, the empty screen stands there.
-    const ScreenMaker* browser = list_.find("browser");
-    std::unique_ptr<ui::Screen> bottom = browser ? (*browser)(this) : nullptr;
-    if (bottom && bottom->ready()) {
-        stack_.set_bottom("browser");
-        screens_["browser"] = std::move(bottom);
-    } else {
-        stack_.set_bottom("empty");
-        screens_["empty"] = (*list_.find("empty"))(this);
-    }
+    // Step 4: the browser at the bottom of the stack. If the collection turns out to hold nothing, the empty
+    // screen takes its place (SPEC-048, compose_browse.cpp).
+    stack_.set_bottom("browser");
+    screens_["browser"] = (*list_.find("browser"))(this);
     top()->shown();
     lv_obj_t* root = lv_screen_active();
     lv_obj_set_style_bg_color(root, ui::colour_background(), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(root, LV_OPA_COVER, LV_PART_MAIN);
     lv_obj_remove_flag(root, LV_OBJ_FLAG_SCROLLABLE);
     draw();
+    // The screen's own clock: what changes by itself on the screen on top (SPEC-080, SPEC-098).
+    every(33, [this] {
+        if (!panel_ && !help_open_) top()->tick();
+    });
+    // Step 5, on the workers.
+    parts_->start();
 }
 
-App::~App() {
-    // The screens go, and their LVGL objects with them. The workers stop after this (they are declared
-    // last, so they go first of the members): the quick worker finishes the saves that wait.
+App::~App() { shut_down(); }
+
+void App::leave() {
+    if (!leaving_) asked_to_leave_ms_ = seams_.clock->now_ms();
+    leaving_ = true;
+}
+
+void App::shut_down() {
+    if (shut_down_) return;
+    shut_down_ = true;
+    if (asked_to_leave_ms_ < 0) asked_to_leave_ms_ = seams_.clock->now_ms();
+    // SPEC-201: stop taking keys (nothing more is read once this has begun); then the sound, the screen's
+    // brightness, state.ini and the outside world's waits.
+    for (Every& e : every_) {
+        if (e.timer != 0) seams_.clock->cancel(e.timer);
+        e.timer = 0;
+    }
+    parts_->stop();
+    // The workers stop: the quick worker finishes the saves that wait; the others end the job that runs.
+    quick_.stop();
+    fetch_.stop();
+    long_.stop();
+    render_.stop();
+    // The measurements, once everything has stopped.
+    parts_->write_metrics(seams_.clock->now_ms() - asked_to_leave_ms_);
+    // The screens go, and their LVGL objects with them, then what they used.
     panel_.reset();
     closed_panel_.reset();
+    closed_screens_.clear();
     screens_.clear();
     lv_obj_clean(lv_screen_active());
+    parts_.reset();
 }
 
-void App::start_settings() {
-    // SPEC-130: the settings, read once at start. SettingsFile and the folders belong to other areas; while
-    // they are not built, there are no settings to show and the Settings screen waits.
-    try {
-        Environment environment;
-        environment.home = getenv_or_empty("HOME");
-        environment.xdg_config_home = getenv_or_empty("XDG_CONFIG_HOME");
-        environment.xdg_data_home = getenv_or_empty("XDG_DATA_HOME");
-        environment.xdg_state_home = getenv_or_empty("XDG_STATE_HOME");
-        environment.xdg_cache_home = getenv_or_empty("XDG_CACHE_HOME");
-        const Folders folders = app_folders(environment);
-        std::unique_ptr<SettingsFile> file(new SettingsFile(seams_.files, &quick_, settings_path(folders)));
-        file->load();
-        const std::string reset = file->take_notice();
-        if (!reset.empty()) notice(reset);
-        settings_ = std::move(file);
-        services_.settings = settings_.get();
-    } catch (const std::exception&) {
-        services_.settings = nullptr;
-    }
+void App::render_turn() {
+    if (parts_) parts_->render();
 }
+
+void App::every(Millis ms, std::function<void()> fn) {
+    every_.push_back(Every{ms, std::move(fn), 0});
+    tick(every_.size() - 1);
+}
+
+void App::tick(std::size_t index) {
+    Every& e = every_[index];
+    e.timer = seams_.clock->call_after(e.ms, [this, index] {
+        every_[index].timer = 0;
+        if (shut_down_) return;
+        every_[index].fn();
+        if (!shut_down_) tick(index);
+    });
+}
+
+std::string App::bottom() const { return stack_.screens().front(); }
 
 // ---- the stack ---------------------------------------------------------------------------------------------
 
@@ -145,7 +156,10 @@ bool App::open(const std::string& name) {
     // The screens above the one returned to are closed.
     const std::vector<std::string> open = stack_.screens();
     for (auto it = screens_.begin(); it != screens_.end();) {
-        if (std::find(open.begin(), open.end(), it->first) == open.end()) it = screens_.erase(it);
+        if (std::find(open.begin(), open.end(), it->first) == open.end()) {
+            closed_screens_.push_back(std::move(it->second));
+            it = screens_.erase(it);
+        }
         else ++it;
     }
     top()->shown();
@@ -160,6 +174,7 @@ void App::set_bottom(const std::string& name) {
     if (make == nullptr) return;
     screens_[name] = (*make)(this);
     stack_.set_bottom(name);
+    closed_screens_.push_back(std::move(screens_[now]));
     screens_.erase(now);
     if (stack_.top() == name) top()->shown();
     redraw();
@@ -168,6 +183,7 @@ void App::set_bottom(const std::string& name) {
 void App::close_top() {
     const std::string closing = stack_.top();
     if (!stack_.close_top()) return;
+    closed_screens_.push_back(std::move(screens_[closing]));
     screens_.erase(closing);
     top()->shown();
     redraw();
@@ -212,8 +228,33 @@ std::string App::place() {
 bool App::typing() { return place_kind(place()) == PlaceKind::Typing; }
 
 void App::key(int linux_code, bool pressed) {
+    if (shut_down_) return;
+    // SPEC-207: a key that turns the screen back on does nothing else, and nor does its release.
+    if (pressed && key_filter_ && key_filter_()) {
+        swallowed_.push_back(linux_code);
+        return;
+    }
+    if (!pressed) {
+        const auto found = std::find(swallowed_.begin(), swallowed_.end(), linux_code);
+        if (found != swallowed_.end()) {
+            swallowed_.erase(found);
+            return;
+        }
+    }
+    if (pressed) keys_read_.push_back(seams_.clock->now_ms());   // SPEC-112
     keys_.key(linux_code, pressed);
     closed_panel_.reset();
+    closed_screens_.clear();
+}
+
+std::string App::top_right_text() {
+    std::string text;
+    for (const auto& piece : top_right_) {
+        const std::string part = piece();
+        if (part.empty()) continue;
+        text += (text.empty() ? "" : "  ") + part;
+    }
+    return text;
 }
 
 void App::on_hold_notice(bool shown) {
@@ -258,7 +299,11 @@ void App::on_key(const KeyEvent& event) {
             panel_->on_action(event);
             return;
         }
-        // A screen.
+        // A screen. SPEC-093: a key 4 to 8 with no label over it does nothing.
+        if (event.key.size() == 1 && event.key[0] >= '4' && event.key[0] <= '8' &&
+            top()->actions()[static_cast<std::size_t>(event.key[0] - '4')].empty()) {
+            return;
+        }
         if (a == "back" && stack_.screens().size() > 1) {
             close_top();
             return;
@@ -347,20 +392,28 @@ void App::screenshot() {
 void App::pump() {
     ui_.run_all();
     closed_panel_.reset();
+    closed_screens_.clear();
     if (!panel_ && !help_open_ && !after_overlay_.empty()) {
         std::vector<std::function<void()>> waiting;
         waiting.swap(after_overlay_);
         for (auto& fn : waiting) fn();
     }
     if (dirty_) draw();
+    if (!keys_read_.empty() && key_timer_) {
+        // SPEC-112: the first screen update after each key has been made.
+        const Millis now = seams_.clock->now_ms();
+        for (const Millis read : keys_read_) key_timer_(now - read);
+    }
+    keys_read_.clear();
 }
 
 bool App::settled() const {
     if (!ui_.empty() || dirty_) return false;
     if (!panel_ && !help_open_ && !after_overlay_.empty()) return false;
-    const bool held = seams_.held && seams_.held();
     for (const Worker* worker : {&quick_, &fetch_, &long_, &render_}) {
-        if (!worker->idle() && !(held && worker->running())) return false;
+        if (worker->idle()) continue;
+        // A job that waits for the fake clock, or for an answer a fake holds back, counts as settled.
+        if (!(seams_.held && worker->running() && seams_.held(worker->id()))) return false;
     }
     return true;
 }
@@ -389,7 +442,7 @@ void App::draw_top_line(lv_obj_t* root) {
     const std::string position = screen->position();
     const int position_w = position.empty() ? 0 : ui::text_width(position, ui::text_font()) + 2;
     // SPEC-109: the mini player on the right, at most a third of the line.
-    const std::string right = top_right_ && screen->name() != "playing" ? top_right_() : "";
+    const std::string right = screen->name() != "playing" ? top_right_text() : "";
     const int right_w = right.empty() ? 0 : std::min(ui::text_width(right, ui::text_font()) + 2, ui::kWidth / 3);
     if (right_w > 0) {
         ui::make_label(root, "mini", right, ui::kWidth - 2 - right_w, 0, right_w, ui::kTopHeight,

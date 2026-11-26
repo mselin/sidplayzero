@@ -10,6 +10,7 @@
 
 #include "spz/md5.h"
 #include "spz/paths.h"
+#include "spz/safe_file.h"
 #include "spz/tune.h"
 
 namespace spz {
@@ -186,6 +187,10 @@ FolderListing Collection::list(const std::string& folder) const {
     }
     if (status == FileStatus::Ok) {
         out.on_device = true;
+        // SPEC-132, SPEC-202: what a killed safe write left in the folder goes as the folder is listed.
+        for (const FileInfo& info : found) {
+            if (!info.is_folder && is_temp_name(info.name)) files_->remove(folder_place(folder) + "/" + info.name);
+        }
         FileInfo self;
         if (files_->info(folder_place(folder), &self) == FileStatus::Ok) {
             out.modified_s = self.modified_s;

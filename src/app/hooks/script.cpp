@@ -26,6 +26,7 @@
 #include "lvgl.h"
 #include "platform/display.h"
 #include "platform/real_clock.h"
+#include "platform/real_engine.h"
 #include "spz/keys.h"
 #include "spz/version.h"
 #include "ui/png.h"
@@ -116,13 +117,18 @@ std::vector<std::uint8_t> read_file(const fs::path& path, bool* ok) {
 
 class Session {
 public:
-    explicit Session(const Options& options) : options_(options), fakes_() {
+    explicit Session(const Options& options)
+        : options_(options), fakes_(), files_(&fakes_.files, &fake_clock_, &holds_), http_(&fakes_.http, &holds_),
+          sink_(&fakes_.sink) {
         const char* home = std::getenv("HOME");
         home_ = home && *home ? home : ".";
         if (options_.clock == "real") clock_ = &real_clock_;
         else clock_ = &fake_clock_;
         fakes_.backend = fake::SoundBackend(clock_);
+        sink_.use_clock(clock_);
     }
+
+    ~Session() { stop_pulling(); }
 
     int run() {
         std::ifstream in(options_.script);
@@ -136,6 +142,7 @@ public:
 
         std::string why;
         if (!fakes_.load(options_.fakes, home_, &why)) return fail_plain(kStatusScriptError, why);
+        files_.list_delay_ms = fakes_.list_delay_ms;
 
         g_clock = clock_;
         lv_init();
@@ -169,10 +176,6 @@ public:
             if (status != 0) report(line_number, line, stop);
         }
         stop_app();
-        if (!options_.metrics.empty()) {
-            std::ofstream metrics(options_.metrics);
-            metrics << "app_version = " << app_version() << "\n";
-        }
         return status;
     }
 
@@ -180,18 +183,63 @@ private:
     // ---- the app's life ----------------------------------------------------------------------------
     void start_app() {
         if (!lock_.take()) throw Stop{kStatusScriptError, "SidPlayZero is already running in this home folder", "", ""};
+        files_.stopping = false;
         app::Seams seams;
         seams.clock = clock_;
-        seams.files = &fakes_.files;
+        seams.files = &files_;
+        seams.http = &http_;
+        seams.unpacker = &fakes_.unpacker;
+        seams.volume = &fakes_.volume;
         seams.backlight = &fakes_.backlight;
-        seams.held = [this] { return fakes_.http.stalled() > 0; };
+        seams.memory = &fakes_.memory;
+        if (options_.backend == "fake") {
+            seams.backend = &fakes_.backend;
+        } else {
+            seams.engine = options_.engine == "fake" ? static_cast<Engine*>(&fakes_.engine) : &real_engine_;
+            seams.sink = &sink_;
+        }
+        // On the fake clock the script turns the render loop before each pull (SPEC-253: "the render loop is
+        // waiting"); on the real clock it runs on its thread, and the sink pulls in real time.
+        seams.render_thread = clock_ == &real_clock_;
+        seams.libraries = {platform::engine_library_version(), platform::residfp_library_version()};
+        seams.held = [this](std::thread::id thread) { return holds_.held(thread); };
+        seams.at_exit = [this] { files_.stopping = true; };
+        seams.has_seed = options_.has_seed;
+        seams.seed = options_.seed;
+        seams.metrics = options_.metrics;
+        seams.start_ms = app::ms_since_process_start();
         app_.reset(new app::App(seams));
+        if (clock_ == &real_clock_) start_pulling();
         settle();
     }
 
     void stop_app() {
-        app_.reset();
+        stop_pulling();
+        if (app_) {
+            app_->shut_down();
+            app_.reset();
+        }
         lock_.release();
+    }
+
+    // On the real clock the recording sink takes its frames in real time, on a thread of its own, as a
+    // device's callback does.
+    void start_pulling() {
+        pulling_ = true;
+        puller_ = std::thread([this] {
+            auto next = std::chrono::steady_clock::now();
+            while (pulling_) {
+                next += std::chrono::milliseconds(kStepMs);
+                const unsigned rate = sink_.sample_rate();
+                if (sink_.is_open() && rate > 0) sink_.pull(static_cast<std::size_t>(rate * kStepMs / 1000));
+                std::this_thread::sleep_until(next);
+            }
+        });
+    }
+
+    void stop_pulling() {
+        pulling_ = false;
+        if (puller_.joinable()) puller_.join();
     }
 
     void need_app(const std::string& what) {
@@ -214,12 +262,21 @@ private:
     // SPEC-253: no work waiting anywhere, and everything drawn.
     void settle() {
         const auto limit = std::chrono::steady_clock::now() + kSettleLimit;
+        bool confirming = false;
         for (;;) {
             run_ui_once();
             lv_refr_now(nullptr);
             bool idle = !app_ || app_->settled();
             for (const auto& check : idle_checks()) idle = idle && check();
-            if (idle) return;
+            // A thread that a fake holds back may have just been told to give up (a request cancelled): it
+            // notices within 10 ms. So settled-while-held must still hold a little later.
+            if (idle && (!holds_.any() || confirming)) return;
+            if (idle) {
+                confirming = true;
+                std::this_thread::sleep_for(std::chrono::milliseconds(25));
+                continue;
+            }
+            confirming = false;
             if (std::chrono::steady_clock::now() > limit) {
                 throw Stop{kStatusExpectFailed, "the app did not settle within 10 s", "settled", "still busy"};
             }
@@ -240,7 +297,9 @@ private:
         for (std::int64_t done = 0; done < ms; done += kStepMs) {
             const std::int64_t step = std::min(kStepMs, ms - done);
             fake_clock_.advance(step);
-            if (fakes_.sink.is_open) fakes_.sink.pull(static_cast<std::size_t>(fakes_.sink.sample_rate * step / 1000));
+            // The render loop fills the ring buffer, then the sink takes exactly the frames that time holds.
+            if (app_) app_->render_turn();
+            if (sink_.is_open()) sink_.pull(static_cast<std::size_t>(sink_.sample_rate() * step / 1000));
             run_ui_once();
             if (app_ && app_->leaving()) break;
         }
@@ -347,6 +406,7 @@ private:
         fs::permissions(full, fs::perms::owner_write | fs::perms::group_write | fs::perms::others_write,
                         writable ? fs::perm_options::add : fs::perm_options::remove, ec);
         // The tests may run as a user whom permissions do not stop, so the fake files are told as well.
+        std::lock_guard<std::mutex> lock(files_.lock());
         if (writable) fakes_.files.make_writable(full.string());
         else fakes_.files.make_read_only(full.string());
     }
@@ -354,7 +414,7 @@ private:
     // ---- sound, requests, logs -----------------------------------------------------------------------
     void save_samples(const std::string& name) {
         std::ofstream out(in_out(name + ".raw"), std::ios::binary);
-        const auto& all = fakes_.sink.received;
+        const std::vector<std::int16_t> all = sink_.received();
         out.write(reinterpret_cast<const char*>(all.data() + fakes_.samples_saved),
                   static_cast<std::streamsize>((all.size() - fakes_.samples_saved) * sizeof(std::int16_t)));
         fakes_.samples_saved = all.size();
@@ -370,7 +430,7 @@ private:
 
     void expect_samples(std::string rest) {
         const std::string how = word(&rest);
-        const auto& all = fakes_.sink.received;
+        const std::vector<std::int16_t> all = sink_.received();
         if (how == "frames") {
             const std::string is = word(&rest);
             const std::string found = std::to_string(all.size() / 2);
@@ -395,11 +455,11 @@ private:
             const std::string what = word(&rest);
             if (what == "down") fakes_.http.down = true;
             else if (what == "up") fakes_.http.down = false;
-            else if (what == "release") fakes_.http.release(trim(rest));
+            else if (what == "release") http_.release(trim(rest));
             else throw Stop{kStatusScriptError, "fake http is followed by down, up or release URL", "", ""};
         } else if (name == "sink") {
             if (word(&rest) != "drop") throw Stop{kStatusScriptError, "fake sink is followed by drop MS", "", ""};
-            fakes_.sink.drop_device();
+            sink_.drop_device(number(trim(rest), "MS"));
         } else if (name == "backend") {
             const std::string event = word(&rest);
             if (event == "song_ended") fakes_.backend.emit_song_ended();
@@ -416,8 +476,10 @@ private:
             } else {
                 throw Stop{kStatusScriptError, "'" + event + "' is not an event of the fake backend", "", ""};
             }
-        } else if (!fakes_.set(name, trim(rest), &why)) {
-            throw Stop{kStatusScriptError, why, "", ""};
+        } else {
+            std::lock_guard<std::mutex> lock(files_.lock());
+            if (!fakes_.set(name, trim(rest), &why)) throw Stop{kStatusScriptError, why, "", ""};
+            files_.list_delay_ms = fakes_.list_delay_ms;
         }
     }
 
@@ -451,12 +513,13 @@ private:
         else if (name == "expect") expect(rest);
         else if (name == "expect-file") expect_file(rest);
         else if (name == "expect-requests") {
-            const std::string found = std::to_string(fakes_.http.log.size());
+            const std::string found = std::to_string(http_.urls().size());
             if (found != trim(rest)) throw Stop{kStatusExpectFailed, line, trim(rest) + " request(s)", found};
         }
         else if (name == "expect-request") {
             const long long n = number(word(&rest), "N");
-            const std::string found = n >= 1 && n <= static_cast<long long>(fakes_.http.log.size()) ? fakes_.http.log[n - 1].url : "(no such request)";
+            const std::vector<std::string> urls = http_.urls();
+            const std::string found = n >= 1 && n <= static_cast<long long>(urls.size()) ? urls[n - 1] : "(no such request)";
             if (found != trim(rest)) throw Stop{kStatusExpectFailed, line, trim(rest), found};
         }
         else if (name == "expect-samples") expect_samples(rest);
@@ -506,12 +569,19 @@ private:
 
     Options options_;
     SimFakes fakes_;
-    fake::Clock fake_clock_;
+    SimClock fake_clock_;
     platform::RealClock real_clock_;
+    Holds holds_;
+    SimFiles files_;
+    SimHttp http_;
+    SimSink sink_;
+    platform::RealEngine real_engine_;
     Clock* clock_ = nullptr;
     std::unique_ptr<app::App> app_;
     app::Lock lock_;
     std::string home_;
+    std::atomic<bool> pulling_{false};
+    std::thread puller_;
 };
 
 }  // namespace

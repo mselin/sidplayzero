@@ -53,6 +53,17 @@ void collect(lv_obj_t* object, std::vector<Box>* boxes) {
         box.h = area.y2 - area.y1 + 1;
         box.band = box.y <= kTopLineBottom ? "top" : box.y <= kContentBottom ? "content" : "actions";
         box.text_x = box.x;
+        if (recorded && label_scrolls(object)) {
+            // SPEC-098: a text that scrolls: its box is the one that clips it, and the text starts where it
+            // has scrolled to.
+            lv_area_t clip;
+            lv_obj_get_coords(lv_obj_get_parent(object), &clip);
+            box.x = clip.x1;
+            box.y = clip.y1;
+            box.w = clip.x2 - clip.x1 + 1;
+            box.h = clip.y2 - clip.y1 + 1;
+            box.band = box.y <= kTopLineBottom ? "top" : box.y <= kContentBottom ? "content" : "actions";
+        }
         box.text_w = recorded ? std::max(full_width, static_cast<int>(size.x)) : static_cast<int>(size.x);
         box.clipped = cut || box.text_w > box.w;
         boxes->push_back(box);

@@ -3,6 +3,7 @@
 // (SPEC-098) and name themselves for the screen description's `boxes` (SPEC-254).
 #pragma once
 
+#include <cstdint>
 #include <string>
 
 #include "lvgl.h"
@@ -39,7 +40,14 @@ struct LabelStyle {
     const lv_font_t* font = nullptr;   // the 12-pixel font when null
     bool dim = false;
     bool cut_start = false;            // cut a text too long from its start, not its end (a path, SPEC-091)
+    // SPEC-098: 0 or more for a text that scrolls sideways instead of being cut: the whole text, moved left
+    // by this many pixels within its box (scroll_offset() gives it). The box is marked as cut.
+    int scroll = -1;
 };
+
+// SPEC-098: how far a text `overflow` pixels too wide for its box has scrolled at `now_ms`: it rests 1 s at
+// each end and moves at 25 pixels a second between them.
+int scroll_offset(int overflow, std::int64_t now_ms);
 
 // A label in a box of its own, named `id` in the screen description. Text too wide for the box is cut and
 // ends in "…", or begins with it with `cut_start` (SPEC-098), and the box is marked as cut; nothing is drawn
@@ -60,5 +68,7 @@ int text_width(const std::string& text, const lv_font_t* font);
 // it was cut. False for an object that make_label() did not make.
 // What make_label recorded of a label: its id, the width and text it would need whole, and whether it was cut.
 bool label_record(lv_obj_t* label, std::string* id, int* full_width, bool* cut, std::string* full_text = nullptr);
+// Whether a label made by make_label() scrolls (LabelStyle::scroll): its box is then its parent's.
+bool label_scrolls(lv_obj_t* label);
 
 }  // namespace spz::ui

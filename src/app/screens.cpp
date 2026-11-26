@@ -6,7 +6,9 @@
 
 #include "app/app.h"
 #include "ui/about_screen.h"
+#include "ui/browser_screen.h"
 #include "ui/empty_screen.h"
+#include "ui/playing_screen.h"
 #include "ui/settings_screen.h"
 
 namespace spz::app {
@@ -21,11 +23,13 @@ ScreenMaker maker() {
 }  // namespace
 
 void add_screens(ScreenList* list) {
+    list->add("browser", maker<ui::BrowserScreen>());
     list->add("empty", maker<ui::EmptyScreen>());
+    list->add("playing", maker<ui::PlayingScreen>());
     list->add("settings", maker<ui::SettingsScreen>());
     list->add("about", maker<ui::AboutScreen>());
-    // To come, from the areas that build them: "browser", "playing", "search", "playlists", "playlist",
-    // "hvsc", "selftest".
+    // To come, from the areas that build them, one line each: "search", "playlists", "playlist", "hvsc",
+    // "selftest".
 }
 
 }  // namespace spz::app

@@ -16,6 +16,7 @@
 #include "spz/engine.h"
 #include "spz/engine_choice.h"
 #include "spz/executor.h"
+#include "spz/fetcher.h"
 #include "spz/files.h"
 #include "spz/listing.h"
 #include "spz/player_fetcher.h"
@@ -44,7 +45,8 @@ enum class PlayerState {
 const Millis kStepWaitMs = 700;        // a tune stepped to is requested once it has been current this long
 const Millis kFailedWaitMs = 2000;     // unattended, a failed entry is left after this long
 const int kBadFilesInARow = 5;         // after this many, unattended playback stops
-const Millis kFetchAheadMs = 10000;    // the next entry is fetched when the song has this long to go, or less
+// kFetchAheadMs (spz/fetcher.h): the next entry is fetched when the song has this long to go, or less. One
+// definition for the two headers, so that a file may include both.
 const Millis kLightOfferMs = 10000;    // how long MSG_TOO_HEAVY's offer of the L key stands
 const int kSlowSeconds = 3;            // underruns in this many separate seconds ...
 const Millis kSlowWindowMs = 10000;    // ... within this long mean the engine cannot keep up

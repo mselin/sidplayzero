@@ -75,7 +75,10 @@ void SettingsScreen::step(int by, bool wrap) {
     if (wrap) next = (next % count + count) % count;
     // SPEC-101, FIND-024: Left and Right stop at the first and last values.
     if (next < 0 || next >= count || next == index) return;
-    shell()->services().settings->set(row.key, row.values[static_cast<std::size_t>(next)]);
+    if (shell()->services().settings->set(row.key, row.values[static_cast<std::size_t>(next)]) &&
+        shell()->services().setting_changed) {
+        shell()->services().setting_changed(row.key);
+    }
     refresh();
     shell()->redraw();
 }
@@ -93,6 +96,7 @@ void SettingsScreen::open_prompt() {
             frame->notice("MSG_INVALID_VALUE");
             return false;
         }
+        if (frame->services().setting_changed) frame->services().setting_changed(key);
         refresh();
         frame->redraw();
         return true;

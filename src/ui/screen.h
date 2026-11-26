@@ -33,12 +33,13 @@
 // 3. Panels are ui::Panel (ui/panel.h): open one with shell()->open_panel(). Notices: shell()->notice().
 //    Work that may take longer than 50 ms goes to a worker (shell()->quick(), fetch_worker(), long_worker()),
 //    and its result comes back with shell()->ui()->post(), which runs it on the UI thread.
-// 4. What is not one screen's own goes to the Shell, from the app's wiring (src/app): Shell::on_action()
-//    for an action that is the same on every screen (the player's "play_pause", the volume keys),
-//    add_describer() for the fields of every description (`player`, `mini`, `job`), set_top_right() for
-//    the mini player, when_no_overlay() for what must wait until no panel and no help is open (SPEC-113),
-//    and set_bottom() for the browser taking the empty screen's place (SPEC-048). The objects of `core` a
-//    screen uses are in Shell::services(), which the wiring fills in.
+// 4. What is not one screen's own goes to the Shell, from the app's composition (src/app/compose_*.cpp):
+//    Shell::on_action() for an action that is the same on every screen (the player's "play_pause", the
+//    volume keys), add_describer() for the fields of every description (`player`, `mini`, `job`),
+//    add_top_right() for the mini player and the job mark, every() for what changes by itself,
+//    when_no_overlay() for what must wait until no panel and no help is open (SPEC-113), and set_bottom()
+//    for the browser taking the empty screen's place (SPEC-048). The objects of `core` a screen uses are in
+//    Shell::services(), which the composition fills in; a screen asks for them each time, and keeps none.
 // 5. Everything here runs on the UI thread.
 #pragma once
 
@@ -56,28 +57,90 @@
 #include "spz/json.h"
 #include "spz/key_input.h"
 #include "spz/keymap.h"
+#include "spz/types.h"
 
 namespace spz {
 class SettingsFile;
+class StateFile;
 class NoticeGate;
 class Backlight;
+class Player;
+class SoundBackend;
+class BrowserModel;
+class Collection;
+class Listing;
+class Fetcher;
+class Index;
+class Jobs;
+class HvscSetup;
+class Releases;
+class CompleteDownload;
+class Playlists;
+class Favourites;
+class FetchMissing;
+class Metrics;
+class ScreenOff;
+struct Entry;
 }  // namespace spz
 
 namespace spz::ui {
 
 class Panel;
 
-// The objects of `core` and `platform` the screens share, set by the app's wiring (src/app). A pointer is
-// null while what it points at is not built.
+// The objects of `core` and `platform` the screens share, set by the app's composition (src/app/
+// composition*.cpp), each by the file of its area. A pointer is null while what it points at is not there
+// (a part that is not built, or, for the browser, a collection that is being set up afresh): a screen asks
+// for it each time it needs it, and never keeps it.
 struct Services {
+    // ---- the outside world, and what is the same for every screen
     Files* files = nullptr;
-    SettingsFile* settings = nullptr;     // SPEC-130
-    NoticeGate* notice_gate = nullptr;    // SPEC-152
     Backlight* backlight = nullptr;       // SPEC-104
     std::string home;                     // the home folder
     std::string collection;               // the collection root (SPEC-040), as a full path
     bool collection_from_variable = false;   // the root comes from HVSC_BASE (SPEC-040)
     std::vector<std::string> libraries;   // "libsidplayfp 3.1.2", "libresidfp 1.3.0": read from the libraries
+
+    // ---- keep (SPEC-130 to SPEC-135, SPEC-207, SPEC-241): src/app/compose_keep.cpp
+    SettingsFile* settings = nullptr;     // SPEC-130
+    StateFile* state = nullptr;           // SPEC-131
+    Metrics* metrics = nullptr;           // SPEC-241
+    ScreenOff* screen_off = nullptr;      // SPEC-207, part `screen-off`
+    // A setting has been changed through `settings` (the Settings screen calls this after every change
+    // it makes): what follows it at once, follows (SPEC-040, SPEC-065, SPEC-207 ...).
+    std::function<void(const std::string& key)> setting_changed;
+
+    // ---- the collection and the browser (SPEC-040 to SPEC-049): src/app/compose_browse.cpp
+    Collection* tree = nullptr;           // the collection itself (the root's folders and the listing's)
+    BrowserModel* browser = nullptr;      // the folder open in the browser, kept while the app runs
+    const Listing* listing = nullptr;     // the listing in use (SPEC-142); never null, maybe not open
+
+    // ---- playing (SPEC-060 to SPEC-080): src/app/compose_play.cpp
+    Player* player = nullptr;
+    SoundBackend* sound = nullptr;        // what the player plays through: for the voice display (SPEC-080)
+    // "Play an entry": the queue is `queue`, the entry at `chosen` plays, the state file records where the
+    // queue came from (SPEC-131: "folder", "search" or "playlist", and the folder, query or playlist name),
+    // and the now-playing screen opens (SPEC-090).
+    std::function<void(const std::vector<Entry>& queue, std::size_t chosen, const std::string& kind,
+                       const std::string& source)> play;
+
+    // ---- HVSC (SPEC-140 to SPEC-154): src/app/compose_hvsc.cpp
+    NoticeGate* notice_gate = nullptr;    // SPEC-152
+    Jobs* jobs = nullptr;                 // SPEC-147
+    Fetcher* fetcher = nullptr;           // SPEC-141
+    HvscSetup* setup = nullptr;           // SPEC-140
+    Releases* releases = nullptr;         // SPEC-148, part `releases`
+    CompleteDownload* download = nullptr; // SPEC-144, part `download-all`
+
+    // ---- search (SPEC-160 to SPEC-164): src/app/compose_search.cpp
+    Index* index = nullptr;
+
+    // ---- playlists and favourites (SPEC-170 to SPEC-179), part `playlists`: src/app/compose_lists.cpp
+    Playlists* playlists = nullptr;
+    Favourites* favourites = nullptr;
+    FetchMissing* fetch_missing = nullptr;
+    // "Add" on a tune (the browser, Search, now playing): asks which playlist (`pick-playlist`) and adds
+    // it there. Null while the part's panel is not built.
+    std::function<void(const Entry& entry)> add_to_playlist;
 };
 
 // What a screen or a panel may ask of the app's frame.
@@ -121,10 +184,14 @@ public:
     // For what shows on every screen, not one screen's own: the player's `player` and the mini player's and
     // the job mark's `mini` (SPEC-109, SPEC-147, SPEC-254). `fn` fills its fields of every description.
     virtual void add_describer(std::function<void(Json*)> fn) = 0;
-    // The right part of the top line (SPEC-091): the mini player and the job mark. `text` gives what to show
-    // there ("" for nothing); the frame draws it, right-aligned, in a box named "mini", and gives the left
-    // part what is left. Asked at every drawing; call redraw() when it changes.
-    virtual void set_top_right(std::function<std::string()> text) = 0;
+    // The right part of the top line (SPEC-091): the mini player and the job mark. Each `text` added gives
+    // its piece ("" for nothing); the frame joins the pieces, in the order added, draws them right-aligned in
+    // a box named "mini", and gives the left part what is left. Asked at every drawing; call redraw() when
+    // one changes. On the now-playing screen nothing is drawn there (SPEC-109).
+    virtual void add_top_right(std::function<std::string()> text) = 0;
+    // Runs `fn` again and again, every `ms` of the clock, on the UI thread, while the app runs: for what is
+    // shown that changes by itself (the elapsed time, the voice display, a job's progress).
+    virtual void every(Millis ms, std::function<void()> fn) = 0;
 };
 
 class Screen {
@@ -147,6 +214,10 @@ public:
     virtual void describe(Json* description) const { (void)description; }
     // It has come on top of the stack: opened, or returned to.
     virtual void shown() {}
+    // About 30 times a second of the clock while it is on top and no panel or help is open: for what changes
+    // by itself (the elapsed time, the voice display, a line that scrolls). Call shell()->redraw() only when
+    // what is drawn would change.
+    virtual void tick() {}
 
 protected:
     Shell* shell() const { return shell_; }

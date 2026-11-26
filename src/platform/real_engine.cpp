@@ -9,6 +9,7 @@
 #include <sidplayfp/sidbuilder.h>
 #include <sidplayfp/sidplayfp.h>
 #include <sidplayfp/sidversion.h>
+#include <residfp/residfp.h>
 
 #include <algorithm>
 #include <atomic>
@@ -31,6 +32,8 @@ const unsigned kCyclesPerPlay = 2000;
 #define SPZ_STRINGIFY(x) SPZ_STRINGIFY2(x)
 const char kLibraryVersion[] = "libsidplayfp " SPZ_STRINGIFY(LIBSIDPLAYFP_VERSION_MAJ) "." SPZ_STRINGIFY(
     LIBSIDPLAYFP_VERSION_MIN) "." SPZ_STRINGIFY(LIBSIDPLAYFP_VERSION_LEV);
+const char kResidfpVersion[] = "libresidfp " SPZ_STRINGIFY(LIBRESIDFP_VERSION_MAJ) "." SPZ_STRINGIFY(
+    LIBRESIDFP_VERSION_MIN) "." SPZ_STRINGIFY(LIBRESIDFP_VERSION_LEV);
 
 }  // namespace
 
@@ -247,6 +250,8 @@ bool RealEngine::registers(int chip, std::uint8_t out[kRegisters]) {
 }
 
 const char* engine_library_version() { return kLibraryVersion; }
+
+const char* residfp_library_version() { return kResidfpVersion; }
 
 const char* engine_sanitizer() { return SPZ_ENGINE_SANITIZER; }
 
