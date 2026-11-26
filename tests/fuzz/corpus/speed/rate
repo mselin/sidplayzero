@@ -1,0 +1,4 @@
+version = 1.0.0
+sample_rate = 44100
+accurate = 2.5e0
+light = 1e3
