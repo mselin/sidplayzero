@@ -15,15 +15,17 @@ brief the project started from, so the findings below are raised against that br
 
 ## Open
 
-### FIND-025 A volume key that fails right after one that worked has its notice wait three seconds
+### FIND-025 The answer to a key can wait three seconds behind an earlier notice
 - Phase: 5, implementation
-- Observed: SPEC-076's test presses a volume key, makes the system's volume fail, presses again, and expects
-  `MSG_VOLUME_FAILED` at once. But `MSG_VOLUME` is still showing, and SPEC-113 has a notice with another
-  identifier wait its turn, up to 3 s.
-- Concerns: SPEC-076, SPEC-113
-- Resolution (proposed): the two volume notices, `MSG_VOLUME` and `MSG_VOLUME_FAILED`, replace each other at
-  once, as a notice replaces one with its own identifier, so the answer to a key is always the one in view.
-  The test then holds as written.
+- Observed: two tests press a key right after another key's notice and expect the new notice at once:
+  SPEC-076's presses a volume key that fails right after one that worked (`MSG_VOLUME_FAILED` behind
+  `MSG_VOLUME`), and SPEC-092's presses Mute right after Fav ("Muted" behind `MSG_FAV_ADDED`). SPEC-113 has
+  a notice with another identifier wait its turn, up to 3 s, so the user would see the answer to the key
+  before last.
+- Concerns: SPEC-076, SPEC-092, SPEC-113
+- Resolution (proposed): a notice raised by a key the user has just pressed replaces the notice showing, at
+  once; notices that come from work in the background (a job ending, a fetch failing) still wait their turn.
+  The answer in view is then always the answer to the last key. Both tests hold as written.
 - Status: open; a change of behaviour, for the owner to decide
 
 ### FIND-007 USBSID-Pico needs a newer engine library than the device's system has
