@@ -185,6 +185,14 @@ void App::close_panel() {
     redraw();
 }
 
+void App::when_no_overlay(std::function<void()> fn) {
+    if (!panel_ && !help_open_) {
+        fn();
+        return;
+    }
+    after_overlay_.push_back(std::move(fn));
+}
+
 void App::notice(const std::string& id, const std::map<std::string, std::string>& about) {
     notices_.raise(id, message_words(id, about));
 }
@@ -339,11 +347,17 @@ void App::screenshot() {
 void App::pump() {
     ui_.run_all();
     closed_panel_.reset();
+    if (!panel_ && !help_open_ && !after_overlay_.empty()) {
+        std::vector<std::function<void()>> waiting;
+        waiting.swap(after_overlay_);
+        for (auto& fn : waiting) fn();
+    }
     if (dirty_) draw();
 }
 
 bool App::settled() const {
     if (!ui_.empty() || dirty_) return false;
+    if (!panel_ && !help_open_ && !after_overlay_.empty()) return false;
     const bool held = seams_.held && seams_.held();
     for (const Worker* worker : {&quick_, &fetch_, &long_, &render_}) {
         if (!worker->idle() && !(held && worker->running())) return false;
@@ -374,7 +388,14 @@ void App::draw_top_line(lv_obj_t* root) {
     ui::Screen* screen = top();
     const std::string position = screen->position();
     const int position_w = position.empty() ? 0 : ui::text_width(position, ui::text_font()) + 2;
-    const int title_w = ui::kWidth - 4 - (position_w > 0 ? position_w + 6 : 0);
+    // SPEC-109: the mini player on the right, at most a third of the line.
+    const std::string right = top_right_ && screen->name() != "playing" ? top_right_() : "";
+    const int right_w = right.empty() ? 0 : std::min(ui::text_width(right, ui::text_font()) + 2, ui::kWidth / 3);
+    if (right_w > 0) {
+        ui::make_label(root, "mini", right, ui::kWidth - 2 - right_w, 0, right_w, ui::kTopHeight,
+                       ui::LabelStyle{ui::Align::Right, nullptr, false, false});
+    }
+    const int title_w = ui::kWidth - 4 - (position_w > 0 ? position_w + 6 : 0) - (right_w > 0 ? right_w + 6 : 0);
     ui::LabelStyle style;
     style.cut_start = screen->name() == "browser";       // SPEC-091: a path loses its start
     ui::make_label(root, "title", screen->title(), 2, 0, title_w, ui::kTopHeight, style);
@@ -444,6 +465,7 @@ Json App::describe() {
     const std::string position = screen->position();
     if (!position.empty()) d.set("position", position);
     screen->describe(&d);
+    for (const auto& describer : describers_) describer(&d);
     Json actions = Json::array();
     const bool now_typing = typing();
     const std::array<std::string, 5> labels =

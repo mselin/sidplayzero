@@ -87,8 +87,12 @@ public:
     void open_panel(std::unique_ptr<ui::Panel> panel) override;
     void close_panel() override;
     ui::Panel* panel() override { return panel_.get(); }
+    bool help_open() const override { return help_open_; }
+    void when_no_overlay(std::function<void()> fn) override;
     void redraw() override { dirty_ = true; }
     void on_action(const std::string& action, std::function<void(const KeyEvent&)> handler) override;
+    void add_describer(std::function<void(Json*)> fn) override { describers_.push_back(std::move(fn)); }
+    void set_top_right(std::function<std::string()> text) override { top_right_ = std::move(text); }
 
 private:
     // KeyListener
@@ -120,6 +124,9 @@ private:
     bool help_open_ = false;
     std::size_t help_first_ = 0;
     std::map<std::string, std::function<void(const KeyEvent&)>> handlers_;
+    std::vector<std::function<void()>> after_overlay_;              // waiting for no panel and no help
+    std::vector<std::function<void(Json*)>> describers_;
+    std::function<std::string()> top_right_;
     NoticeQueue notices_;
     KeyInput keys_;
     bool dirty_ = true;

@@ -440,8 +440,9 @@ private:
         else if (name == "settle") settle();
         else if (name == "fake") { fake(rest); if (clock_ == &fake_clock_) settle(); }
         else if (name == "dump") {
+            const std::string text = describe().dump(2);      // first: no file is left when there is no app
             std::ofstream out(in_out(trim(rest) + ".json"));
-            out << describe().dump(2);
+            out << text;
         }
         else if (name == "shot") {
             need_app("shot");

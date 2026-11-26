@@ -33,7 +33,13 @@
 // 3. Panels are ui::Panel (ui/panel.h): open one with shell()->open_panel(). Notices: shell()->notice().
 //    Work that may take longer than 50 ms goes to a worker (shell()->quick(), fetch_worker(), long_worker()),
 //    and its result comes back with shell()->ui()->post(), which runs it on the UI thread.
-// 4. Everything here runs on the UI thread.
+// 4. What is not one screen's own goes to the Shell, from the app's wiring (src/app): Shell::on_action()
+//    for an action that is the same on every screen (the player's "play_pause", the volume keys),
+//    add_describer() for the fields of every description (`player`, `mini`, `job`), set_top_right() for
+//    the mini player, when_no_overlay() for what must wait until no panel and no help is open (SPEC-113),
+//    and set_bottom() for the browser taking the empty screen's place (SPEC-048). The objects of `core` a
+//    screen uses are in Shell::services(), which the wiring fills in.
+// 5. Everything here runs on the UI thread.
 #pragma once
 
 #include <array>
@@ -101,11 +107,24 @@ public:
     virtual void open_panel(std::unique_ptr<Panel> panel) = 0;
     virtual void close_panel() = 0;
     virtual Panel* panel() = 0;
+    // Whether help is open (SPEC-107). With panel(), what SPEC-113's two exceptions wait for: the browser
+    // that takes the empty screen's place, and the browser that opens when HVSC has been set up, wait until
+    // neither is open: when_no_overlay() is for that.
+    virtual bool help_open() const = 0;
+    // Runs `fn` once, the next time no panel and no help is open (at once if none is).
+    virtual void when_no_overlay(std::function<void()> fn) = 0;
     // The state of a screen or a panel changed: draw everything again before the next frame.
     virtual void redraw() = 0;
     // For the areas whose actions are the same on every screen (the player's "play_pause", the volume's
     // "volume_up" ...): `handler` is called for every key whose action is `action`, wherever it is pressed.
     virtual void on_action(const std::string& action, std::function<void(const KeyEvent&)> handler) = 0;
+    // For what shows on every screen, not one screen's own: the player's `player` and the mini player's and
+    // the job mark's `mini` (SPEC-109, SPEC-147, SPEC-254). `fn` fills its fields of every description.
+    virtual void add_describer(std::function<void(Json*)> fn) = 0;
+    // The right part of the top line (SPEC-091): the mini player and the job mark. `text` gives what to show
+    // there ("" for nothing); the frame draws it, right-aligned, in a box named "mini", and gives the left
+    // part what is left. Asked at every drawing; call redraw() when it changes.
+    virtual void set_top_right(std::function<std::string()> text) = 0;
 };
 
 class Screen {
