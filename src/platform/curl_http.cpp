@@ -1,0 +1,326 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+#include "platform/curl_http.h"
+
+#include <curl/curl.h>
+#include <fcntl.h>
+#include <unistd.h>
+
+#include <cerrno>
+#include <cstdlib>
+#include <cstring>
+#include <mutex>
+
+#include "spz/version.h"
+
+#ifndef SPZ_TEST_HOOKS
+#define SPZ_TEST_HOOKS 0
+#endif
+
+namespace spz::platform {
+
+namespace {
+
+const long kConnectSeconds = 15;
+const long kSlowBytesPerSecond = 1024;
+const long kSlowSeconds = 30;
+const long kMostRedirects = 5;
+
+void global_init() {
+    static std::once_flag once;
+    std::call_once(once, [] { curl_global_init(CURL_GLOBAL_DEFAULT); });
+}
+
+bool starts_with(const std::string& text, const char* prefix) {
+    return text.compare(0, std::strlen(prefix), prefix) == 0;
+}
+
+// http://127.0.0.1, with a port or a path or neither, and nothing else.
+bool is_loopback_http(const std::string& url) {
+    const char prefix[] = "http://127.0.0.1";
+    if (!starts_with(url, prefix)) return false;
+    const std::size_t at = sizeof prefix - 1;
+    return url.size() == at || url[at] == ':' || url[at] == '/';
+}
+
+std::string lower(std::string text) {
+    for (char& c : text) {
+        if (c >= 'A' && c <= 'Z') c = static_cast<char>(c - 'A' + 'a');
+    }
+    return text;
+}
+
+std::string trim(const std::string& text) {
+    std::size_t begin = 0, end = text.size();
+    while (begin < end && (text[begin] == ' ' || text[begin] == '\t')) ++begin;
+    while (end > begin && (text[end - 1] == ' ' || text[end - 1] == '\t' || text[end - 1] == '\r' ||
+                           text[end - 1] == '\n')) {
+        --end;
+    }
+    return text.substr(begin, end - begin);
+}
+
+std::uint64_t number(const std::string& text) {
+    std::uint64_t value = 0;
+    bool any = false;
+    for (char c : text) {
+        if (c < '0' || c > '9') break;
+        value = value * 10 + static_cast<std::uint64_t>(c - '0');
+        any = true;
+    }
+    return any ? value : 0;
+}
+
+// What one request gathers while it runs.
+struct Transfer {
+    const HttpRequest* request = nullptr;
+    const HttpClient::Progress* progress = nullptr;
+    const std::atomic<bool>* stopping = nullptr;
+    CURL* curl = nullptr;
+    int fd = -1;
+    bool opened = false;
+    bool resumed = false;
+    std::uint64_t written = 0;
+    HttpFailure write_failure = HttpFailure::None;
+    std::string etag, last_modified;
+    std::uint64_t content_length = 0, range_total = 0;
+    bool cancelled = false;
+
+    std::uint64_t offset() const { return resumed ? request->resume_from : 0; }
+
+    static std::size_t header(char* data, std::size_t size, std::size_t count, void* user) {
+        auto* self = static_cast<Transfer*>(user);
+        const std::string line(data, size * count);
+        if (starts_with(line, "HTTP/")) {   // a new answer, after a redirect: forget the last one's
+            self->etag.clear();
+            self->last_modified.clear();
+            self->content_length = 0;
+            self->range_total = 0;
+            return size * count;
+        }
+        const std::size_t colon = line.find(':');
+        if (colon == std::string::npos) return size * count;
+        const std::string name = lower(trim(line.substr(0, colon)));
+        const std::string value = trim(line.substr(colon + 1));
+        if (name == "etag") {
+            self->etag = value;
+        } else if (name == "last-modified") {
+            self->last_modified = value;
+        } else if (name == "content-length") {
+            self->content_length = number(value);
+        } else if (name == "content-range") {
+            const std::size_t slash = value.rfind('/');
+            if (slash != std::string::npos) self->range_total = number(value.substr(slash + 1));
+        }
+        return size * count;
+    }
+
+    static std::size_t body(char* data, std::size_t size, std::size_t count, void* user) {
+        auto* self = static_cast<Transfer*>(user);
+        const std::size_t bytes = size * count;
+        long status = 0;
+        curl_easy_getinfo(self->curl, CURLINFO_RESPONSE_CODE, &status);
+        if (status != 200 && status != 206) return bytes;   // a page about an error is not the file
+        if (!self->opened) {
+            self->resumed = status == 206 && self->request->resume_from > 0;
+            const int flags = O_WRONLY | O_CREAT | O_CLOEXEC | (self->resumed ? O_APPEND : O_TRUNC);
+            self->fd = ::open(self->request->to_path.c_str(), flags, 0644);
+            self->opened = true;
+            if (self->fd < 0) {
+                self->write_failure = (errno == ENOSPC || errno == EDQUOT) ? HttpFailure::CardFull
+                                                                         : HttpFailure::CannotWrite;
+                return 0;
+            }
+        }
+        if (self->fd < 0) return 0;
+        std::size_t take = bytes;
+        const std::uint64_t limit = self->request->limit_bytes;
+        bool over = false;
+        if (limit > 0 && self->offset() + self->written + take > limit) {
+            take = static_cast<std::size_t>(limit - std::min<std::uint64_t>(limit, self->offset() + self->written));
+            over = true;
+        }
+        std::size_t done = 0;
+        while (done < take) {
+            const ssize_t put = ::write(self->fd, data + done, take - done);
+            if (put < 0) {
+                if (errno == EINTR) continue;
+                self->write_failure = (errno == ENOSPC || errno == EDQUOT) ? HttpFailure::CardFull
+                                                                         : HttpFailure::CannotWrite;
+                return 0;
+            }
+            done += static_cast<std::size_t>(put);
+        }
+        self->written += take;
+        if (over) {
+            self->write_failure = HttpFailure::TooLarge;
+            return 0;
+        }
+        return bytes;
+    }
+
+    static int info(void* user, curl_off_t, curl_off_t, curl_off_t, curl_off_t) {
+        auto* self = static_cast<Transfer*>(user);
+        if (self->stopping->load()) {
+            self->cancelled = true;
+            return 1;
+        }
+        if (*self->progress && self->opened) {
+            // The whole file's size: from Content-Range for the rest of a file, else from Content-Length.
+            const std::uint64_t total = self->resumed ? self->range_total : self->content_length;
+            if (!(*self->progress)(self->offset() + self->written, total)) {
+                self->cancelled = true;
+                return 1;
+            }
+        }
+        return 0;
+    }
+};
+
+HttpFailure failure_of(CURLcode code) {
+    switch (code) {
+        case CURLE_OK: return HttpFailure::None;
+        case CURLE_UNSUPPORTED_PROTOCOL:
+        case CURLE_SSL_CONNECT_ERROR:
+        case CURLE_PEER_FAILED_VERIFICATION:
+        case CURLE_SSL_CERTPROBLEM:
+        case CURLE_SSL_CIPHER:
+        case CURLE_SSL_CACERT_BADFILE:
+        case CURLE_SSL_ISSUER_ERROR:
+        case CURLE_SSL_PINNEDPUBKEYNOTMATCH:
+        case CURLE_SSL_INVALIDCERTSTATUS:
+        case CURLE_USE_SSL_FAILED:
+            return HttpFailure::Tls;
+        case CURLE_FILESIZE_EXCEEDED: return HttpFailure::TooLarge;
+        case CURLE_ABORTED_BY_CALLBACK: return HttpFailure::Cancelled;
+        default: return HttpFailure::Network;
+    }
+}
+
+}  // namespace
+
+CurlHttpClient::CurlHttpClient(HttpRules rules) : rules_(std::move(rules)) {
+    global_init();
+    if (!test_rules_allowed()) rules_ = HttpRules();
+}
+
+CurlHttpClient::~CurlHttpClient() = default;
+
+void CurlHttpClient::stop_all() { stopping_.store(true); }
+
+std::string CurlHttpClient::user_agent() { return std::string("SidPlayZero/") + app_version(); }
+
+bool CurlHttpClient::test_rules_allowed() { return SPZ_TEST_HOOKS != 0; }
+
+HttpResult CurlHttpClient::fetch(const HttpRequest& request, const Progress& progress) {
+    HttpResult result;
+    const bool https = starts_with(request.url, "https://");
+    const bool loopback = rules_.loopback_http && is_loopback_http(request.url);
+    if (!https && !loopback) {
+        result.failure = HttpFailure::Tls;     // not HTTPS: refused before anything is sent
+        return result;
+    }
+    if (stopping_.load()) {
+        result.failure = HttpFailure::Cancelled;
+        return result;
+    }
+
+    CURL* curl = curl_easy_init();
+    if (curl == nullptr) {
+        result.failure = HttpFailure::Network;
+        return result;
+    }
+    Transfer transfer;
+    transfer.request = &request;
+    transfer.progress = &progress;
+    transfer.stopping = &stopping_;
+    transfer.curl = curl;
+
+    const std::string agent = user_agent();
+    curl_easy_setopt(curl, CURLOPT_URL, request.url.c_str());
+    curl_easy_setopt(curl, CURLOPT_PROTOCOLS_STR, loopback ? "http" : "https");
+    curl_easy_setopt(curl, CURLOPT_REDIR_PROTOCOLS_STR, "https");
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+    curl_easy_setopt(curl, CURLOPT_MAXREDIRS, kMostRedirects);
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2L);
+    if (!rules_.extra_authority.empty()) {
+        // The test's authority, beside the system's own.
+        curl_easy_setopt(curl, CURLOPT_CAINFO, rules_.extra_authority.c_str());
+        curl_easy_setopt(curl, CURLOPT_CAPATH, "/etc/ssl/certs");
+    }
+    curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, kConnectSeconds);
+    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, kSlowBytesPerSecond);
+    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, kSlowSeconds);
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, agent.c_str());
+    curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
+    curl_easy_setopt(curl, CURLOPT_NETRC, static_cast<long>(CURL_NETRC_IGNORED));
+    if (request.limit_bytes > 0) {
+        curl_easy_setopt(curl, CURLOPT_MAXFILESIZE_LARGE, static_cast<curl_off_t>(request.limit_bytes));
+    }
+    curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, &Transfer::header);
+    curl_easy_setopt(curl, CURLOPT_HEADERDATA, &transfer);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &Transfer::body);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &transfer);
+    curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
+    curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, &Transfer::info);
+    curl_easy_setopt(curl, CURLOPT_XFERINFODATA, &transfer);
+
+    curl_slist* headers = nullptr;
+    std::string range;
+    if (request.resume_from > 0) {
+        range = std::to_string(request.resume_from) + "-";
+        curl_easy_setopt(curl, CURLOPT_RANGE, range.c_str());
+        // The rest only of the same file: the server answers with all of it if the file has changed.
+        const std::string& condition = !request.if_etag.empty() ? request.if_etag : request.if_last_modified;
+        if (!condition.empty()) {
+            headers = curl_slist_append(headers, ("If-Range: " + condition).c_str());
+            curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+        }
+    }
+
+    const CURLcode code = curl_easy_perform(curl);
+    long status = 0;
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &status);
+    curl_easy_cleanup(curl);
+    curl_slist_free_all(headers);
+    if (transfer.fd >= 0) {
+        if (::fsync(transfer.fd) != 0 && transfer.write_failure == HttpFailure::None && code == CURLE_OK) {
+            transfer.write_failure = HttpFailure::CannotWrite;
+        }
+        ::close(transfer.fd);
+    }
+
+    result.status = static_cast<int>(status);
+    result.bytes = transfer.written;
+    result.resumed = transfer.resumed;
+    result.etag = transfer.etag;
+    result.last_modified = transfer.last_modified;
+    if (status == 206 && transfer.range_total > 0) {
+        result.total = transfer.range_total;
+    } else if (status == 200) {
+        result.total = transfer.content_length;
+    }
+
+    if (transfer.write_failure != HttpFailure::None) {
+        result.failure = transfer.write_failure;
+    } else if (transfer.cancelled) {
+        result.failure = HttpFailure::Cancelled;
+    } else if (code != CURLE_OK) {
+        result.failure = failure_of(code);
+    } else if (status == 404 || status == 410) {
+        result.failure = HttpFailure::NotFound;
+    } else if (status != 200 && status != 206) {
+        result.failure = HttpFailure::Network;
+    } else if (!transfer.opened) {
+        // A success with an empty body: the file is there, and empty.
+        const int fd = ::open(request.to_path.c_str(), O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0644);
+        if (fd < 0) {
+            result.failure = (errno == ENOSPC || errno == EDQUOT) ? HttpFailure::CardFull : HttpFailure::CannotWrite;
+        } else {
+            ::close(fd);
+        }
+    }
+    return result;
+}
+
+}  // namespace spz::platform

@@ -29,8 +29,13 @@ set(SIDPLAYZERO_SANITIZE "" CACHE STRING "Build with a sanitizer: address (with 
 include(cmake/fetch.cmake)
 include(cmake/parts.cmake)
 
-# No path of the machine that builds ends up in the program (SPEC-001, SPEC-225).
+# No path of the machine that builds ends up in the program (SPEC-001, SPEC-225). The pinned downloads may
+# lie elsewhere when .cache is a link: they are named from .cache too.
 add_compile_options("-ffile-prefix-map=${CMAKE_SOURCE_DIR}=.")
+get_filename_component(_spz_cache_real "${SPZ_CACHE_DIR}" REALPATH)
+if(NOT _spz_cache_real STREQUAL "${SPZ_CACHE_DIR}")
+    add_compile_options("-ffile-prefix-map=${_spz_cache_real}=.cache")
+endif()
 
 set(SPZ_WARNINGS -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wno-sign-conversion)
 
@@ -49,6 +54,12 @@ elseif(NOT SIDPLAYZERO_SANITIZE STREQUAL "")
 endif()
 
 add_subdirectory(src/core)
+
+# The engine, built from its pinned archives with this build's compiler and flags (SPEC-002), for the
+# program and for the fuzz target that gives it tunes (SPEC-205).
+if(SIDPLAYZERO_BUILD_APP OR SIDPLAYZERO_BUILD_FUZZ)
+    include(cmake/engine.cmake)
+endif()
 
 if(SIDPLAYZERO_BUILD_APP)
     add_subdirectory(src)
