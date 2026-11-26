@@ -176,8 +176,12 @@ private:
     // ---- search: compose_search.cpp -------------------------------------------------------------------------
     void make_search();
     void search_at_start();           // SPEC-161: the index checked and brought up to date
+    void search_root_changed();       // SPEC-161: the collection root has changed: a new index, rebuilt
+    void build_index(IndexReason reason);   // on the long worker; MSG_INDEX_READY when the reason calls for it
     struct OwnTunesInIndex;           // OwnTunes, for the playlists' resolver
     std::unique_ptr<Index> index_;
+    std::shared_ptr<std::atomic<bool>> index_live_;          // false once index_ has been replaced
+    std::vector<std::unique_ptr<Index>> retired_indexes_;    // those of earlier roots, kept until the app ends
     std::shared_ptr<OwnTunes> own_tunes_;
 
     // ---- playlists and favourites: compose_lists.cpp -------------------------------------------------------
