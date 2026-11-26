@@ -561,7 +561,6 @@ SPEC-144 stopping at each of steps 3 to 6, with the real 7z, leaves the root's c
 SPEC-150 SPEC-151 SPEC-140 with url_files pointed at the local server, the server's log is the complete list of requests a set-up makes: the five documents	code	not built yet
 SPEC-007 the real Unpacker starts 7z with an argument list and no shell: a name full of a shell's characters arrives as one argument [parts: download-all]	code	not built yet
 SPEC-149 SPEC-007 the app's reader of the real 7z's listing gives every entry of a good archive, and the check passes it [parts: download-all]	code	not built yet
-SPEC-007 the real Unpacker unpacks a good archive into the folder it is given [parts: download-all]	code	not built yet
 SPEC-149 an archive with an absolute path is refused by the real 7z path, and nothing appears at that path [parts: download-all]	code	not built yet
 SPEC-149 an archive with a .. part is refused by the real 7z path, and nothing appears beside the staging folder [parts: download-all]	code	not built yet
 SPEC-149 an archive with a link that points outside is refused by the real 7z path [parts: download-all]	code	not built yet
@@ -656,8 +655,6 @@ SPEC-010 the 12-pixel font has a glyph for each of the 218 printable Windows-125
 SPEC-010 the 14-pixel font has a glyph for each of the 218 printable Windows-1252 characters	code	not built yet
 SPEC-010 two runs of the script that shows every printable Windows-1252 character give the same pixels, and each tune's title is drawn	code	the script stopped at: expect screen = browser
 SPEC-020 in the program's build, `platform` is where the engine, miniaudio and libcurl are used: a file of it can include each	code	no file of platform is built with a path to miniaudio.h
-SPEC-002 the build fails if the checksum of libresidfp-1.3.0.tar.gz differs from its pin	code	the build went through with a wrong checksum
-SPEC-002 the build fails if the checksum of libsidplayfp-3.1.2.tar.gz differs from its pin	code	the build went through with a wrong checksum
 SPEC-003 ten seconds of a fixture rendered by the app equal the sidplayfp program's WAV made with --delay=0, and the app starts no sidplayfp program to get them	code	the script stopped at: expect screen = browser
 SPEC-002 the program needs no libsidplayfp library when it starts, and --version prints libsidplayfp 3.1.2	code	'libsidplayfp 3.1.2' not found in
 SPEC-022 a test build makes the audio callback abort if it allocates or takes a lock	code	not built yet
