@@ -403,6 +403,20 @@ class RealUnpacker(SevenZipCase):
             self.assertEqual(list(self.work.rglob(planted)), [], "a shell ran part of the archive's name")
             self.assertFalse((ROOT / planted).exists())
 
+    def test_tells_7z_the_type(self):
+        """SPEC-149 the real Unpacker lists and unpacks with -t7z, so that 7-Zip reads the file as a 7z archive and as nothing else (FIND-026) [parts: download-all]"""
+        archive = self.good_archive()
+        log = self.work / "standin.log"
+        env = {**os.environ, "PATH": f"{STANDINS}:{os.environ['PATH']}", "SPZ_STANDIN_LOG": str(log)}
+        tool("unpacker", "list", archive, env=env)
+        tool("unpacker", "unpack", archive, self.work / "into", env=env)
+        calls = [call.split("\n") for call in re.split(r"(?m)^7z\n", log.read_text()) if call]
+        self.assertEqual(len(calls), 2, log.read_text())
+        for call in calls:
+            arguments = [line[2:] for line in call if line.startswith("  ")]
+            self.assertIn("-t7z", arguments)
+            self.assertLess(arguments.index("-t7z"), arguments.index("--"), arguments)   # an option, not a name
+
     def test_lists_a_good_archive(self):
         """SPEC-149 SPEC-007 the app's reader of the real 7z's listing gives every entry of a good archive, and the check passes it [parts: download-all]"""
         archive = self.good_archive()
@@ -634,6 +648,151 @@ class UnsafeArchives(SevenZipCase):
         self.assertLess(archive.stat().st_size, 16 * MIB)
         shutil.rmtree(top)
         self.refused(archive, "too_large")
+
+    def tar_named_7z(self, name, members):
+        """A tar archive under a .7z name: 7-Zip lists it as a tar unless it is told the type (FIND-026). Each
+        member is (path, kind, target): kind "file", "symlink" or "hardlink"."""
+        import io
+        import tarfile
+        archive = self.work / name
+        with tarfile.open(archive, "w", format=tarfile.GNU_FORMAT) as tar:
+            for path, kind, target in members:
+                info = tarfile.TarInfo(path)
+                if kind == "file":
+                    info.size = len(self.tune)
+                    tar.addfile(info, io.BytesIO(self.tune))
+                    continue
+                info.type = tarfile.SYMTYPE if kind == "symlink" else tarfile.LNKTYPE
+                info.linkname = target
+                tar.addfile(info)
+        return archive
+
+    def refused_unread(self, archive, link):
+        """A file that is not a 7z archive: the app's reader does not take its listing, and the complete
+        download fails in step 4 with nothing unpacked."""
+        listing = subprocess.run([SEVEN_ZIP, "l", "-slt", archive], text=True, errors="replace",
+                                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout
+        self.assertIn("Type = tar", listing, "the archive is not the trick it was meant to be")
+        self.assertIn(link, listing, "the archive is not the trick it was meant to be")
+        self.assertNotRegex(listing, r"Attributes = \S", "the trick's links are to be known only by other lines")
+        before = tree(self.home)
+        before_root = tree(self.root)
+        listed = self.need(tool("unpacker", "list", archive))
+        self.assertEqual(listed.get("listed"), "no", listed.output[-600:])
+        result = self.need(self.download(archive))
+        self.assertEqual(result.get("result"), "failed", result.output)
+        self.assertEqual(result.get("step"), "4", result.output)
+        self.assertFalse(self.staging.exists(), "the staging folder is still there")
+        self.assertEqual(tree(self.root), before_root)
+        after = {name: data for name, data in tree(self.home).items() if not name.startswith("cache/")}
+        self.assertEqual(after, {name: data for name, data in before.items() if not name.startswith("cache/")})
+        self.assertFalse((self.cache / "install.state").exists())
+
+    def test_tar_with_a_link_under_a_7z_name(self):
+        """SPEC-149 a tar archive named .7z, holding a link that 7-Zip reports only by its mode and a Symbolic Link line, is refused by the real 7z path before anything is unpacked (FIND-026) [parts: download-all]"""
+        archive = self.tar_named_7z("symlink.7z", [("C64Music/Good.sid", "file", ""),
+                                                   ("C64Music/Link.sid", "symlink", str(self.work / "outside.txt"))])
+        self.refused_unread(archive, "Symbolic Link = " + str(self.work / "outside.txt"))
+
+    def test_tar_with_a_hard_link_under_a_7z_name(self):
+        """SPEC-149 a tar archive named .7z, holding a hard link, is refused by the real 7z path before anything is unpacked (FIND-026) [parts: download-all]"""
+        archive = self.tar_named_7z("hardlink.7z", [("C64Music/Good.sid", "file", ""),
+                                                    ("C64Music/Also_Good.sid", "hardlink", "C64Music/Good.sid")])
+        self.refused_unread(archive, "Hard Link = C64Music/Good.sid")
+
+
+# --- SPEC-149, SPEC-204: a 7z that does not stop talking ------------------------------------------------------
+
+class EndlessListing(ToolCase):
+    """SPEC-149 and SPEC-204, with a stand-in for 7z made here: its listing never ends. The real Unpacker reads
+    it up to 64 MiB, or until it names more entries than SPEC-149 allows, and then stops 7z, with everything
+    7z started (its own process group). The tool runs with its memory limited, so that a reader that kept
+    everything fails rather than filling the machine."""
+
+    def setUp(self):
+        super().setUp()
+        self.bin = self.work / "bin"
+        self.bin.mkdir()
+        self.sleeper = self.work / "sleeper.pid"
+        self.archive = self.work / "endless.7z"
+        self.archive.write_bytes(b"7z\xbc\xaf\x27\x1c")
+
+    def tearDown(self):
+        pid = self.sleeper_pid()
+        if pid:
+            try:
+                os.kill(pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+        super().tearDown()
+
+    def sleeper_pid(self):
+        text = self.sleeper.read_text().strip() if self.sleeper.exists() else ""
+        return int(text) if text.isdigit() else 0
+
+    def standin(self, endless):
+        """A 7z that starts a process of its own that would outlive it, prints the start of a 7z archive's
+        listing, then `endless` (a shell command) for ever."""
+        script = self.bin / "7z"
+        script.write_text("#!/bin/sh\n"
+                          "sleep 600 &\n"
+                          f"echo $! > '{self.sleeper}'\n"
+                          "printf '\\n7-Zip (a stand-in)\\n\\nListing archive: a.7z\\n\\n--\\nPath = a.7z\\nType = 7z\\n\\n----------\\n'\n"
+                          f"exec {endless}\n")
+        script.chmod(0o755)
+        for other in ("7zz", "7za"):
+            (self.bin / other).symlink_to(script)
+
+    def list_it(self):
+        import resource
+
+        def limited():
+            resource.setrlimit(resource.RLIMIT_AS, (3 * 1024 * MIB, 3 * 1024 * MIB))
+
+        env = {**os.environ, "PATH": f"{self.bin}:{os.environ['PATH']}"}
+        try:
+            process = subprocess.run([str(TOOL), "unpacker", "list", str(self.archive)], env=env, text=True,
+                                     errors="replace", stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=120,
+                                     preexec_fn=limited)
+        except subprocess.TimeoutExpired:
+            self.fail("the listing was still being read after two minutes")
+        result = Ran(("unpacker", "list", self.archive), process.returncode, process.stdout)
+        self.need_status(result)
+        return result
+
+    def need_status(self, result):
+        if result.status != 0:
+            said = " / ".join(line for line in result.output.strip().split("\n")[-5:] if line)
+            self.fail(f"spz_tool unpacker list ended with status {result.status}: {said}")
+
+    def check_stopped(self):
+        pid = self.sleeper_pid()
+        self.assertTrue(pid, "the stand-in did not run")
+        for _ in range(50):
+            try:
+                os.kill(pid, 0)
+            except ProcessLookupError:
+                return
+            if Path(f"/proc/{pid}/stat").exists() and Path(f"/proc/{pid}/stat").read_text().split(") ")[-1].startswith("Z"):
+                return
+            threading.Event().wait(0.1)
+        self.fail("what 7z started was still running after the listing was read")
+
+    def test_endless_entries(self):
+        """SPEC-149 a 7z whose listing names entries without end is stopped once it has named more than 200,000, with everything it started, and the archive is refused as having too many entries (FIND-026) [parts: download-all]"""
+        self.standin("yes 'Path = C64Music/T.sid'")
+        result = self.list_it()
+        self.assertEqual(result.get("listed"), "yes", result.output[-600:])
+        self.assertEqual(result.get("fault"), "too_many_entries", result.output[-600:])
+        self.assertGreater(int(result.get("entries")), 200000)
+        self.check_stopped()
+
+    def test_endless_line(self):
+        """SPEC-149 SPEC-204 a 7z whose listing goes on without end is read no further than 64 MiB: the listing is refused, and 7z is stopped with everything it started (FIND-026) [parts: download-all]"""
+        self.standin("cat /dev/zero")
+        result = self.list_it()
+        self.assertEqual(result.get("listed"), "no", result.output[-600:])
+        self.check_stopped()
 
 
 if __name__ == "__main__":

@@ -15,6 +15,7 @@
 #include "spz/download_resume.h"
 #include "spz/listing.h"
 #include "spz/md5.h"
+#include "spz/paths.h"
 #include "spz/safe_file.h"
 #include "spz/tune.h"
 
@@ -49,12 +50,33 @@ bool parse_size(const std::string& text, std::uint64_t* out) {
     return true;
 }
 
-// Whether a word of `7z l -slt`'s Attributes is a Unix mode such as "-rw-r--r--" or "lrwxrwxrwx".
+// Whether a word of `7z l -slt`'s Attributes, or the value of a Mode line, is a Unix mode such as
+// "-rw-r--r--" or "lrwxrwxrwx": a letter for its kind, then nine of the permissions. The letter may be
+// one the reader does not know ("?"); kind_of_mode() says what it means.
 bool is_unix_mode(const std::string& word) {
     if (word.size() != 10) return false;
-    if (std::string("-dlbcps").find(word[0]) == std::string::npos) return false;
     for (std::size_t i = 1; i < word.size(); ++i) {
         if (std::string("-rwxsStT").find(word[i]) == std::string::npos) return false;
+    }
+    return true;
+}
+
+// What a Unix mode's first letter says the entry is. A kind the reader does not know is refused as a
+// special file is (SPEC-149, FIND-026).
+void kind_of_mode(char kind, ArchiveEntry* entry) {
+    switch (kind) {
+        case '-': break;
+        case 'd': entry->is_folder = true; break;
+        case 'l': entry->is_link = true; break;
+        default: entry->is_special = true; break;   // b, c, p, s, and any other
+    }
+}
+
+// Whether a word is eight hexadecimal digits: 7-Zip writes so the Windows attribute bits it has no letter for.
+bool is_hex_word(const std::string& word) {
+    if (word.size() != 8) return false;
+    for (const char c : word) {
+        if (!is_digit(c) && !(c >= 'A' && c <= 'F') && !(c >= 'a' && c <= 'f')) return false;
     }
     return true;
 }
@@ -72,6 +94,25 @@ std::vector<std::string> split_words(const std::string& text) {
     }
     if (!word.empty()) words.push_back(word);
     return words;
+}
+
+// An entry's Attributes: a word of Windows letters ("D" a folder; "L" a reparse point, which is how
+// Windows keeps a link; "d" a device, "8" a volume), perhaps a word of hexadecimal bits, perhaps a Unix
+// mode. Any other word is of a kind the reader does not know, and the entry is refused as special.
+void read_attributes(const std::string& value, ArchiveEntry* entry) {
+    const std::vector<std::string> words = split_words(value);
+    for (std::size_t i = 0; i < words.size(); ++i) {
+        const std::string& word = words[i];
+        if (is_unix_mode(word)) {
+            kind_of_mode(word[0], entry);
+        } else if (i == 0 && word.find_first_not_of("RHS8DAdNTsLCOIEVXPU_") == std::string::npos) {
+            if (word.find('D') != std::string::npos) entry->is_folder = true;
+            if (word.find('L') != std::string::npos) entry->is_link = true;
+            if (word.find_first_of("d8") != std::string::npos) entry->is_special = true;
+        } else if (!is_hex_word(word)) {
+            entry->is_special = true;
+        }
+    }
 }
 
 // The name of the archive's file in the cache: the last part of its address, if it is a plain name.
@@ -143,6 +184,23 @@ bool walk(Files* files, const std::string& folder, const std::string& inside, st
     return true;
 }
 
+// Whether a file unpacked at `name` under the staging folder's C64Music is moved into the collection
+// (SPEC-149, FIND-026): a path HVSC's rules allow (SPEC-154), or one of HVSC's documents, a file under
+// DOCUMENTS named with the same characters. No part may begin with a dot. Anything else stays where it was
+// unpacked, and goes with the staging folder.
+bool is_moved(const std::string& name) {
+    const std::string path = "/" + name;
+    if (path.find("/.") != std::string::npos) return false;
+    if (is_hvsc_path(path)) return true;
+    if (name.compare(0, 10, "DOCUMENTS/") != 0 || path.size() > 255) return false;
+    for (const char c : name) {
+        const bool allowed = (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || is_digit(c) || c == '_' || c == '-' ||
+                             c == '.' || c == '/';
+        if (!allowed) return false;
+    }
+    return name.find("//") == std::string::npos && name.back() != '/';
+}
+
 }  // namespace
 
 // --- SPEC-145 ------------------------------------------------------------------------------------------
@@ -179,6 +237,8 @@ bool read_7z_listing(const std::string& text, std::vector<ArchiveEntry>* out) {
     out->clear();
     bool in_entries = false;   // past the line of ten dashes that ends the archive's own block
     bool open = false;         // an entry's block has begun with its Path
+    bool seven_z = false;      // the archive's own block says "Type = 7z", and no other type
+    bool other_type = false;
     ArchiveEntry entry;
     const auto close = [&] {
         if (open) out->push_back(entry);
@@ -193,7 +253,13 @@ bool read_7z_listing(const std::string& text, std::vector<ArchiveEntry>* out) {
         at = end + 1;
         if (!line.empty() && line.back() == '\r') line.pop_back();
         if (!in_entries) {
+            // 7-Zip lists other kinds of archive under any name (FIND-026): only a 7z archive is read.
+            if (line.compare(0, 7, "Type = ") == 0) {
+                if (line == "Type = 7z") seven_z = true;
+                else other_type = true;
+            }
             in_entries = line == "----------";
+            if (in_entries && (!seven_z || other_type)) return false;
             continue;
         }
         if (line.empty()) {
@@ -215,20 +281,18 @@ bool read_7z_listing(const std::string& text, std::vector<ArchiveEntry>* out) {
         } else if (key == "Size") {
             if (!parse_size(value, &entry.size)) return false;
         } else if (key == "Attributes") {
-            const std::vector<std::string> words = split_words(value);
-            if (!words.empty() && words[0].find('D') != std::string::npos && !is_unix_mode(words[0])) entry.is_folder = true;
-            for (const std::string& word : words) {
-                if (!is_unix_mode(word)) continue;
-                switch (word[0]) {
-                    case 'd': entry.is_folder = true; break;
-                    case 'l': entry.is_link = true; break;
-                    case 'b':
-                    case 'c':
-                    case 'p':
-                    case 's': entry.is_special = true; break;
-                    default: break;
-                }
-            }
+            read_attributes(value, &entry);
+        } else if (key == "Mode") {
+            // How 7-Zip gives the kind of an entry of other formats; a mode it cannot read is not known.
+            if (is_unix_mode(value)) kind_of_mode(value[0], &entry);
+            else if (!value.empty()) entry.is_special = true;
+        } else if (key == "Folder") {
+            if (value == "+") entry.is_folder = true;
+            else if (value != "-" && !value.empty()) entry.is_special = true;
+        } else if (key == "Symbolic Link" || key == "Hard Link") {
+            if (!value.empty()) entry.is_link = true;
+        } else if (key == "Device Major" || key == "Device Minor") {
+            if (!value.empty()) entry.is_special = true;
         }
     }
     close();
@@ -440,8 +504,8 @@ struct CompleteDownload::Impl {
             if (copy_safely(files, listing_file(), listing_old(), kListingFileLimit) != FileStatus::Ok) return fail_late(7);
         }
 
-        // Every file of the staging folder's C64Music is renamed over its place, DOCUMENTS last and the
-        // song length file last of all.
+        // Every file of the staging folder's C64Music that HVSC's rules allow is renamed over its place,
+        // DOCUMENTS last and the song length file last of all.
         const std::string from_folder = staging() + "/" + kTopFolder;
         std::vector<std::string> found;
         int odd = 0;
@@ -449,6 +513,8 @@ struct CompleteDownload::Impl {
         if (files->info(from_folder, &staged) == FileStatus::Ok && !walk(files, from_folder, "", &found, &odd)) {
             return fail_late(7);
         }
+        found.erase(std::remove_if(found.begin(), found.end(), [](const std::string& name) { return !is_moved(name); }),
+                    found.end());
         const auto rank = [](const std::string& name) {
             if (name == kSongLengths) return 2;
             return name.compare(0, 10, "DOCUMENTS/") == 0 ? 1 : 0;

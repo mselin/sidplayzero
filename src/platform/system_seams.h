@@ -11,9 +11,11 @@
 
 namespace spz::platform {
 
-// `7z`, `7zz` or `7za`, the first found on PATH. list() runs `7z l -slt` and reads what it prints with the
-// app's own reader (read_7z_listing, spz/complete_download.h); unpack() runs `7z x -mmt1` into the
-// folder, in a process group of its own, which is killed if the progress function says stop.
+// `7z`, `7zz` or `7za`, the first found on PATH. list() runs `7z l -slt -t7z` and reads what it prints with
+// the app's own reader (read_7z_listing, spz/complete_download.h), up to SPEC-204's 64 MiB (a longer
+// listing fails), and stops it once it has named more entries than SPEC-149 allows; unpack() runs
+// `7z x -t7z -mmt1` into the folder. Both run 7z in a process group of its own (stopped with the app,
+// stop_all_children), with a time limit, and unpack() kills it if the progress function says stop.
 class SevenZipUnpacker : public Unpacker {
 public:
     bool available() override;

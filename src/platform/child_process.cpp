@@ -10,6 +10,7 @@
 #include <time.h>
 #include <unistd.h>
 
+#include <algorithm>
 #include <cerrno>
 #include <cstdlib>
 #include <cstring>
@@ -144,23 +145,35 @@ ChildResult run_child(const std::string& program, const std::vector<std::string>
                 open = false;
             } else if (options.output) {
                 if (!result.stopped && !options.output(std::string(buffer, static_cast<std::size_t>(got)))) kill_it();
-            } else {
-                result.output.append(buffer, static_cast<std::size_t>(got));
+            } else if (!result.stopped) {
+                const std::size_t piece = static_cast<std::size_t>(got);
+                if (piece > options.output_limit - std::min(options.output_limit, result.output.size())) {
+                    kill_it();   // more than it is allowed to say
+                } else {
+                    result.output.append(buffer, piece);
+                }
             }
         }
         if (!result.stopped && options.timeout_ms > 0 && now_ms() - started > options.timeout_ms) kill_it();
     }
     ::close(pipe_fds[0]);
+    if (options.own_group) {
+        // Whatever it left behind in its group is killed once it has ended, but before it is reaped: until
+        // then its process id, and so the group's, cannot be given to another process.
+        siginfo_t ended{};
+        int waiting;
+        do {
+            waiting = ::waitid(P_PID, static_cast<id_t>(pid), &ended, WEXITED | WNOWAIT);
+        } while (waiting < 0 && errno == EINTR);
+        ::kill(-pid, SIGKILL);
+        std::lock_guard<std::mutex> lock(g_groups_mutex);
+        g_groups.erase(pid);   // before the id can be reused, so that stop_all_children() cannot hit another
+    }
     int status = 0;
     pid_t waited;
     do {
         waited = ::waitpid(pid, &status, 0);
     } while (waited < 0 && errno == EINTR);
-    if (options.own_group) {
-        ::kill(-pid, SIGKILL);   // whatever it left behind in its group
-        std::lock_guard<std::mutex> lock(g_groups_mutex);
-        g_groups.erase(pid);
-    }
     if (waited == pid && WIFEXITED(status)) {
         result.exited = true;
         result.status = WEXITSTATUS(status);

@@ -169,7 +169,17 @@ bool Player::refuse_while_off() {
 
 std::string Player::full_path(const std::string& path) const {
     const std::string file_scheme = "file://";
-    if (path.compare(0, file_scheme.size(), file_scheme) == 0) return path.substr(file_scheme.size());
+    if (path.compare(0, file_scheme.size(), file_scheme) == 0) {
+        // A tune outside the collection, by its full path (SPEC-170). Anything else, a relative path or one
+        // with a control character (a zero byte would end it early), names no file: "" (read as invalid).
+        const std::string file = path.substr(file_scheme.size());
+        if (file.empty() || file[0] != '/') return "";
+        for (const char c : file) {
+            const auto byte = static_cast<unsigned char>(c);
+            if (byte < 0x20 || byte == 0x7F) return "";
+        }
+        return file;
+    }
     std::string root = options_.root;
     while (!root.empty() && root.back() == '/') root.pop_back();
     return root + path;
@@ -274,6 +284,10 @@ bool Player::run_load(const LoadJob& job, Files* files, SoundBackend* backend,
     LoadResult& result = *out;
     result.generation = job.generation;
 
+    if (job.file.empty()) {   // a file:// entry that names no full path (full_path)
+        result.message = "MSG_INVALID_SID";
+        return true;
+    }
     Bytes bytes;
     const FileStatus status = files ? files->read(job.file, kTuneSizeLimit, &bytes) : FileStatus::NotFound;
     if (status == FileStatus::NotFound) {

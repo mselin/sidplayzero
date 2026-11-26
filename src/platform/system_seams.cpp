@@ -21,6 +21,13 @@ namespace {
 // Programs are asked to speak plainly, whatever the user's language: their words are read here.
 const std::vector<std::string> kPlainLanguage = {"LC_ALL=C.UTF-8", "LANG=C.UTF-8", "LANGUAGE="};
 
+// SPEC-204: the listing that 7z prints of an archive is read up to 64 MiB.
+const std::size_t kListingLimitBytes = 64u * 1024u * 1024u;
+// SPEC-149: 7z runs with a time limit. Listing reads only the archive's headers; unpacking HVSC on the
+// device takes minutes, and is given an hour.
+const long kListTimeoutMs = 5L * 60L * 1000L;
+const long kUnpackTimeoutMs = 60L * 60L * 1000L;
+
 bool read_number_file(const std::string& path, long* out) {
     std::ifstream file(path);
     long value = 0;
@@ -46,12 +53,42 @@ bool SevenZipUnpacker::available() { return !program().empty(); }
 bool SevenZipUnpacker::list(const std::string& archive, std::vector<ArchiveEntry>* out) {
     const std::string seven = program();
     if (seven.empty()) return false;
+    // What 7z prints is kept up to SPEC-204's limit; a longer listing is refused. Once it has named more
+    // entries than SPEC-149 allows, the rest is not needed: 7z is stopped, and what was read is enough
+    // for the check to refuse the archive.
+    std::string listing;
+    std::uint64_t paths = 0;        // lines that begin "Path = ": the archive's own, then one for each entry
+    std::size_t scanned = 0;        // where to look for the next of them
+    bool too_long = false;
+    bool too_many = false;
+    const std::string path_line = "\nPath = ";
     ChildOptions options;
     options.environment = kPlainLanguage;
-    const ChildResult ran = run_child(seven, {"7z", "l", "-slt", "--", archive}, options);
-    if (!ran.exited || ran.status != 0) return false;
+    options.own_group = true;
+    options.timeout_ms = kListTimeoutMs;
+    options.output = [&](const std::string& piece) {
+        if (piece.size() > kListingLimitBytes - listing.size()) {
+            too_long = true;
+            return false;
+        }
+        listing += piece;
+        for (std::size_t at = listing.find(path_line, scanned); at != std::string::npos;
+             at = listing.find(path_line, at + 1)) {
+            ++paths;
+        }
+        scanned = listing.size() >= path_line.size() ? listing.size() - path_line.size() + 1 : 0;
+        // The archive's own Path, kArchiveMaxEntries + 1 entries, and the Path that ends the last of them.
+        if (paths >= kArchiveMaxEntries + 3) {
+            too_many = true;
+            return false;
+        }
+        return true;
+    };
+    const ChildResult ran = run_child(seven, {"7z", "l", "-slt", "-t7z", "--", archive}, options);
+    if (too_long || (!too_many && (!ran.exited || ran.status != 0 || ran.stopped))) return false;
     std::vector<ArchiveEntry> entries;
-    if (!read_7z_listing(ran.output, &entries)) return false;
+    if (!read_7z_listing(listing, &entries)) return false;
+    if (too_many && entries.size() <= kArchiveMaxEntries) return false;
     *out = std::move(entries);
     return true;
 }
@@ -65,11 +102,12 @@ bool SevenZipUnpacker::unpack(const std::string& archive, const std::string& int
     ChildOptions options;
     options.environment = kPlainLanguage;
     options.own_group = true;
+    options.timeout_ms = kUnpackTimeoutMs;
     options.output = [&](const std::string& piece) {
         // With -bb1, 7z names each file and folder it writes on a line of its own, after "- ".
         for (char c : piece) {
             if (c != '\n') {
-                line += c;
+                if (line.size() < 65536) line += c;   // only its beginning is looked at
                 continue;
             }
             if (line.compare(0, 2, "- ") == 0 && line.back() != '/') {   // a folder's line ends in "/"
@@ -81,7 +119,7 @@ bool SevenZipUnpacker::unpack(const std::string& archive, const std::string& int
         return !stop;
     };
     const ChildResult ran =
-        run_child(seven, {"7z", "x", "-mmt1", "-y", "-bd", "-bb1", "-o" + into, "--", archive}, options);
+        run_child(seven, {"7z", "x", "-t7z", "-mmt1", "-y", "-bd", "-bb1", "-o" + into, "--", archive}, options);
     return ran.exited && ran.status == 0 && !ran.stopped && !stop;
 }
 

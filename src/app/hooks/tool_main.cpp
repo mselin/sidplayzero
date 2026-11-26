@@ -16,7 +16,7 @@
 //   spz_tool volume get | set N | toggle-mute                                              test_play.py, SPEC-076
 //   spz_tool input-setup DEVICES                                                           test_keys.py, SPEC-110
 //   spz_tool audio-guard clean | allocate | lock                                      test_structure.py, SPEC-022
-//   spz_tool load-tunes [--cut] FILE...                                               test_bad_tunes.py, SPEC-203
+//   spz_tool load-tunes [--cut] [--unchecked] FILE...                                 test_bad_tunes.py, SPEC-203
 //   spz_tool kept-files                                                                    test_keep.py, SPEC-133
 #include <signal.h>
 #include <unistd.h>
@@ -839,8 +839,10 @@ public:
 
 // What the player does with a tune file: SPEC-203's check, then, if it passes, load() of the real software
 // backend with the real engine, and 100 ms rendered. "played", "refused MSG_..." or "failed MSG_...".
-std::string load_one(const std::vector<std::uint8_t>& bytes) {
-    const std::string refused = spz::check_tune(bytes);
+// With `unchecked`, the player's check is left out, and the file goes to the backend as it is: what the
+// real engine does with it on its own.
+std::string load_one(const std::vector<std::uint8_t>& bytes, bool unchecked = false) {
+    const std::string refused = unchecked ? std::string() : spz::check_tune(bytes);
     if (!refused.empty()) return "refused " + refused;
     spz::TuneInfo info;
     spz::read_tune_info(bytes, &info);
@@ -872,15 +874,18 @@ std::string load_one(const std::vector<std::uint8_t>& bytes) {
 
 int load_tunes(const std::vector<std::string>& args) {
     bool cut = false;
+    bool unchecked = false;
     std::vector<std::string> paths;
     for (const std::string& word : args) {
         if (word == "--cut") {
             cut = true;
+        } else if (word == "--unchecked") {
+            unchecked = true;
         } else {
             paths.push_back(word);
         }
     }
-    if (paths.empty()) return usage("load-tunes [--cut] FILE...");
+    if (paths.empty()) return usage("load-tunes [--cut] [--unchecked] FILE...");
     RealFiles files;
     int done = 0;
     for (const std::string& path : paths) {
@@ -891,11 +896,11 @@ int load_tunes(const std::vector<std::string>& args) {
             return 1;
         }
         if (!cut) {
-            say(name_of(path), load_one(bytes));
+            say(name_of(path), load_one(bytes, unchecked));
         } else {
             int refused = 0, failed = 0, played = 0;
             for (std::size_t length = 0; length <= bytes.size(); ++length) {
-                const std::string got = load_one(std::vector<std::uint8_t>(bytes.begin(), bytes.begin() + static_cast<std::ptrdiff_t>(length)));
+                const std::string got = load_one(std::vector<std::uint8_t>(bytes.begin(), bytes.begin() + static_cast<std::ptrdiff_t>(length)), unchecked);
                 if (got == "played") {
                     ++played;
                 } else if (got.compare(0, 7, "refused") == 0) {

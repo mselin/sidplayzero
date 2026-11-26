@@ -18,8 +18,11 @@ struct ChildOptions {
     std::function<bool(const std::string& piece)> output;
     // Kill the program, and say so, if it has not ended within this many milliseconds. 0: no limit.
     long timeout_ms = 0;
-    // Run it in a process group of its own, so that stopping it stops whatever it started.
+    // Run it in a process group of its own, so that stopping it stops whatever it started. Whatever is
+    // still running in the group when the program ends is killed too, before the program is reaped.
     bool own_group = false;
+    // Without an output function: what is kept of its output at most. A program that says more is stopped.
+    std::size_t output_limit = 1024 * 1024;
     // Variables to set for it, as NAME=VALUE, beside the environment of this process.
     std::vector<std::string> environment;
 };

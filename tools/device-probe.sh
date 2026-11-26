@@ -163,12 +163,13 @@ probe() {
 # sample rate, and renders one of them twice to see whether the output is the same both times:
 # once as sidplayfp does it by default, with a random power-on delay, and once with the delay fixed.
 bench() {
-  local base="$1" work=/dev/shm/sidplayzero-probe.$$ fetched=0
+  local base="$1" work="" fetched=0
   section "Render benchmark (sidplayfp -w, 60 s of each tune)"
   if ! have sidplayfp; then
     echo "skipped: sidplayfp is not installed (sudo apt install sidplayfp)"; return 0
   fi
-  mkdir -p "$work" || { echo "skipped: cannot write to /dev/shm"; return 0; }
+  # A new folder of its own, with a name no one could have guessed and planted a link at.
+  work=$(mktemp -d /dev/shm/sidplayzero-probe.XXXXXXXX) || { echo "skipped: cannot write to /dev/shm"; return 0; }
   echo "sidplayfp options: $(sidplayfp --help 2>&1 | grep -o -E -- '--(resid|residfp|sidlite|usbsid|exsid)\b' | sort -u | tr '\n' ' ')"
   local t f
   for t in $TUNES; do
@@ -210,10 +211,13 @@ bench() {
 # what that needed. Nothing is unpacked to the card; the archive itself is deleted afterwards.
 unpack_test() {
   section "Unpack test (7z t on the complete HVSC archive)"
-  local z="" f="./sidplayzero-probe-archive.$$.7z" log="/dev/shm/sidplayzero-probe-7z.$$"
+  local z="" f="" log=""
   for c in 7z 7zz 7za; do have "$c" && { z="$c"; break; }; done
   [ -n "$z" ] || { echo "skipped: no 7z program (sudo apt install 7zip)"; return 0; }
   have curl || { echo "skipped: curl is not installed"; return 0; }
+  # New files of its own, made by mktemp, with names no one could have guessed and planted a link at.
+  f=$(mktemp ./sidplayzero-probe-archive.XXXXXXXX) || { echo "skipped: cannot write to the current folder"; return 0; }
+  log=$(mktemp /dev/shm/sidplayzero-probe-7z.XXXXXXXX) || { echo "skipped: cannot write to /dev/shm"; rm -f "$f"; return 0; }
   echo "7z program: $z"
   echo "before: $(grep -E '^(MemAvailable|SwapFree)' /proc/meminfo | tr -s ' ' | tr '\n' ' ')"
   local t0 t1

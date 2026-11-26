@@ -117,8 +117,14 @@ refuse_root() {
 install_package() {
   local deb="$1"
   [ -f "$deb" ] || stop "there is no file $deb"
+  # The file that was checked, and no other: apt-get takes a path with a slash in it as a package file.
+  local path="$deb"
+  case "$path" in
+    */*) ;;
+    *) path="./$path" ;;
+  esac
   say "Installing $(basename "$deb") (this asks for your password if sudo needs it)."
-  $SUDO apt-get install -y "./$(basename "$deb")" >/dev/null 2>&1 || stop "the package could not be installed"
+  $SUDO apt-get install -y "$path" >/dev/null 2>&1 || stop "the package could not be installed"
   rm -f "$RESULTS"
 }
 

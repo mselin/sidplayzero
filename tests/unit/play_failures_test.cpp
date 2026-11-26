@@ -457,3 +457,37 @@ TEST_CASE("SPEC-068 a ROM file of the wrong size, or one that is not there, is i
     }
 }
 #endif
+
+// ---- A tune outside the collection (SPEC-170): a file:// entry is read only at a full path ------------------------
+
+TEST_CASE("SPEC-069 SPEC-170 a file:// entry is read only when it names a full path: a relative one, or one with a control character, fails with MSG_INVALID_SID and is not read") {
+    {
+        PlayerFixture f;   // the full path plays, as any tune does
+        f.play({"file://" + f.root + kGoodA}, 0);
+        CHECK(f.state() == PlayerState::Playing);
+        CHECK(f.backend.count("load") == 1);
+    }
+    // The same file named from the folder the program happens to run in, or with a zero byte or a line feed
+    // that the system would end its name at: none of these is a full path, and none is read.
+    const std::vector<std::string> kinds = {"relative", "zero byte", "line feed", "empty"};
+    for (const std::string& kind : kinds) {
+        CAPTURE(kind);
+        PlayerFixture f;
+        const std::string good = f.root + kGoodA;
+        std::string entry = "file://";
+        if (kind == "relative") {
+            const std::string relative = std::filesystem::relative(good, std::filesystem::current_path()).generic_string();
+            REQUIRE_FALSE(relative.empty());
+            REQUIRE(relative[0] != '/');
+            entry += relative;
+        } else if (kind == "zero byte") {
+            entry += good + std::string(1, '\0') + "/../B_Bad_1.sid";
+        } else if (kind == "line feed") {
+            entry += good + "\n";
+        }
+        f.play({entry}, 0);
+        CHECK(f.state() == PlayerState::Failed);
+        CHECK(f.status().message == "MSG_INVALID_SID");
+        CHECK(f.backend.count("load") == 0);
+    }
+}

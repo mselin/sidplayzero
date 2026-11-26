@@ -40,6 +40,8 @@ public:
     Fd& operator=(const Fd&) = delete;
     int get() const { return fd_; }
     bool ok() const { return fd_ >= 0; }
+    // Gives the descriptor up: it is no longer closed here.
+    void release() { fd_ = -1; }
     // Closes now, for a caller that wants to know whether the close succeeded.
     int close() {
         const int result = ::close(fd_);
@@ -84,8 +86,14 @@ FileStatus write_all(int fd, const std::vector<std::uint8_t>& bytes) {
 }
 
 FileStatus write_with(const std::string& path, int flags, const std::vector<std::uint8_t>& bytes) {
-    Fd fd(::open(path.c_str(), flags | O_WRONLY | O_CREAT | O_CLOEXEC, 0644));
+    // Without waiting, as open_for_reading(): a FIFO or a device in the file's place is refused.
+    Fd fd(::open(path.c_str(), flags | O_WRONLY | O_CREAT | O_CLOEXEC | O_NONBLOCK | O_NOCTTY, 0644));
     if (!fd.ok()) return from_errno(errno);
+    struct stat st;
+    if (::fstat(fd.get(), &st) != 0) return from_errno(errno);
+    if (!S_ISREG(st.st_mode)) return FileStatus::Failed;
+    const int now = ::fcntl(fd.get(), F_GETFL);
+    if (now < 0 || ::fcntl(fd.get(), F_SETFL, now & ~O_NONBLOCK) != 0) return from_errno(errno);
     const FileStatus status = write_all(fd.get(), bytes);
     if (status != FileStatus::Ok) return status;
     if (fd.close() != 0) return from_errno(errno);
@@ -105,14 +113,30 @@ std::string nearest_existing(const std::string& path) {
     return p;
 }
 
+// Opens a path for reading only if it is a regular file (or, with `folder_too`, a folder), whatever a link
+// to it says, without waiting: a FIFO or a device is opened without blocking, seen for what it is by fstat
+// and refused, so that nothing a worker reads can hold it for ever. Gives the open file and its status.
+FileStatus open_for_reading(const std::string& path, bool folder_too, int* fd_out, struct stat* st) {
+    *fd_out = -1;
+    Fd fd(::open(path.c_str(), O_RDONLY | O_CLOEXEC | O_NONBLOCK | O_NOCTTY));
+    if (!fd.ok()) return from_errno(errno);
+    if (::fstat(fd.get(), st) != 0) return from_errno(errno);
+    if (!S_ISREG(st->st_mode) && !(folder_too && S_ISDIR(st->st_mode))) return FileStatus::Failed;
+    const int flags = ::fcntl(fd.get(), F_GETFL);
+    if (flags < 0 || ::fcntl(fd.get(), F_SETFL, flags & ~O_NONBLOCK) != 0) return from_errno(errno);
+    *fd_out = fd.get();
+    fd.release();
+    return FileStatus::Ok;
+}
+
 }  // namespace
 
 FileStatus RealFiles::read(const std::string& path, std::size_t limit, std::vector<std::uint8_t>* out) {
-    Fd fd(::open(path.c_str(), O_RDONLY | O_CLOEXEC));
-    if (!fd.ok()) return from_errno(errno);
     struct stat st;
-    if (::fstat(fd.get(), &st) != 0) return from_errno(errno);
-    if (!S_ISREG(st.st_mode)) return FileStatus::Failed;
+    int opened = -1;
+    const FileStatus status = open_for_reading(path, false, &opened, &st);
+    if (status != FileStatus::Ok) return status;
+    Fd fd(opened);
     if (static_cast<std::uint64_t>(st.st_size) > limit) return FileStatus::TooLarge;
     std::vector<std::uint8_t> data(static_cast<std::size_t>(st.st_size));
     std::size_t done = 0;
@@ -140,11 +164,11 @@ FileStatus RealFiles::append(const std::string& path, const std::vector<std::uin
 
 FileStatus RealFiles::map(const std::string& path, std::size_t limit, MappedFile* out) {
     *out = MappedFile();
-    Fd fd(::open(path.c_str(), O_RDONLY | O_CLOEXEC));
-    if (!fd.ok()) return from_errno(errno);
     struct stat st;
-    if (::fstat(fd.get(), &st) != 0) return from_errno(errno);
-    if (!S_ISREG(st.st_mode)) return FileStatus::Failed;
+    int opened = -1;
+    const FileStatus status = open_for_reading(path, false, &opened, &st);
+    if (status != FileStatus::Ok) return status;
+    Fd fd(opened);
     if (static_cast<std::uint64_t>(st.st_size) > limit) return FileStatus::TooLarge;
     const std::size_t size = static_cast<std::size_t>(st.st_size);
     if (size == 0) {
@@ -159,8 +183,11 @@ FileStatus RealFiles::map(const std::string& path, std::size_t limit, MappedFile
 }
 
 FileStatus RealFiles::sync(const std::string& path) {
-    Fd fd(::open(path.c_str(), O_RDONLY | O_CLOEXEC));
-    if (!fd.ok()) return from_errno(errno);
+    struct stat st;
+    int opened = -1;
+    const FileStatus status = open_for_reading(path, true, &opened, &st);
+    if (status != FileStatus::Ok) return status;
+    Fd fd(opened);
     if (::fsync(fd.get()) != 0) return from_errno(errno);
     return FileStatus::Ok;
 }

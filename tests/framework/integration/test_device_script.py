@@ -89,6 +89,17 @@ class DeviceScript(unittest.TestCase):
         self.assertIn("sudo\n  apt-get\n  remove\n  -y\n  sidplayzero\n", asked)
         self.assertEqual(asked.count("sudo\n"), 2, "sudo was used for something besides installing and removing")
 
+    def test_installs_the_file_it_checked(self):
+        """TF-080 SPEC-260 given a package in another folder, the script installs that file, not one of the same name in the current folder"""
+        self.play_the_app()
+        (self.work / "packages").mkdir()
+        (self.work / "packages" / "sidplayzero_0.1.0-1_arm64.deb").write_bytes(b"the package that was meant")
+        done = self.run_script(["--prove", "packages/sidplayzero_0.1.0-1_arm64.deb"], answers="\n")
+        self.assertEqual(done.returncode, 0, done.stdout)
+        asked = self.log.read_text()
+        self.assertIn("sudo\n  apt-get\n  install\n  -y\n  packages/sidplayzero_0.1.0-1_arm64.deb\n", asked)
+        self.assertNotIn("./sidplayzero_0.1.0-1_arm64.deb", asked)
+
     def test_refuses_root(self):
         """TF-080 SPEC-260 run as root, the script refuses and installs nothing"""
         done = self.run_script(["--prove", "sidplayzero_0.1.0-1_arm64.deb"], SPZ_FAKE_UID="0")
@@ -147,3 +158,67 @@ class DeviceScript(unittest.TestCase):
         asked = set(re.findall(r"(?m)^\s+ask ([a-z_]+) ", SCRIPT.read_text()))
         listed = set(re.findall(r"(?m)^\| `([a-z_]+)` \|", (ROOT / "docs" / "device-checklist.md").read_text()))
         self.assertEqual(asked, listed)
+
+
+class DeviceProbe(unittest.TestCase):
+    """tools/device-probe.sh (CONTRIBUTING.md: what runs on the device) against stand-ins for curl and 7z. The
+    files it writes for a while are new ones of its own, made by mktemp, so that a link planted at a name made
+    from its process number cannot turn its writes onto another file."""
+
+    def setUp(self):
+        self.work = Path(tempfile.mkdtemp(prefix="spz-probe-"))
+        self.bin = self.work / "bin"
+        self.bin.mkdir()
+        curl = self.bin / "curl"
+        # Writes a few bytes where -o says, and nothing else.
+        curl.write_text('#!/bin/sh\nwhile [ $# -gt 0 ]; do\n  if [ "$1" = "-o" ]; then printf "7z archive" > "$2"; shift; fi\n'
+                        '  shift\ndone\nexit 0\n')
+        curl.chmod(0o755)
+        self.planted = []
+
+    def tearDown(self):
+        for link in self.planted:
+            if link.is_symlink():
+                link.unlink()
+        subprocess.run(["rm", "-rf", str(self.work)])
+
+    @staticmethod
+    def shm_logs():
+        return {p for p in Path("/dev/shm").glob("sidplayzero-probe-7z.*") if not p.is_symlink()}
+
+    def test_unpack_test_writes_only_files_of_its_own(self):
+        """TF-080 the probe's unpack test writes the archive and 7z's log to new files of its own: links planted at the names its process number would give are not followed, and nothing is left behind"""
+        script = ROOT / "tools" / "device-probe.sh"
+        env = {**os.environ, "PATH": f"{self.bin}:{STANDINS}:{os.environ['PATH']}"}
+        logs_before = self.shm_logs()
+        # The probe is started by a shell that waits for a line and then becomes it, keeping its process number.
+        process = subprocess.Popen(["bash", "-c", 'read -r _; exec bash "$0" --unpack-test', str(script)], cwd=self.work,
+                                   env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                   text=True)
+        victims = {}
+        for name in (f"/dev/shm/sidplayzero-probe-7z.{process.pid}",
+                     str(self.work / f"sidplayzero-probe-archive.{process.pid}.7z")):
+            victim = self.work / f"victim-{len(victims)}.txt"
+            victim.write_text("a file the probe must not touch\n")
+            link = Path(name)
+            if link.is_symlink() or link.exists():
+                link.unlink()
+            link.symlink_to(victim)
+            self.planted.append(link)
+            victims[victim] = victim.read_text()
+        try:
+            output, _ = process.communicate("\n", timeout=300)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            self.fail("the probe did not end within five minutes")
+        self.assertEqual(process.returncode, 0, output)
+        results = sorted(self.work.glob("sidplayzero-probe-2*.txt"))
+        self.assertEqual(len(results), 1, output)
+        text = results[0].read_text()
+        self.assertIn("7z program: 7z", text)
+        self.assertIn("7z exit status: 0", text)
+        for victim, before in victims.items():
+            self.assertEqual(victim.read_text(), before, f"the probe wrote through a planted link onto {victim.name}")
+        left = [p.name for p in self.work.iterdir() if p.name.startswith("sidplayzero-probe-archive.") and not p.is_symlink()]
+        self.assertEqual(left, [], "the probe left its archive behind")
+        self.assertEqual(self.shm_logs() - logs_before, set(), "the probe left its log behind")

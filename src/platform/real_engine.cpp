@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "platform/real_engine.h"
 
+#include "spz/tune.h"
+
 #include <sidplayfp/SidConfig.h>
 #include <sidplayfp/SidTune.h>
 #include <sidplayfp/SidTuneInfo.h>
@@ -117,6 +119,9 @@ bool RealEngine::load(const std::vector<std::uint8_t>& tune, int subtune, const 
     d.pending.clear();
     d.pending_at = 0;
 
+    // SPEC-203's check, made here too, whoever calls: the library sees only what passes it.
+    const std::string refused = check_tune(tune);
+    if (!refused.empty()) return refuse(refused.c_str());
     if (tune.empty() || tune.size() > 0xffffffffu) return refuse("MSG_ENGINE_REFUSED");
     // libsidplayfp 3.1.2 reads two bytes at the start of the tune's C64 data, after the load address when
     // the header has none, before it checks that they are there (SidTuneBase::acceptSidTune). A tune with
