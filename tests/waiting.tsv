@@ -218,23 +218,13 @@ SPEC-200 a second copy of the real program, started while the first runs, says t
 SPEC-201 the same with SIGINT	code	expect screen = browser
 SPEC-201 playing a fixture tune and sent SIGTERM, the real program ends with status 0 within 1 s, state.ini names the tune, and no child process is left	code	expect screen = browser
 SPEC-201 the same with a fake download held open: the download is cut short, and nothing of it is in the collection	code	expect screen = browser
-SPEC-045 SPEC-111 a second press of a key that is still down is the keyboard's own repeat, and is ignored	code	not built yet
-SPEC-045 a key whose action repeats, held for one second, acts 16 times: once, and then, after 400 ms, 25 times a second	code	not built yet
-SPEC-045 moving in a list, moving the cursor, deleting in a field and stepping a value repeat; with letters as arrows too	code	not built yet
-SPEC-045 no other action repeats: a key held for one second acts once, Up and Down on now playing among them	code	not built yet
-SPEC-045 which actions of the key map repeat is told by the action alone	code	not built yet
 SPEC-090 "Get HVSC" on the empty screen opens the HVSC screen over it	code	expect panel.id = notice-panel
 SPEC-090 Playlists and Playlist open by their keys, playing an entry opens now playing, and from the deepest stack five presses of ESC reach the browser	code	expect screen = browser
-SPEC-090 SPEC-048 the bottom of the stack is the browser or, in its place, the empty screen	code	not built yet
 SPEC-090 SPEC-110 every screen that is always built opens by its keys alone, and the stack is as the item says after each	code	expect screen = browser
 SPEC-090 SPEC-114 with a panel and help open over the fifth screen, six short presses of ESC reach the browser	code	expect screen = browser
 SPEC-090 a key for a screen that is already in the stack returns to it and closes those above; TAB in HVSC and in About gives the stack Settings had, and TAB in Settings changes nothing	code	expect screen = browser
-SPEC-090 by the keys of the key map no screen is ever in the stack twice, and the stack is never deeper than six	code	not built yet
 SPEC-090 from the stack browser, Search, now playing, Settings, HVSC, four short presses of ESC reach the browser	code	expect screen = browser
-SPEC-090 opening a screen that is in the stack returns to it and closes those above it	code	not built yet
 SPEC-090 playing a tune from the browser and from Search opens now playing on top of the stack	code	expect screen = browser
-SPEC-090 the stack starts as the browser alone, a key that opens a screen puts it on top, and ESC closes the top one	code	not built yet
-SPEC-091 SPEC-093 the labels over the keys 4 to 8 are the key map's, for every place	code	not built yet
 SPEC-091 SPEC-098 the now-playing screen while a tune plays, and the browser in a folder three levels down, keep to the bands and the boxes	code	: the keys did not lead to the place playing
 SPEC-091 on every screen each action label has a box centred on its x, no two boxes of one band overlap, and every box lies inside its band	code	: the keys did not lead to the place browser
 SPEC-091 while text is typed the action bar shows "Enter: OK" and "ESC: cancel" instead of its five labels	code	: the keys did not lead to the place search-field
@@ -242,9 +232,7 @@ SPEC-092 SPEC-099 in the text prompt the keys of `always` act, and P, L and Spac
 SPEC-092 SPEC-104 the brightness keys act on every screen, in a panel and in the text prompt	code	expect screen = browser
 SPEC-092 SPEC-108 Print Screen acts on every screen, in a panel and in the text prompt	code	expect screen = browser
 SPEC-092 SPEC-114 in a panel the keys of `always` act, the keys of `lists` scroll, and TAB, Space and P do nothing	code	expect screen = browser
-SPEC-092 each place is a screen, a place where text is typed, a panel, or the key step	code	not built yet
 SPEC-092 in Settings each key of `always`, of `lists` and of `screens` has its effect, and TAB, switched off there, has none	code	expect screen = browser
-SPEC-092 in a panel and in help, TAB, Space, P and L give no action, and the `lists` keys do	code	not built yet
 SPEC-092 on the About screen each key of `always`, of `lists` and of `screens` has its effect	code	expect screen = browser
 SPEC-092 on the HVSC screen each key of `always`, of `lists` and of `screens` has its effect	code	expect screen = browser
 SPEC-092 on the browser each key of `always`, of `lists` and of `screens` has its effect	code	expect screen = browser
@@ -252,95 +240,51 @@ SPEC-092 on the empty screen each key of `always`, of `lists` and of `screens` h
 SPEC-092 on the now-playing screen each key of `always`, of `lists` and of `screens` has its effect	code	expect screen = browser
 SPEC-092 on the result list of Search each key of `always`, of `lists` and of `screens` has its effect	code	expect screen = browser
 SPEC-092 on the two playlist screens and in a list panel the keys of `always`, of `lists` and of `screens` have their effect	code	expect screen = browser
-SPEC-092 the keys of `always` act in every place, also where text is typed and in a panel	code	not built yet
-SPEC-092 the keys of `lists` act wherever no text is typed, panels and help included, and not where it is	code	not built yet
-SPEC-092 the keys of `screens` act on a screen only, and a place can switch one off	code	not built yet
-SPEC-092 while text is typed the keys of `always` still act, and P, L and Space are typed and do nothing else	code	not built yet
 SPEC-092 with a confirm panel open, TAB, Space, P and L leave the screen description unchanged	code	: the keys did not lead to the place confirm
 SPEC-093 SPEC-095 on the browser the keys 4 and 5 trigger the actions whose labels are above them	code	expect screen = browser
 SPEC-093 SPEC-095 on the browser the keys 6, 7 and 8 trigger Lists, Fav and Add	code	expect screen = browser
 SPEC-093 SPEC-101 SPEC-103 in Settings, HVSC and About the keys with a label do what it says, and 6, 7, 9 and Q do nothing	code	expect screen = browser
-SPEC-093 a letter or digit the key map does not name for a place does nothing there	code	not built yet
 SPEC-093 in Settings the keys 6, 7, 9 and Q, which the key map does not name there, change nothing	code	: the keys did not lead to the place settings
 SPEC-093 on the browser 9 and Q change nothing in the screen description	code	: the keys did not lead to the place browser
 SPEC-093 on the browser 9 and Q change nothing, and the key 4 does nothing while it has no label	code	expect screen = browser
 SPEC-093 on the browser the letter X and the Down key code each move the highlight one row, and F, Z and C do what Up, Left and Right do	code	expect screen = browser
-SPEC-094 SPEC-092 what a key does, in every place and for every key name, is what the file's rows and groups give	code	not built yet
-SPEC-094 SPEC-111 in the key step no group applies: every key is recorded, and a held ESC leaves	code	not built yet
-SPEC-094 the key map compiled into core has exactly the rows of docs/keymap.tsv, in its order	code	not built yet
-SPEC-096 Right acts at once where it cannot be held: in the browser, in Settings, in a text field	code	not built yet
-SPEC-096 Right held for 400 ms skips ahead until it is let go, and letting go does not change the subtune [parts: skip]	code	not built yet
-SPEC-096 on now playing, Right let go before 400 ms is the next subtune, when it is let go [parts: skip]	code	not built yet
 SPEC-098 a list row whose file name is too long for its box is cut to fit, and the description still has the whole name	code	: the keys did not lead to the browser
 SPEC-098 for every box of every screen, the text is no wider than the box or the box is marked as clipped	code	: the keys did not lead to the place browser
 SPEC-098 on the now-playing screen a line 1 that is too long scrolls: its text_x differs between two dumps a second apart	code	: the keys did not lead to the now-playing screen
 SPEC-098 the tune titled "Hülsbeck Tëst", with its 32-character author, gives lines that hold those strings exactly	code	expect screen = browser
-SPEC-099 Backspace removes the character before the cursor and Delete the one after it	code	not built yet
 SPEC-099 Backspace removes the character before the cursor and Delete the one after it, and Left, Right, Home and End move the cursor	code	expect screen = browser
-SPEC-099 Left, Right, Home and End move the cursor, and it stops at both ends	code	not built yet
-SPEC-099 SPEC-093 the letters F, X, Z and C are typed in a text field, and are Up, Down, Left and Right elsewhere	code	not built yet
 SPEC-099 SPEC-100 in the Search field Down moves to the results, and TAB and Up do nothing	code	expect screen = browser
 SPEC-099 SPEC-101 a prompt opens holding the current value; the field for a length holds 5 characters and the field for an address 255	code	: the keys did not lead to Settings
-SPEC-099 TAB, Up and Down do nothing in a prompt, and Up nothing in the Search field	code	not built yet
-SPEC-099 a field holds 64 characters in Search, 40 for a playlist's name, 255 for a path or an address, 5 for a length	code	not built yet
-SPEC-099 a field that opens holding a value keeps it, and counts characters, not bytes	code	not built yet
 SPEC-099 a sequence with Shift and the sym codes types ~/C64_Music.2, and a letter is a capital only while Shift is down	code	expect screen = browser
-SPEC-099 an action that is not a field's changes nothing	code	not built yet
-SPEC-099 digits and Space give themselves, with Shift or without, and each sym code gives its sign	code	not built yet
-SPEC-099 in a text field the keys that edit and move arrive as their own key codes, and Enter and ESC end it	code	not built yet
 SPEC-099 in a text prompt TAB, Up and Down do nothing, ESC cancels and Enter accepts	code	expect screen = browser
 SPEC-099 the Search field holds 64 characters, and the 65th is not added, as the screen shows it	code	expect screen = browser
-SPEC-099 the Search field holds 64 characters, and the 65th is not added	code	not built yet
 SPEC-099 the key codes for "hub 1985" put exactly that text in the Search field, and the codes for F, X, Z and C are typed there	code	expect screen = browser
-SPEC-099 the key codes for hub 1985 type exactly that text, and those for ~/C64_Music.2, with Shift and sym codes, that one	code	not built yet
-SPEC-099 the keys of a text prompt, through the key map, edit a field as the item says	code	not built yet
-SPEC-099 typed characters go in at the cursor, and the cursor moves on with them	code	not built yet
-SPEC-099 where no text is typed, a sym code types nothing and does nothing	code	not built yet
-SPEC-099 where text is typed, a letter key gives its lower-case letter, and its capital while Shift is down	code	not built yet
-SPEC-099 where text is typed, the place's own rows are for a character and for the keys that edit	code	not built yet
 SPEC-101 0:02 for the default length is refused with the notice MSG_INVALID_VALUE, the prompt stays open, and 0:05 is taken	code	: the keys did not lead to Settings
-SPEC-101 SPEC-103 SPEC-093 Settings has Back, HVSC and About; About has Back and Notice; a panel has no labels	code	not built yet
 SPEC-101 SPEC-110 a setting with a fixed set of values is stepped with Left and Right, Enter steps forward, and each change is saved at once and is there after a restart	code	expect screen = browser
 SPEC-101 SPEC-110 every row that is present is changed by keys alone, by Left, Right or the prompt as its kind needs, is saved at once, and shows the same value after a restart	code	: the keys did not lead to Settings
 SPEC-101 SPEC-110 with HVSC_BASE unset, Enter on the row of the collection opens a prompt holding the setting's value	code	: the keys did not lead to Settings
 SPEC-101 SPEC-115 the Settings screen has the rows of the table whose part is built, in the table's order, each with a value	code	: the keys did not lead to Settings
-SPEC-101 SPEC-115 the Settings screen has the rows that are always built and those whose part is, and no others	code	not built yet
-SPEC-101 SPEC-130 a setting with a fixed set of values has exactly those values, in order; the others open a prompt	code	not built yet
 SPEC-101 a value that is not allowed gives the notice MSG_INVALID_VALUE and leaves the prompt open	code	expect screen = browser
-SPEC-101 the rows of the Settings table are the specification's, in its order, each with its setting and its part	code	not built yet
 SPEC-103 SPEC-152 "Notice" opens a text panel whose text is SPEC-152's notice, and no more than that while HVSC is not set up	code	: the keys did not lead to the place about
 SPEC-103 `sidplayzero --version` prints the first two of the About screen's lines: the name with the version, and the libraries	code	: the keys did not lead to the place about
 SPEC-103 once HVSC is set up, the notice in About is followed by the copyright section of the root's HVSC.txt, and by no more of that file	code	expect screen = browser
 SPEC-103 once HVSC is set up, the notice is followed by the copyright section of the root's DOCUMENTS/HVSC.txt	code	: the keys did not lead to the About screen
 SPEC-103 the About screen names the libraries and the licence, key 4 is "Back", and key 5, "Notice", opens a text panel that begins with HVSC's notice	code	expect screen = browser
 SPEC-103 the About screen shows SidPlayZero and its version, the two libraries, the licence and where it is installed, and the address of the source	code	: the keys did not lead to the place about
-SPEC-104 a level between two tens goes to the nearest multiple of 10 % above or below [parts: brightness]	code	not built yet
-SPEC-104 at 10 % darker asks for nothing, and at 100 % brighter asks for nothing; the notice shows the level [parts: brightness]	code	not built yet
-SPEC-104 several presses walk the level in tens and stop at the ends [parts: brightness]	code	not built yet
 SPEC-104 the level never goes below 10 % or above 100 %, and the notice shows the level as it is	code	expect screen = browser
 SPEC-104 with a backlight that cannot be changed, the notice is MSG_BRIGHTNESS_UNAVAILABLE	code	expect screen = browser
-SPEC-104 with a backlight that cannot be changed, the notice is MSG_BRIGHTNESS_UNAVAILABLE and nothing is set [parts: brightness]	code	not built yet
 SPEC-104 with the fake backlight at 50 %, the brighter key asks for 60 % and the darker key for 40 %, and the notice shows the level	code	expect screen = browser
-SPEC-104 with the screen at 50 %, brighter asks the backlight for 60 % and darker for 40 % [parts: brightness]	code	not built yet
-SPEC-106 ESC held for 1,000 ms is the key EscHold, which leaves, once, and letting go then does nothing	code	not built yet
 SPEC-106 ESC held for 1,000 ms leaves, from a screen that is not the first, and the program ends with status 0	code	expect screen = browser
-SPEC-106 ESC held for 500 ms raises the notice; let go before 1,000 ms it takes the notice away and does nothing else	code	not built yet
 SPEC-106 ESC held for 500 ms shows MSG_HOLD_TO_LEAVE; released before 1,000 ms, the notice goes and nothing else happens	code	expect screen = browser
-SPEC-106 SPEC-092 ESC and its hold are the same in every place: a panel, help, a text field	code	not built yet
-SPEC-106 SPEC-113 a notice can be taken away before its time, and the next in line then has its turn	code	not built yet
 SPEC-106 a 1,000 ms press of ESC ends the program with status 0	code	: the keys did not lead to Settings
 SPEC-106 a 200 ms press of ESC goes back, and no notice shows on the way	code	: the keys did not lead to the place about
 SPEC-106 a 700 ms press of ESC shows and removes the notice and leaves the screen description otherwise unchanged	code	: the keys did not lead to the place about
-SPEC-106 a press of ESC let go within 500 ms is the key Esc, which goes back, and it acts when it is let go	code	not built yet
 SPEC-106 a press of ESC released within 500 ms is "back", and acts when it is released	code	expect screen = browser
 SPEC-107 SPEC-115 help over the browser has exactly the lines the rule gives from the key map	code	: the keys did not lead to the place browser
 SPEC-107 SPEC-115 help over the now-playing screen has the lines the rule gives, with or without the two `lists` rows the screen replaces	code	: the keys did not lead to the place playing
 SPEC-107 SPEC-115 help over the results of Search has exactly the lines the rule gives from the key map	code	: the keys did not lead to the place search-results
 SPEC-107 fn+H opens help over the place under it; Up and Down scroll it; fn+H, Enter or ESC closes it	code	expect screen = browser
-SPEC-107 for every place, the lines of help are exactly those the rule gives from docs/keymap.tsv, with the same words	code	not built yet
-SPEC-107 help for the now-playing screen: its own rows first, then the groups, with or without the two `lists` rows it replaces	code	not built yet
 SPEC-107 help in Settings has exactly the lines the rule gives, so none for TAB	code	: the keys did not lead to the place settings
-SPEC-107 help in Settings has no line for TAB, and help over a confirm panel none for TAB, Space, P or L	code	not built yet
 SPEC-107 help in Settings lists the screen's own rows and then the `screens` rows without TAB, which Settings switches off	code	expect screen = browser
 SPEC-107 help over a confirm panel has exactly the lines the rule gives, so none for TAB, Space, P or L	code	: the keys did not lead to the place confirm
 SPEC-107 help over a confirm panel lists its row, then the `lists` rows, then the `always` rows, and has no line for TAB, Space, P or L	code	expect screen = browser
@@ -356,30 +300,15 @@ SPEC-107 help over the empty screen has exactly the lines the rule gives from th
 SPEC-107 help over the filter panel has exactly the lines the rule gives [parts: filters]	code	: the keys did not lead to the place filter
 SPEC-107 help over the notice panel has its row, the `lists` rows and the `always` rows	code	: the keys did not lead to the place notice-panel
 SPEC-107 help over the pick-playlist, more-playlist and import panels has exactly the lines the rule gives [parts: playlists]	code	: the keys did not lead to the place pick-playlist
-SPEC-107 the groups come in the order screens, lists, always, each in the file's order	code	not built yet
-SPEC-107 where text is typed, help has the place's rows and the `always` rows and no others	code	not built yet
 SPEC-108 Print Screen shows MSG_SCREENSHOT_SAVED with the path of a file named sidplayzero_YYYYMMDD_HHMMSS_mmm.png in Pictures/Screenshots	code	expect screen = browser
 SPEC-108 Print Screen works with a panel open, and the picture has the panel [parts: screenshot]	code	: the keys did not lead to the place text
 SPEC-108 Print Screen writes a PNG of 320 by 170 named sidplayzero_YYYYMMDD_HHMMSS_mmm.png, with the same pixels as the simulator's own shot of that moment [parts: screenshot]	code	: the keys did not lead to the place browser
 SPEC-108 the notice MSG_SCREENSHOT_SAVED shows the path of the picture, in Pictures/Screenshots, which is created if needed [parts: screenshot]	code	: the keys did not lead to the place browser
 SPEC-108 with the screenshots folder made unwritable, Print Screen shows MSG_SCREENSHOT_FAILED	code	expect screen = browser
-SPEC-111 SPEC-107 the name of each key on the device is the one in the specification's table	code	not built yet
-SPEC-111 SPEC-260 in the key step every key is recorded with its code, the signs too, and a held ESC still leaves	code	not built yet
-SPEC-111 a key code that the tables do not name is ignored: Ctrl, Alt, sym, fn, Insert, F1 to F12	code	not built yet
-SPEC-111 each key code of the specification's table gives its key's name, once for each press	code	not built yet
-SPEC-111 the action of a key is the key map's for the place the keys go to at that moment	code	not built yet
-SPEC-113 MSG_TOO_HEAVY, which offers a key, shows for ten seconds, also after it has waited its turn	code	not built yet
 SPEC-113 SPEC-114 a download that finishes while a text prompt is open leaves the prompt and its text as they were, and is told by a notice	code	expect screen = browser
-SPEC-113 a notice raised when the last one has gone shows at once, for its own three seconds	code	not built yet
-SPEC-113 a notice shows at once and for three seconds of the clock	code	not built yet
 SPEC-113 a notice takes no keys: a key pressed while one shows has its usual effect	code	expect screen = browser
-SPEC-113 a notice with the identifier of one that waits takes that one's place in the line	code	not built yet
-SPEC-113 a notice with the identifier of the one showing takes its place at once and its time starts again	code	not built yet
-SPEC-113 at most five notices wait, and the one that has waited longest is dropped for a sixth	code	not built yet
 SPEC-113 five volume presses within a second leave one notice, with the last level	code	expect screen = browser
-SPEC-113 three different notices raised at once show one after another, in the order raised, three seconds each	code	not built yet
 SPEC-113 three different notices raised at once show one after another, three seconds of the clock each	code	expect screen = browser
-SPEC-113 whoever draws the notice is told each time the one showing changes	code	not built yet
 SPEC-114 SPEC-091 the prompt panel opens on a text setting, Enter accepts and ESC cancels, and the keys 4 to 8 are typed, not obeyed	code	expect screen = browser
 SPEC-114 SPEC-092 the confirm panel opens on "Stop", Enter is yes and ESC is no, and the keys 4 to 8, TAB, Space, P and L do nothing while it is open	code	expect screen = browser
 SPEC-114 SPEC-152 the notice panel opens on the first thing that would use the network, ESC cancels and Enter accepts, and the keys 4 to 8 do nothing while it is open	code	expect panel.id = notice-panel
@@ -388,18 +317,8 @@ SPEC-114 the panels of the part playlists open by their keys with their identifi
 SPEC-114 the text panel opens on "Notice", Enter or ESC closes it, and the keys 4 to 8 do nothing while it is open	code	expect screen = browser
 SPEC-114 while a text panel is open the keys 4 to 8 change nothing in the screen description	code	: the keys did not lead to the place text
 SPEC-115 SPEC-091 on every screen the action bar has the key map's label for each key whose part is built, and none for a key whose part is not	code	: the keys did not lead to the place browser
-SPEC-115 SPEC-092 with too-slow built, L is a key of every screen and of no panel [parts: too-slow]	code	not built yet
-SPEC-115 SPEC-095 SPEC-096 the keys of the browser and of now playing are there exactly when their parts are	code	not built yet
-SPEC-115 SPEC-095 with playlists built, the browser's keys 6 to 8 are Lists, Fav and Add [parts: playlists]	code	not built yet
-SPEC-115 SPEC-096 Right held on now playing skips ahead where the part skip is built, and is the next subtune, once, where it is not	code	not built yet
 SPEC-115 SPEC-104 SPEC-108 without their parts the brightness keys raise no notice and Print Screen saves no picture; with them, they do	code	: the keys did not lead to the place browser
-SPEC-115 SPEC-104 with brightness built, its two keys act in every place [parts: brightness]	code	not built yet
-SPEC-115 SPEC-107 help has a line for a key of a part exactly when that part is built	code	not built yet
-SPEC-115 SPEC-108 with screenshot built, Print Screen acts in every place [parts: screenshot]	code	not built yet
 SPEC-115 a key whose part is not built changes nothing and has no line in help; a key whose part is built has its line	code	: the keys did not lead to the place browser
-SPEC-115 a key whose part is not built does nothing and has no label; one whose part is built has both	code	not built yet
-SPEC-115 a part is built exactly when its build switch is on, and several joined by | when any of them is	code	not built yet
-SPEC-115 the keys of brightness, screenshot, too-slow and restart give their actions only when their parts are built	code	not built yet
 SPEC-110 with only a mouse and a touch screen in the list, the input set-up still creates no pointer	code	not built yet
 SPEC-110 against a made-up list with a mouse, a touch screen and two keyboards, the input set-up creates one keypad and nothing else	code	not built yet
 SPEC-110 SPEC-111 the CardputerZero's own keyboard is chosen before another device with letters, and the path in SIDPLAYZERO_KEYBOARD before both	code	not built yet
