@@ -6,6 +6,7 @@
 
 #include <cstdint>
 #include <functional>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -19,14 +20,15 @@
 namespace spz {
 
 // What "Fetch missing" needs of the fetcher of SPEC-141, which belongs to another part of `core`: one
-// tune fetched, and how it went.
-class TuneFetcher {
+// tune fetched, and how it went. (The player's own interface to the fetcher is TuneFetcher, in
+// spz/player_fetcher.h: two classes of one name would break the one-definition rule.)
+class PlaylistTuneFetcher {
 public:
     // Called on the UI thread when the fetch is over: "" if the tune is present now, else the failure's
     // message identifier by SPEC-069's table, "MSG_FETCH_NETWORK" for lack of network.
     using Done = std::function<void(const std::string& failure)>;
 
-    virtual ~TuneFetcher() = default;
+    virtual ~PlaylistTuneFetcher() = default;
     // Fetches the tune at an HVSC path as SPEC-141 does (requested from `url_files`, checked against the
     // listing, renamed into place, added to the index), as a file of "Fetch missing": on the fetch
     // worker, after whatever is in flight there, and after any tune that is to be played.
@@ -57,7 +59,10 @@ public:
     static constexpr std::uint64_t kRoomNeeded = 8 * 1024 * 1024;    // SPEC-141: free bytes before a request
 
     FetchMissing(Clock* clock, Files* files, const std::string& root, const EntryResolver* resolver,
-                 TuneFetcher* fetcher, NoticeGate* gate, FetchMissingListener* listener);
+                 PlaylistTuneFetcher* fetcher, NoticeGate* gate, FetchMissingListener* listener);
+    ~FetchMissing();
+    FetchMissing(const FetchMissing&) = delete;
+    FetchMissing& operator=(const FetchMissing&) = delete;
 
     // "Fetch missing" on a playlist's entries. Passes the notice gate first; then fetches the entries
     // that are absent, in their order, at most kMostInOneGo of them, each asked for only when the one
@@ -69,13 +74,29 @@ public:
     FetchMissingState state() const;
 
 private:
+    void go(const std::vector<Entry>& entries);   // once the gate is passed
+    void ask_next();
+    void file_done(const std::string& failure);
+    void finish(const std::string& message);
+
     Clock* clock_;
     Files* files_;
     std::string root_;
     const EntryResolver* resolver_;
-    TuneFetcher* fetcher_;
+    PlaylistTuneFetcher* fetcher_;
     NoticeGate* gate_;
     FetchMissingListener* listener_;
+
+    std::shared_ptr<bool> alive_;        // callbacks hold a weak copy: none runs once this is gone
+    std::vector<std::string> todo_;      // the HVSC paths of this go, in order
+    int absent_ = 0;                     // absent entries when the go began
+    int fetched_ = 0;
+    FetchMissingState state_;
+    bool waiting_for_gate_ = false;
+    bool in_flight_ = false;
+    bool stopping_ = false;
+    bool timer_set_ = false;
+    Clock::TimerId timer_ = 0;
 };
 
 }  // namespace spz

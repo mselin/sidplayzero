@@ -89,10 +89,25 @@ public:
     std::vector<Entry> queue(const std::string& name) const;
 
 private:
+    int index_of(const std::string& name) const;
+    // Whether a name is another playlist's, without regard to case, or is "Favourites".
+    bool is_taken(const std::string& name, int except) const;
+    // The file name SPEC-170 gives a name, with " 2", " 3" and so on added while it is taken.
+    std::string free_file_name(const std::string& name, int except);
+    // Writes the playlist at `index` to its file through SPEC-132's safe write, its paths corrected.
+    FileStatus save(std::size_t index);
+
     Files* files_;
     std::string folder_;
     const EntryResolver* resolver_;
     std::vector<Playlist> playlists_;
+    std::vector<std::string> file_names_;    // the file of each playlist, in the folder
 };
+
+namespace lists_files {
+// SPEC-132's safe write, for the files of the lists: the target's folder made, a temporary file beside
+// the target written and flushed, renamed over it, and the folder flushed.
+FileStatus write_safely(Files* files, const std::string& target, const Bytes& bytes);
+}  // namespace lists_files
 
 }  // namespace spz
