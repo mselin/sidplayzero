@@ -1,0 +1,8 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPEC-255 SPEC-090 SPEC-114 the import panel looks as the owner approved it on 26 November 2026
+# parts: detail mini modes shuffle restart skip voices bars notes rate too-slow brightness playlists import-more filters resume releases download-all
+# fixture: collections/85/C64Music C64Music
+# args: --backend fake
+key 6
+key 8
+shot panel_import

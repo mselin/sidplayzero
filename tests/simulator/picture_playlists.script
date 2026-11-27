@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPEC-255 SPEC-090 SPEC-114 the Playlists screen looks as the owner approved it on 26 November 2026
+# parts: detail mini modes shuffle restart skip voices bars notes rate too-slow brightness playlists import-more filters resume releases download-all
+# fixture: collections/85/C64Music C64Music
+# args: --backend fake
+key Down
+key Down
+key Enter
+key Enter
+key Enter
+key 7
+advance 3500
+key Esc
+key Esc
+key Esc
+key 6
+shot playlists

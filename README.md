@@ -10,15 +10,15 @@ normally the [High Voltage SID Collection](https://hvsc.c64.org) (HVSC), and pla
 **The app is written, and there is no release to install yet.** Every screen and feature of the design is
 built, and its tests pass on a desktop and in the simulator of the device's screen. What is left before a
 first release is the device itself: one sitting with the app on a CardputerZero, which checks what only
-the device can show (its keys, its sound, the speed of its two engines), and the screenshots for the app
-store.
+the device can show (its keys, its sound, the speed of its two engines).
 
 | Done | Not done yet |
 |---|---|
 | What the app has to do ([requirements](docs/requirements.md)) | The sitting on the device ([checklist](docs/device-checklist.md)) |
-| How it does it ([the design](docs/spec.md), reviewed independently) | The store's screenshots |
-| The tests of every item of the design, and the app, which passes them | A release |
+| How it does it ([the design](docs/spec.md), reviewed independently) | A release |
+| The tests of every item of the design, and the app, which passes them | |
 | Independent reviews of the code's quality and security, and their fixes | |
+| The screens' images, approved, and the store's screenshots chosen from them | |
 
 Everything below under "Using it" describes the app as its design has it. Until the sitting on the device,
 what it says about the device has been tried only in the simulator.
