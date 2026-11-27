@@ -1001,7 +1001,8 @@ Stepping a value with Left or Right stops at the first and last values; it does 
 - Level: simulator
 
 **SPEC-102 The HVSC screen.** The HVSC screen shows a status block and, under it, a list of things to do,
-chosen with Up, Down and Enter. The status block has: "HVSC #n", "HVSC, release not known" or "HVSC is not set up"; how many tunes HVSC
+chosen with Up, Down and Enter. The status block has: "HVSC #n", "HVSC #n, complete" when the collection holds that release complete
+(`hvsc_complete_release`, FIND-031), "HVSC, release not known" or "HVSC is not set up"; how many tunes HVSC
 lists and how many are on the device; the index's state; and while a job runs, its step, a bar, and its
 figures (SPEC-147). The list has, in this order, the rows that apply:
 
@@ -1326,6 +1327,7 @@ same form as the settings:
 | `current_path`, `current_subtune` | The player's current entry |
 | `queue_kind`, `queue_source`, `queue_place` | `folder`, `search` or `playlist`; the folder's path, the query or the playlist's name; and the place in the queue |
 | `notice_accepted` | `on` once the user has accepted SPEC-152's notice |
+| `hvsc_complete_release` | The release of HVSC the collection holds complete, after a complete download (SPEC-144); absent otherwise (FIND-031) |
 | `backlight_saved` | The brightness to restore, while the app has the screen off (SPEC-207) |
 
 It is written through SPEC-132 when any of these has changed and two seconds‡ have passed since the first
@@ -1527,7 +1529,8 @@ in:
    that `listing.old` names and the new song length database does not is removed, if its MD5 is still the
    one `listing.old` gives. Files the user put there, or changed, are never removed. From here on the job cannot be stopped: "Stop" has no label.
 8. Build the listing and the index again. Delete the archive, the staging folder, `listing.old` and the
-   marker. Raise the notice `MSG_DOWNLOAD_DONE`.
+   marker. Set `hvsc_complete_release` in `state.ini` to the release (FIND-031). Raise the notice
+   `MSG_DOWNLOAD_DONE`.
 
 A failure or a stop in steps 1 to 6 leaves the root exactly as it was, removes the staging folder and the
 marker, and raises `MSG_DOWNLOAD_FAILED`; a partial archive is kept for SPEC-147. A failure in step 7 or 8
@@ -1603,7 +1606,12 @@ server answers without honouring the range.
 `DOCUMENTS/hv_sids.txt`, a file of two lines that HVSC keeps for this purpose. The HVSC screen shows it as
 "HVSC #n". "Check for a newer release" requests that file from `url_files` and compares: a higher number
 adds the row "Update to #m" and raises `MSG_HVSC_NEWER`; otherwise `MSG_HVSC_NEWEST`; and if the file cannot
-be fetched or names no release, `MSG_CHECK_FAILED`. "Update" runs SPEC-140's steps 2 to 6 as a job. Afterwards, for present tunes:
+be fetched or names no release, `MSG_CHECK_FAILED`. "Update" runs SPEC-140's steps 2 to 6 as a job. When the collection holds the release it is set up with
+complete (`hvsc_complete_release`) and SPEC-145 allows the complete download at that moment, "Update" runs
+the complete download of SPEC-144 for the newer release instead, which brings the documents too and leaves
+the collection complete for it; when SPEC-145 does not allow it, "Update" runs steps 2 to 6 as above,
+`hvsc_complete_release` is removed, and the HVSC screen offers "Download everything" again whenever SPEC-145
+allows it (FIND-031). Afterwards, for present tunes:
 
 - a tune whose path the new listing no longer has, and whose MD5 it has at another path, is moved there;
 - a tune whose path and MD5 the new listing does not have stays where it is, as a tune of the user's own;
@@ -2315,6 +2323,7 @@ as they are taken (SPEC-260). The keys are those of SPEC-240's table and these:
 | `render_repeatable`, `render_hash_accurate`, `render_hash_light` | Whether ten seconds of the built-in tune rendered twice gave the same samples, and their SHA-256 for each engine |
 | `lengths_commando` | The first two lengths the listing gives for `/MUSICIANS/H/Hubbard_Rob/Commando.sid` |
 | `key_codes_wrong` | The keys whose codes differed from SPEC-111 in the key step, or `none` |
+| `key_answer` | Each answer of the key step as it is given: the name, then `right` or `wrong` (FIND-029) |
 | `memory_check_mib`, `unpacker`, `card_free_mib`, `download_everything_offered` | What SPEC-145's conditions found |
 | `backlight_writable`, `framebuffer`, `keyboard` | What the app was allowed to open |
 | `user_groups` | The groups of the user it ran as, without the group named after the user |
@@ -2644,14 +2653,18 @@ of which every line is kept. The script changes the request before each of the t
 | `engines` | Opens the self-test screen; measures the two engines (SPEC-072) and renders the built-in tune twice with each; writes the speed factors and the three `render_` keys |
 | `benchmark` | Opens the self-test screen while it fetches the benchmark set, if that is absent. Then it closes that screen and plays the set for 30 minutes on the app's ordinary screens, while the **key script** presses keys just as a user would, through the same code as real keys; then it builds the index again while a tune plays. It writes the keys of SPEC-240 that it produces, which are all but `start_ms`, `exit_ms` and `hvsc_setup_s`, and the `bench_` keys, and opens the self-test screen again |
 
-*The key step.* It asks for 67 keys, one at a time: the 61 names of SPEC-111's table, row by row from the
-top and from left to right within a row (so Esc first, the letters A to Z before the digits 0 to 9, and
-PrintScreen last), and then the six characters `/ . _ : ~ -` in that order. The screen's last line reads
-"Key n/67: NAME"; a character is named by itself. The first press of a key that SPEC-111 or SPEC-099 names
-answers the key asked for, and the step goes on to the next: the answer is right if its code is the one
-SPEC-111 gives for the name, or the one SPEC-099 gives for the character, and wrong otherwise. A code that
-neither names is ignored, as it is everywhere. After the 67th the step is done. `key_codes_wrong` holds
-the names asked for whose answers were wrong, in the order asked and with a space between them, or `none`.
+*The key step.* It asks only for what could differ on a device, 25 keys, one at a time (FIND-029): the 19
+names of SPEC-111's table that are pressed with `fn` (Up, Down, Left, Right, Home, End, PageUp, PageDown,
+Delete, PlayPause, Previous, Next, Mute, VolumeDown, VolumeUp, BrightnessDown, BrightnessUp, Help,
+PrintScreen, in that order), and then the six characters `/ . _ : ~ -`, which come from the `sym` layer
+(SPEC-099), in that order. The screen's last line reads "Key n/25: NAME"; a character is named by itself.
+The first press of a key that SPEC-111 or SPEC-099 names answers the key asked for, and the step goes on to
+the next: the answer is right if its code is the one SPEC-111 gives for the name, or the one SPEC-099 gives
+for the character, and wrong otherwise. A code that neither names is ignored, as it is everywhere. Each
+answer is written to `selftest.results` as it is given, as `key_answer = NAME right|wrong`; a key step that
+is started again begins at the first key with no answer, so leaving and starting the app again loses
+nothing. After the 25th the step is done. `key_codes_wrong` holds the names whose last answer was wrong, in
+the order asked and with a space between them, or `none`.
 
 The self-test screen is opened over the browser, by the test and not by a key, and closed by it or by ESC.
 It shows the step and its progress as lines of text and, when a step is done, "Done. Hold ESC to leave." It
@@ -2668,14 +2681,17 @@ the 30 minutes done, and the notice `MSG_SELFTEST` shows at its start.
 | 3 | App | Request `engines`: the tester starts the app and waits for "Done" | SPEC-072, SPEC-071 |
 | 4 | Tester | Request `none`. With an empty collection folder: Enter, Enter sets HVSC up; plays `Commando.sid`; says whether sound comes from the loudspeaker and whether the screen shows "Commando", "Rob Hubbard" and 3:55 | SPEC-140, SPEC-141, SPEC-046, SPEC-063, SPEC-070 |
 | 5 | Tester | If the HVSC screen offers "Download everything" and the tester chooses to: runs it to its end. The steps after this then measure a complete collection | SPEC-145, SPEC-144 |
-| 6 | Tester | Turns networking off; starts the app and leaves with a held ESC, five times; turns networking on | SPEC-200, SPEC-201 |
+| 6 | Tester | Turns networking off, which ends the SSH session; starts the app and leaves with a held ESC, five times; turns networking on, connects again and runs the script again, which carries on (FIND-030) | SPEC-200, SPEC-201 |
 | 7 | Tester | Volume keys: the level heard changes; brightness keys; headphones in and out twice | SPEC-076, SPEC-104, SPEC-078 |
 | 8 | App | Request `benchmark`: the tester starts the app and leaves the device alone for about 35 minutes | SPEC-242, SPEC-072, SPEC-112, SPEC-043, SPEC-161, SPEC-162 |
 | 9 | Tester | Request `none`. Leaves a tune playing for two minutes without touching the device, and says what the screen did | SPEC-207 |
 | 10 | Tester | Leaves the app: the launcher answers at once, its key sounds play, and its volume and the brightness are as they were | SPEC-201, REQ-127 |
 | 11 | Script | Removes the package; checks that the settings, playlists and collection are still there; gathers the results file (SPEC-258) and removes the request and the app's results | SPEC-229, SPEC-134 |
 
-The five starts of step 6 come after HVSC is set up and its caches exist, as REQ-055 means them. The key
+The five starts of step 6 come after HVSC is set up and its caches exist, as REQ-055 means them. The
+script keeps the step it has reached in `sitting.state` beside it: run again with the same package, it
+carries on from that step, so a step that ends the SSH session, or a sitting that stops, loses nothing;
+`--restart` begins again from step 1 (FIND-030). The key
 script, built into the app, repeats this round during step 8, starting one every 20 s‡: from the root, open
 and leave the two folders of SPEC-240; rest on three present tunes for the detail line; open Search, type
 "hub 1985" and then "galway ark", and go back; open and close Settings; and, in the first round and every

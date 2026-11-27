@@ -34,6 +34,40 @@ brief the project started from, so the findings below are raised against that br
 
 ## Closed
 
+### FIND-031 A complete collection was not kept complete by an update
+- Phase: 5, implementation (asked for by the owner after the device sitting, 27 November 2026)
+- Observed: the release HVSC is set up with is recorded (`hv_sids.txt`, "HVSC #85"), and "Download
+  everything" can be run whenever SPEC-145 allows it, but nothing remembered that the collection was
+  complete: "Update to #m" brought only the new documents, and the new release's tunes would have been
+  fetched one by one as they were played.
+- Concerns: REQ-084, REQ-089, SPEC-102, SPEC-131, SPEC-144, SPEC-148
+- Resolution: a complete download records `hvsc_complete_release` in `state.ini`; the HVSC screen says
+  "HVSC #n, complete"; and "Update" of a complete collection runs the complete download of the newer
+  release, when SPEC-145 allows it at that moment, so the collection stays complete. HVSC's smaller update
+  archives are not used: they carry scripts of moves and deletions, and the complete download's own move,
+  which removes only files the old release had and leaves the user's own, is already built and tested.
+- Status: closed. Asked for by the owner on 27 November 2026; this design is for the owner to confirm
+
+### FIND-030 The device sitting's offline starts needed the SSH session to survive turning networking off
+- Phase: 5, implementation (found at the device sitting, 27 November 2026)
+- Observed: step 6 has the tester turn networking off, which ends the SSH session the script runs in; the
+  tester had to keep the script alive with tmux.
+- Concerns: SPEC-260, `tools/device-run.sh`, `docs/device-checklist.md`
+- Resolution: the script keeps the step it has reached in `sitting.state` and carries on from there when it
+  is run again with the same package; `--restart` begins again. Step 6 says to reconnect and run it again.
+- Status: closed. Decided by the owner on 27 November 2026
+
+### FIND-029 The key step asked for every key, and could not be taken up again
+- Phase: 5, implementation (found at the device sitting, 27 November 2026)
+- Observed: the key step asked for all 67 keys of SPEC-111 and SPEC-099, one at a time, which was a pain,
+  and a second start of the step began again from the first key, so it was not done properly the second
+  time.
+- Concerns: SPEC-260, SPEC-241, SPEC-111
+- Resolution: the step asks only for what could differ on a device: the 19 keys pressed with `fn` and the
+  six characters of the `sym` layer, 25 in all. Each answer is written as it is given (`key_answer`), and a
+  step started again begins at the first key with no answer.
+- Status: closed. Decided by the owner on 27 November 2026
+
 ### FIND-028 HVSC writes some lengths with fewer than three decimals, and the listing refused HVSC
 - Phase: 5, implementation (found at the device sitting, 27 November 2026)
 - Observed: on the device, "Get HVSC" stopped with "HVSC could not be set up" at step 4. SPEC-142 had a
