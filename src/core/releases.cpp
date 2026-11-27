@@ -41,6 +41,18 @@ struct Releases::Impl {
 
     std::string changed_file() const { return p.cache + "/changed.txt"; }
 
+    // FIND-031, on the long worker: whether "Update" takes the complete download of `release` rather than
+    // the documents. The collection holds the release it is set up with complete, and SPEC-145 allows the
+    // complete download at this moment.
+    bool complete_download_wanted(const Listing& listing, int release) const {
+        if (!p.state || !p.download || !p.unpacker || !p.memory || p.download->unfinished()) return false;
+        const int complete = p.state->state().hvsc_complete_release;
+        if (complete <= 0 || release <= complete) return false;
+        const HvscStatus status = hvsc_status(p.files, listing, p.root);
+        if (status.release != complete) return false;
+        return download_offer(status, p.files, p.unpacker, p.memory, p.root).offered;
+    }
+
     void load() {
         if (loaded) return;
         loaded = true;
@@ -160,12 +172,25 @@ bool Releases::update() {
             // The listing in use, kept open: its mapping stays as it is when listing.bin is replaced.
             Listing old_listing;
             old_listing.open(p.files, p.cache + "/listing.bin", p.root + "/" + kSongLengths);
+            const int newer_release = s->newer;
+            if (s->complete_download_wanted(old_listing, newer_release)) {
+                // FIND-031: the collection is complete, and is kept complete by the newer release's archive.
+                p.ui->post([s, newer_release] {
+                    s->p.jobs->end();
+                    s->p.download->start(newer_release);
+                });
+                return;
+            }
             const SetupOutcome outcome = run_setup_steps(p.files, p.http, p.jobs, p.settings.get().url_files, p.root, p.cache);
             if (outcome.failed_step == 0) {
                 if (old_listing.is_open()) s->sort_out_tunes(old_listing);
                 s->newer = 0;
             }
-            p.ui->post([s, outcome] { tell_setup_outcome(outcome, s->p.jobs, s->p.notices, s->p.listener); });
+            p.ui->post([s, outcome] {
+                // FIND-031: only the documents came; the collection is no longer complete.
+                if (outcome.failed_step == 0 && s->p.state) s->p.state->set_hvsc_complete_release(0);
+                tell_setup_outcome(outcome, s->p.jobs, s->p.notices, s->p.listener);
+            });
         });
     });
     return true;

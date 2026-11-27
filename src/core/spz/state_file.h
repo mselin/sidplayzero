@@ -37,6 +37,8 @@ struct State {
     std::string queue_source;           // the folder's path, the query, or the playlist's name
     int queue_place = 0;                // the current entry's place in the queue, counted from 1; 0 for none
     bool notice_accepted = false;       // written as `on` once the user has accepted SPEC-152's notice
+    int hvsc_complete_release = 0;      // the release of HVSC the collection holds complete, after a complete
+                                        // download (SPEC-144, FIND-031); 0, and no line in the file, otherwise
     int backlight_saved = -1;           // the brightness to restore, in percent, while the app has the
                                         // screen off (SPEC-207); -1, and no line in the file, otherwise
 
@@ -45,7 +47,7 @@ struct State {
                current_path == other.current_path && current_subtune == other.current_subtune &&
                queue_kind == other.queue_kind && queue_source == other.queue_source &&
                queue_place == other.queue_place && notice_accepted == other.notice_accepted &&
-               backlight_saved == other.backlight_saved;
+               hvsc_complete_release == other.hvsc_complete_release && backlight_saved == other.backlight_saved;
     }
     bool operator!=(const State& other) const { return !(*this == other); }
 };
@@ -54,7 +56,8 @@ struct State {
 struct StateRead {
     State state;           // each key as the file gives it, or as a new State has it
     bool fault = false;    // as SettingsRead::fault; also a value that is not a number where one is needed, a
-                           // queue_kind that is not one of the three, a notice_accepted that is not on or off
+                           // queue_kind that is not one of the three, a notice_accepted that is not on or off, an
+                           // hvsc_complete_release that is not a release number
     bool used = true;      // false for a file that is not valid UTF-8 or is larger than 64 KiB
 };
 
@@ -89,6 +92,7 @@ public:
     void set_current(const std::string& path, int subtune);                       // "" and 0 for no entry
     void set_queue(const std::string& kind, const std::string& source, int place);
     void set_notice_accepted(bool accepted);
+    void set_hvsc_complete_release(int release);                                  // 0 removes it
     void set_backlight_saved(int percent);                                        // -1 clears it
 
     // Whether something has changed that the file does not hold yet.

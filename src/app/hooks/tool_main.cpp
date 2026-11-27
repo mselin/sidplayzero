@@ -12,13 +12,14 @@
 //   spz_tool setup --root DIR --cache DIR --url-files URL [--ca FILE]                      test_hvsc.py, SPEC-140
 //   spz_tool unpacker list ARCHIVE | unpacker unpack ARCHIVE INTO              test_hvsc.py, SPEC-007, SPEC-149
 //   spz_tool complete-download ...                                                         test_hvsc.py, SPEC-144
+//   spz_tool update ...                                                           test_hvsc.py, SPEC-148, FIND-031
 //   spz_tool volume get | set N | toggle-mute                                              test_play.py, SPEC-076
 //   spz_tool input-setup DEVICES                                                           test_keys.py, SPEC-110
 //   spz_tool audio-guard clean | allocate | lock                                      test_structure.py, SPEC-022
 //   spz_tool load-tunes [--cut] [--unchecked] FILE...                                 test_bad_tunes.py, SPEC-203
 //   spz_tool kept-files                                                                    test_keep.py, SPEC-133
 //
-// This file has the tool's frame and its small commands; setup and complete-download are in tool_hvsc.cpp,
+// This file has the tool's frame and its small commands; setup, complete-download and update are in tool_hvsc.cpp,
 // audio-guard and load-tunes in tool_sound.cpp, and what they share is declared in tool.h.
 #include <atomic>
 #include <chrono>
@@ -425,6 +426,7 @@ int dispatch(const std::string& command, const std::vector<std::string>& args) {
     if (command == "setup") return setup(args);
     if (command == "unpacker") return unpacker(args);
     if (command == "complete-download") return complete_download(args);
+    if (command == "update") return update(args);
     if (command == "volume") return volume(args);
     if (command == "input-setup") return input_setup(args);
     if (command == "audio-guard") return audio_guard(args);

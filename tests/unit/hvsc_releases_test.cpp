@@ -3,6 +3,8 @@
 // does with the tunes that are on the device. The reader of hv_sids.txt is tested with the set-up
 // (hvsc_setup_test.cpp), which needs it whether or not this part is built.
 #include <algorithm>
+#include <functional>
+#include <map>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -15,6 +17,7 @@
 #include "spz/hvsc_setup.h"
 #include "spz/listing.h"
 #include "spz/releases.h"
+#include "spz/state_file.h"
 #include "support.h"
 
 #if SPZ_PART_RELEASES
@@ -351,5 +354,228 @@ TEST_CASE("SPEC-148 SPEC-140 one job at a time: an update does not begin while a
     CHECK(u.http.calls == 0);
     CHECK(u.jobs.state().kind == spz::JobKind::Setup);
 }
+
+// --- FIND-031: "Update" of a complete collection ------------------------------------------------------
+
+#if SPZ_PART_DOWNLOAD_ALL
+
+namespace {
+
+struct PlayRecorder : spz::PlaySwitch {
+    Words log;
+    void playing_off() override { log.push_back("off"); }
+    void playing_on() override { log.push_back("on"); }
+};
+
+struct DownloadEvents : spz::DownloadListener {
+    Words events;     // "done", "failed 3"
+    void download_done() override { events.push_back("done"); }
+    void download_failed(int step) override { events.push_back("failed " + std::to_string(step)); }
+};
+
+// As Updating, and the collection holds release 84 complete (hvsc_complete_release = 84): every tune of it is
+// on the device, with one of the user's own beside them. The fake server has release 85's complete archive
+// too, which the fake Unpacker unpacks as the fixture collection of 85; the device has the memory and the
+// room SPEC-145 asks for.
+struct CompleteUpdating : Updating {
+    spz::fake::Unpacker unpacker;
+    spz::fake::Memory memory;
+    PlayRecorder play;
+    DownloadEvents downloaded;
+    spz::fake::Files state_files;                    // state.ini's writes are not among the jobs'
+    spz::fake::Executor quick;
+    spz::StateFile state{&state_files, &clock, &quick, temp.file("state/state.ini")};
+    std::string tree = temp.file("archive");
+    std::unique_ptr<spz::CompleteDownload> download;
+    std::map<std::string, spz::Bytes> expected;      // the collection complete for 85, and the user's tune
+
+    CompleteUpdating() {
+        write_file(root + "/" + kOwnTune, fixture("tunes/own_tune.sid"));
+        files.set_free_bytes(4096 * kMiB);
+        spz::test::copy_fixture_tree(collection(85), fs::path(tree) / "C64Music");
+        unpacker.tree = tree;
+        for (const auto& item : fs::recursive_directory_iterator(tree)) {
+            spz::ArchiveEntry entry;
+            entry.path = fs::relative(item.path(), tree).generic_string();
+            entry.is_folder = item.is_directory();
+            entry.size = item.is_regular_file() ? item.file_size() : 0;
+            unpacker.entries.push_back(entry);
+        }
+        spz::fake::HttpClient::Answer archive;
+        archive.body = bytes(std::string(3000, 'A'));
+        http.answer(archive_url(85), archive);
+        state.set_hvsc_complete_release(84);
+        expected = snapshot(spz::test::fixture_path(collection(85)));
+        expected[kOwnTune] = fixture("tunes/own_tune.sid");
+
+        spz::CompleteDownloadParts parts;
+        parts.files = &files;
+        parts.http = &http;
+        parts.unpacker = &unpacker;
+        parts.memory = &memory;
+        parts.long_worker = &long_worker;
+        parts.ui = &ui;
+        parts.gate = &gate;
+        parts.jobs = &jobs;
+        parts.notices = &notices;
+        parts.settings = &settings;
+        parts.root = root;
+        parts.cache = cache;
+        parts.play = &play;
+        parts.listener = &downloaded;
+        parts.state = &state;
+        download.reset(new spz::CompleteDownload(parts));
+        releases = make_complete();
+    }
+
+    // A Releases that knows of the state, the complete download and SPEC-145's seams, as the app makes it.
+    std::unique_ptr<spz::Releases> make_complete() {
+        spz::ReleasesParts parts;
+        parts.files = &files;
+        parts.http = &http;
+        parts.long_worker = &long_worker;
+        parts.ui = &ui;
+        parts.gate = &gate;
+        parts.jobs = &jobs;
+        parts.notices = &notices;
+        parts.settings = &settings;
+        parts.root = root;
+        parts.cache = cache;
+        parts.listener = &events;
+        parts.state = &state;
+        parts.download = download.get();
+        parts.unpacker = &unpacker;
+        parts.memory = &memory;
+        return std::unique_ptr<spz::Releases>(new spz::Releases(parts));
+    }
+
+    // "Check for a newer release" finds 85; then "Update to #85".
+    void check_and_update() {
+        releases->check();
+        run();
+        REQUIRE(releases->newer() == 85);
+        http.log.clear();
+        notices.raised.clear();
+        REQUIRE(releases->update());
+        CHECK(jobs.state().kind == spz::JobKind::Update);
+        run();
+    }
+
+    // Whether SPEC-145 allows the complete download now, as the HVSC screen asks it.
+    bool offered() {
+        spz::Listing now;
+        if (!now.open(&files, listing_file(), database())) return false;
+        return spz::download_offer(spz::hvsc_status(&files, now, root), &files, &unpacker, &memory, root).offered;
+    }
+};
+
+}  // namespace
+
+TEST_CASE("SPEC-148 SPEC-144 with the collection complete for 84 and SPEC-145 allowing it, Update to #85 runs the complete download of 85 and leaves the collection complete for 85 (FIND-031) [parts: releases download-all]") {
+    CompleteUpdating u;
+    REQUIRE(spz::read_release(read_file(u.root + "/DOCUMENTS/hv_sids.txt")) == 84);
+    u.check_and_update();
+
+    // The complete download of SPEC-144 for the newer release: its archive, and no document on its own.
+    CHECK(urls(u.http) == Words{archive_url(85)});
+    CHECK(u.unpacker.log.size() == 2);                         // listed, then unpacked
+    CHECK(u.notices.ids() == Words{"MSG_DOWNLOAD_DONE"});
+    CHECK(u.downloaded.events == Words{"done"});
+    CHECK(u.events.events.empty());                            // not the set-up's steps 2 to 6
+    CHECK(u.play.log == Words{"off", "on"});
+    CHECK_FALSE(u.jobs.running());
+
+    // Complete for 85: every file of 85, the documents too; release 84's own file gone; the user's file kept.
+    CHECK(snapshot(u.root) == u.expected);
+    CHECK_FALSE(exists(u.in_root(kOldName)));
+    CHECK(read_file(u.root + "/" + kOwnTune) == fixture("tunes/own_tune.sid"));
+    CHECK(spz::read_release(read_file(u.root + "/DOCUMENTS/hv_sids.txt")) == 85);
+    CHECK(u.state.state().hvsc_complete_release == 85);
+    spz::Listing now;
+    REQUIRE(now.open(&u.files, u.listing_file(), u.database()));
+    Words listed;
+    for (const spz::ListedTune& tune : now.tunes(0, 100)) listed.push_back(tune.path);
+    CHECK(listed == kTunes85);
+    // Every tune is release 85's own file: none is left to fetch again.
+    CHECK_FALSE(u.releases->fetch_again(kChanged));
+    CHECK(read_file(u.in_root(kChanged)) == fixture("tunes/changed_85.sid"));
+}
+
+TEST_CASE("SPEC-148 SPEC-145 with the collection complete for 84 but SPEC-145 not allowing the complete download, Update runs steps 2 to 6, hvsc_complete_release is removed, and Download everything is offered again once SPEC-145 allows it (FIND-031) [parts: releases download-all]") {
+    struct Condition {
+        const char* what;
+        std::function<void(CompleteUpdating*)> fail;
+        std::function<void(CompleteUpdating*)> mend;
+    };
+    const std::vector<Condition> conditions = {
+        {"449 MiB of memory and swap", [](CompleteUpdating* u) { u->memory.available = 249; },
+         [](CompleteUpdating* u) { u->memory.available = 250; }},
+        {"no 7z", [](CompleteUpdating* u) { u->unpacker.is_available = false; },
+         [](CompleteUpdating* u) { u->unpacker.is_available = true; }},
+        {"699 MiB free", [](CompleteUpdating* u) { u->files.set_free_bytes(699 * kMiB); },
+         [](CompleteUpdating* u) { u->files.set_free_bytes(700 * kMiB); }},
+    };
+    for (const Condition& condition : conditions) {
+        CAPTURE(condition.what);
+        CompleteUpdating u;
+        condition.fail(&u);
+        u.check_and_update();
+
+        CHECK(u.requested_sorted() == Updating::document_urls());
+        CHECK(u.unpacker.log.empty());
+        CHECK(u.notices.ids() == Words{"MSG_HVSC_READY"});
+        CHECK(u.events.events == Words{"ready 85"});
+        CHECK(u.downloaded.events.empty());
+        CHECK(spz::read_release(read_file(u.root + "/DOCUMENTS/hv_sids.txt")) == 85);
+        CHECK(u.state.state().hvsc_complete_release == 0);    // removed: only the documents are 85's
+        // As any update of the documents: release 84's tune at its new name, the user's tune kept.
+        CHECK(exists(u.in_root(kRenamed)));
+        CHECK(exists(u.root + "/" + kOwnTune));
+
+        CHECK_FALSE(u.offered());
+        condition.mend(&u);
+        CHECK(u.offered());                                    // "Download everything" again
+    }
+}
+
+TEST_CASE("SPEC-148 a collection not held complete, or held complete for another release than the one it is set up with, is updated by steps 2 to 6 even when SPEC-145 allows the complete download (FIND-031) [parts: releases download-all]") {
+    for (const int complete : {0, 83}) {
+        CAPTURE(complete);
+        CompleteUpdating u;
+        u.state.set_hvsc_complete_release(complete);
+        u.check_and_update();
+        CHECK(u.requested_sorted() == Updating::document_urls());
+        CHECK(u.unpacker.log.empty());
+        CHECK(u.notices.ids() == Words{"MSG_HVSC_READY"});
+        CHECK(u.state.state().hvsc_complete_release == 0);
+    }
+}
+
+TEST_CASE("SPEC-148 SPEC-144 the complete download that Update runs gives way to nothing else: a job already running stops Update, and a failed download leaves the collection complete for 84 (FIND-031) [parts: releases download-all]") {
+    {
+        CompleteUpdating u;
+        u.releases->check();
+        u.run();
+        REQUIRE(u.jobs.begin(spz::JobKind::Fetch));
+        CHECK_FALSE(u.releases->update());
+        u.run();
+        CHECK(u.jobs.state().kind == spz::JobKind::Fetch);
+        CHECK(u.state.state().hvsc_complete_release == 84);
+    }
+    {
+        CompleteUpdating u;
+        const auto before = snapshot(u.root);
+        u.unpacker.fail_after_files = 2;                       // 7z fails in step 5
+        u.check_and_update();
+        CHECK(urls(u.http) == Words{archive_url(85)});
+        CHECK(u.notices.ids() == Words{"MSG_DOWNLOAD_FAILED"});
+        CHECK(u.downloaded.events == Words{"failed 5"});
+        CHECK(snapshot(u.root) == before);
+        CHECK(u.state.state().hvsc_complete_release == 84);
+        CHECK_FALSE(u.jobs.running());
+    }
+}
+
+#endif  // SPZ_PART_DOWNLOAD_ALL
 
 #endif  // SPZ_PART_RELEASES

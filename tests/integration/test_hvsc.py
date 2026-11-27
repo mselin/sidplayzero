@@ -547,6 +547,29 @@ class RealCompleteDownload(SevenZipCase):
             self.assertNotIn("[Cookie:", server.log[0])
         self.assertEqual(tree(self.root), self.expected_tree(planted=False))
 
+    def test_update_of_a_complete_collection(self):
+        """SPEC-148 SPEC-144 SPEC-131 Update from a collection complete for 84 to 85, with a real 7z and the local server, runs the complete download of 85: the collection is complete for 85, 84's own files are gone and the planted file is kept (FIND-031) [parts: releases download-all]"""
+        self.set_up(84, tunes=True)
+        self.plant()
+        state = self.home / "state" / "state.ini"
+        state.parent.mkdir(parents=True)
+        state.write_text("notice_accepted = on\nhvsc_complete_release = 84\n", encoding="utf-8")
+        served = self.work / "served"
+        shutil.copytree(FIXTURES / "collections" / "85" / "C64Music" / "DOCUMENTS", served / "C64Music" / "DOCUMENTS")
+        with localserver.LocalServer(served, self.work) as server:
+            result = self.need(tool("update", "--root", self.root, "--cache", self.cache, "--state", state,
+                                    "--url-files", server.url("/C64Music"), "--ca", server.authority,
+                                    "--archive", self.good_archive(85)))
+            # The check asked for hv_sids.txt, and the update asked the server for no document on its own.
+            self.assertEqual([entry.split(" ")[1] for entry in server.log], ["/C64Music/DOCUMENTS/hv_sids.txt"])
+        self.assertEqual(result.get("newer"), "85", result.output)
+        self.assertEqual(result.get("result"), "done", result.output)
+        self.assertEqual(result.get("complete_release"), "85", result.output)
+        self.assertEqual(tree(self.root), self.expected_tree())
+        self.assertFalse((self.root / OLD_NAME).exists())
+        self.assertIn("hvsc_complete_release = 85\n", state.read_text(encoding="utf-8"))
+        self.check_clean()
+
 
 class UnsafeArchives(SevenZipCase):
     """SPEC-149: one archive for each trick, made here with the 7z program; each is refused by the real 7z

@@ -15,6 +15,7 @@
 #include "spz/listing.h"
 #include "spz/notice_gate.h"
 #include "spz/settings_file.h"
+#include "spz/state_file.h"
 #include "spz/types.h"
 
 namespace spz {
@@ -72,6 +73,9 @@ struct HvscSetupParts {
     std::string root;                    // the collection root, with no slash at its end; need not exist
     std::string cache;                   // the cache folder (SPEC-134)
     HvscListener* listener = nullptr;    // may be null
+    // A set-up brings HVSC's documents only, so a collection it sets up is not complete: on success it removes
+    // `hvsc_complete_release` (FIND-031). May be null.
+    StateFile* state = nullptr;
 };
 
 class HvscSetup {

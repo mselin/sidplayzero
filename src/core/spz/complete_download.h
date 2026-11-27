@@ -17,6 +17,7 @@
 #include "spz/job.h"
 #include "spz/notice_gate.h"
 #include "spz/settings_file.h"
+#include "spz/state_file.h"
 #include "spz/system.h"
 
 namespace spz {
@@ -127,6 +128,7 @@ struct CompleteDownloadParts {
     std::string cache;                     // listing.bin, install.state, listing.old and the archive are here
     PlaySwitch* play = nullptr;
     DownloadListener* listener = nullptr;  // may be null
+    StateFile* state = nullptr;            // may be null; step 8 sets hvsc_complete_release in it (FIND-031)
 };
 
 class CompleteDownload {
@@ -136,7 +138,9 @@ public:
     CompleteDownload(const CompleteDownload&) = delete;
     CompleteDownload& operator=(const CompleteDownload&) = delete;
 
-    // "Download everything". Step 1 is the notice gate, and the release HVSC is set up with. Then a job
+    // "Download everything". Step 1 is the notice gate, and the release: `release` if it is above 0, as
+    // when "Update" takes the complete download of the newer release (SPEC-148, FIND-031), else the one
+    // HVSC is set up with. Then a job
     // of kind Download on the long worker, which keeps the marker at the step it is in:
     //   2  SPEC-145's conditions again, and 700 MiB of room (MSG_NEED_ROOM); the player is switched off
     //   3  `url_archive` with {release} replaced, to the cache, resumable (download_resumable), limit 512 MiB
@@ -149,12 +153,13 @@ public:
     //      else is moved: it goes with the staging folder); each file listing.old names and the new song
     //      length file does not is removed if its MD5 is still listing.old's. No stopping from here on.
     //   8  the listing is built again; the archive, the staging folder, listing.old and the marker are
-    //      deleted; the notice MSG_DOWNLOAD_DONE
+    //      deleted; hvsc_complete_release is set in the state to the job's release (FIND-031), before
+    //      the listener is told; the notice MSG_DOWNLOAD_DONE
     // A failure or a stop in steps 2 to 6 leaves the root as it was, removes the staging folder and the
     // marker, keeps a partial archive, and raises MSG_DOWNLOAD_FAILED with "step". A failure in step 7
     // or 8 raises the same and keeps the marker, the staging folder and listing.old. Either way playing
     // is switched on again. Returns false, and does nothing, if a job is running already.
-    bool start();
+    bool start(int release = 0);
 
     // At start (SPEC-200), on the long worker, before anything reads the song length database. A marker
     // naming step 1 to 6: the staging folder and the marker are removed. A marker naming step 7 or 8:

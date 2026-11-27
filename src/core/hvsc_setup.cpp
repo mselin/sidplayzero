@@ -290,7 +290,11 @@ bool HvscSetup::start() {
         if (!p.jobs->begin(JobKind::Setup)) return;
         p.long_worker->post([p] {
             const SetupOutcome outcome = run_setup_steps(p.files, p.http, p.jobs, p.settings.get().url_files, p.root, p.cache);
-            p.ui->post([p, outcome] { tell_setup_outcome(outcome, p.jobs, p.notices, p.listener); });
+            p.ui->post([p, outcome] {
+                // FIND-031: what was just set up holds the documents only, whatever was marked before.
+                if (outcome.failed_step == 0 && p.state) p.state->set_hvsc_complete_release(0);
+                tell_setup_outcome(outcome, p.jobs, p.notices, p.listener);
+            });
         });
     });
     return true;

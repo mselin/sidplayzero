@@ -7,7 +7,10 @@ script's input. Tests of the test framework, not of the app.
 """
 
 import os
+import queue
 import re
+import shutil
+import signal
 import subprocess
 import tempfile
 import threading
@@ -21,7 +24,8 @@ STANDINS = ROOT / "tests" / "integration" / "standins"
 
 APP_RESULTS = {
     "none": "start_ms = 812\napp_version = 0.1.0\nexit_ms = 20\n",
-    "keys": "start_ms = 790\nkey_codes_wrong = none\nstep_done = keys\nexit_ms = 18\n",
+    "keys": ("start_ms = 790\nkey_answer = Up wrong\nkey_answer = Up right\nkey_answer = Down right\nkey_codes_wrong = none\n"
+             "step_done = keys\nexit_ms = 18\n"),
     "engines": "start_ms = 801\nspeed_factor_accurate = 1.90\nspeed_factor_light = 14.20\nstep_done = engines\nexit_ms = 19\n",
     "benchmark": "start_ms = 805\nunderrun_frames = 0\ncpu_percent = 41\nstep_done = benchmark\nexit_ms = 21\n",
 }
@@ -36,6 +40,10 @@ class DeviceScript(unittest.TestCase):
         self.state = self.home / ".local" / "state" / "sidplayzero"
         self.log = self.work / "sudo.log"
         self.stop_app = threading.Event()
+        # The script keeps sitting.state beside itself (FIND-030): each test runs a copy of its own.
+        self.script = self.work / "device-run.sh"
+        shutil.copyfile(SCRIPT, self.script)
+        self.sitting_state = self.work / "sitting.state"
 
     def tearDown(self):
         self.stop_app.set()
@@ -64,7 +72,7 @@ class DeviceScript(unittest.TestCase):
         threading.Thread(target=run, daemon=True).start()
 
     def run_script(self, arguments, answers="", **env):
-        return subprocess.run(["bash", str(SCRIPT), *arguments], cwd=self.work, env=self.environment(**env), input=answers,
+        return subprocess.run(["bash", str(self.script), *arguments], cwd=self.work, env=self.environment(**env), input=answers,
                               text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=120)
 
     def results_file(self, pattern):
@@ -147,11 +155,87 @@ class DeviceScript(unittest.TestCase):
         for name in names:
             self.assertRegex(results, rf"(?m)^check_{name} = \S", name)
         self.assertIn("check_brightness_keys = the app says it may not", results)
-        self.assertRegex(results, r"(?m)^start_ms = 790 801( 812)* 805$")   # every start, in order
+        self.assertRegex(results, r"(?m)^start_ms = 790 801( 812)* 805( 812)?$")   # every start, in order; step 9 starts it once more
         self.assertIn("speed_factor_accurate = 1.90", results)
         self.assertIn("user_files_kept_after_removal = yes", results)
         self.assertIn("package_removed_cleanly = yes", results)
         self.assertIn("checks_not_in_order = 0", results)
+        # Of the key step's answers, the last of each key (FIND-029).
+        self.assertIn("key_answer = Up right", results)
+        self.assertIn("key_answer = Down right", results)
+        self.assertNotIn("key_answer = Up wrong", results)
+        self.assertFalse(self.sitting_state.exists(), "sitting.state was left behind by a sitting that is done")
+
+    def run_until_step_6_then_drop(self, answers):
+        """Runs the sitting, giving `answers`, until it gives step 6's instruction; then ends it as a dropped SSH
+        session would, with a hang-up to its whole process group. Gives what it printed."""
+        process = subprocess.Popen(["bash", str(self.script), "sidplayzero_0.1.0-1_arm64.deb"], cwd=self.work,
+                                   env=self.environment(), stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                   stderr=subprocess.STDOUT, text=True, start_new_session=True)
+        lines = queue.Queue()
+        threading.Thread(target=lambda: [lines.put(line) for line in process.stdout], daemon=True).start()
+        process.stdin.write(answers)
+        process.stdin.flush()
+        printed = ""
+        deadline = time.monotonic() + 60
+        try:
+            while "Step 6." not in printed:
+                left = deadline - time.monotonic()
+                self.assertGreater(left, 0, f"the script did not reach step 6:\n{printed}")
+                try:
+                    printed += lines.get(timeout=left)
+                except queue.Empty:
+                    pass
+        finally:
+            os.killpg(process.pid, signal.SIGHUP)
+            process.wait(timeout=10)
+            process.stdin.close()
+        return printed
+
+    def test_sitting_carried_on(self):
+        """TF-080 SPEC-260 a sitting whose session ends at step 6 is carried on by running the script again: no step or answer is repeated, and the results file is complete"""
+        self.play_the_app()
+        (self.home / ".config" / "sidplayzero").mkdir(parents=True)
+        first = self.run_until_step_6_then_drop("\n".join(["yes", "yes", "", "yes", "yes", "not offered"]) + "\n")
+        self.assertIn("ends this SSH session", first)
+        self.assertTrue(self.sitting_state.exists(), "the script kept no sitting.state beside itself")
+        self.assertIn("step = 6", self.sitting_state.read_text())
+
+        answers = "\n".join(["", "yes", "the app says it may not", "yes", "stayed on", "yes", "yes", "yes", "yes"]) + "\n"
+        done = self.run_script(["sidplayzero_0.1.0-1_arm64.deb"], answers=answers)
+        self.assertEqual(done.returncode, 0, done.stdout)
+        self.assertIn("Carrying on the sitting from step 6", done.stdout)
+        for earlier in ("Step 2.", "Step 3.", "Step 4.", "Step 5."):
+            self.assertNotIn(earlier, done.stdout, "a step done before the session ended was given again")
+        results = self.results_file("sidplayzero-device-2*.txt")
+        names = re.findall(r"(?m)^\| `([a-z_]+)` \|", (ROOT / "docs" / "device-checklist.md").read_text())
+        self.assertEqual(len(names), 13)
+        for name in names:
+            self.assertEqual(len(re.findall(rf"(?m)^check_{name} = \S", results)), 1, f"check_{name}:\n{results}")
+        self.assertEqual(len(re.findall(r"(?m)^package_files = ", results)), 1)
+        self.assertIn("check_download_everything = not offered", results)
+        self.assertIn("check_brightness_keys = the app says it may not", results)
+        self.assertRegex(results, r"(?m)^start_ms = 790 801( 812)* 805( 812)?$")
+        self.assertEqual(len(re.findall(r"(?m)^key_answer = Up ", results)), 1)
+        self.assertIn("checks_passed = 3", results)
+        self.assertIn("checks_not_in_order = 0", results)
+        self.assertIn("package_removed_cleanly = yes", results)
+        self.assertEqual(self.log.read_text().count("  install\n"), 1, "the package was installed again")
+        self.assertFalse(self.sitting_state.exists())
+
+    def test_sitting_restart(self):
+        """TF-080 SPEC-260 --restart begins the sitting again from step 1, whatever sitting.state holds"""
+        self.play_the_app()
+        self.run_until_step_6_then_drop("\n".join(["yes", "yes", "", "yes", "yes", "not offered"]) + "\n")
+        answers = "\n".join(["no", "yes", "", "yes", "yes", "not offered", "", "yes", "yes", "yes",
+                             "stayed on", "yes", "yes", "yes", "yes"]) + "\n"
+        done = self.run_script(["--restart", "sidplayzero_0.1.0-1_arm64.deb"], answers=answers)
+        self.assertEqual(done.returncode, 0, done.stdout)
+        self.assertNotIn("Carrying on", done.stdout)
+        self.assertIn("Step 2.", done.stdout)
+        results = self.results_file("sidplayzero-device-2*.txt")
+        self.assertIn("check_launcher_shows_app = no", results)
+        self.assertEqual(self.log.read_text().count("  install\n"), 2)
 
     def test_checklist_and_script_agree(self):
         """TF-080 SPEC-260 every question the script asks is a line of the checklist, and the other way round"""

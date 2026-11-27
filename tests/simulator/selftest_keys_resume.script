@@ -1,0 +1,72 @@
+# SPEC-260 SPEC-241 each answer of the key step is written as it is given, and a key step started again begins at the first key with no answer (FIND-029)
+# fakes: fakes/selftest_keys
+# args: --backend fake --seed 1
+expect screen = selftest
+expect place = key-step
+expect text contains "Key 1/25: Up"
+key Up
+# Down is asked for, and another key is pressed instead
+expect text contains "Key 2/25: Down"
+key Up
+expect text contains "Key 3/25: Left"
+key Left
+expect text contains "Key 4/25: Right"
+expect-file .local/state/sidplayzero/selftest.results contains "key_answer = Up right"
+expect-file .local/state/sidplayzero/selftest.results contains "key_answer = Down wrong"
+expect-file .local/state/sidplayzero/selftest.results contains "key_answer = Left right"
+# leave with a held ESC before the step is done, and start again: it carries on at the fourth key
+hold Esc 1000
+restart
+expect screen = selftest
+expect place = key-step
+expect text contains "Answered: 3, wrong: 1"
+expect text contains "Key 4/25: Right"
+key Right
+expect text contains "Key 5/25: Home"
+key Home
+expect text contains "Key 6/25: End"
+key End
+expect text contains "Key 7/25: PageUp"
+key PageUp
+expect text contains "Key 8/25: PageDown"
+key PageDown
+expect text contains "Key 9/25: Delete"
+key Delete
+expect text contains "Key 10/25: PlayPause"
+key PlayPause
+expect text contains "Key 11/25: Previous"
+key Previous
+expect text contains "Key 12/25: Next"
+key Next
+expect text contains "Key 13/25: Mute"
+key Mute
+expect text contains "Key 14/25: VolumeDown"
+key VolumeDown
+expect text contains "Key 15/25: VolumeUp"
+key VolumeUp
+expect text contains "Key 16/25: BrightnessDown"
+key BrightnessDown
+expect text contains "Key 17/25: BrightnessUp"
+key BrightnessUp
+expect text contains "Key 18/25: Help"
+key Help
+expect text contains "Key 19/25: PrintScreen"
+key PrintScreen
+expect place = key-step
+expect text contains "Key 20/25: /"
+type /
+expect text contains "Key 21/25: ."
+type .
+expect text contains "Key 22/25: _"
+type _
+expect text contains "Key 23/25: :"
+type :
+expect text contains "Key 24/25: ~"
+type ~
+expect text contains "Key 25/25: -"
+type -
+expect text contains "Done. Hold ESC to leave."
+expect screen = selftest
+expect-file .local/state/sidplayzero/selftest.results contains "key_codes_wrong = Down"
+expect-file .local/state/sidplayzero/selftest.results contains "step_done = keys"
+quit
