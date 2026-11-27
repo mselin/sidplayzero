@@ -6,13 +6,23 @@
   "store": {
     "summary": "Browse and play Commodore 64 SID music from HVSC, with the sidplayfp engine",
     "description": "SidPlayZero plays the music of the Commodore 64 on the CardputerZero. It browses a collection of SID tunes by folder, searches it by title, author and year, keeps playlists and favourites, and plays the tunes with the sidplayfp engine, all from the device's own keys.\n\nThe app contains no music. The High Voltage SID Collection (HVSC) is a free collection of more than 60,000 SID tunes, kept at hvsc.c64.org; the tunes are the copyright of their authors. SidPlayZero can set HVSC up on the device when you ask it to, after showing HVSC's own notice, and then fetches a tune from HVSC's site the first time you play it. It also plays any folder of .sid files you copy to the device yourself, with no network at all.\n\nSidPlayZero is free software under the GNU General Public License, version 3 or later.",
-    "categories": ["Media"],
+    "categories": [
+      "Media"
+    ],
     "license": "GPL-3.0-or-later",
     "source_repo": "https://github.com/mselin/sidplayzero",
-    "author": { "display_name": "The SidPlayZero authors" },
+    "author": {
+      "display_name": "The SidPlayZero authors"
+    },
     "share_code": "SIDZ",
     "icon": "packaging/icons/store.png",
-    "screenshots": [],
+    "screenshots": [
+      "packaging/store/browser_folder.png",
+      "packaging/store/playing.png",
+      "packaging/store/search.png",
+      "packaging/store/playlist.png",
+      "packaging/store/hvsc.png"
+    ],
     "permissions": {
       "camera": false,
       "microphone": false,
