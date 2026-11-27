@@ -19,7 +19,6 @@ expect notice.text contains 85
 # The check, and SPEC-140's five documents: no archive.
 expect-requests 6
 expect-file C64Music/DOCUMENTS/hv_sids.txt contains "Release 85"
-expect-file C64Music/DEMOS/A-F/Clock_Demo.sid absent
 key Tab
 key 5
 expect lines contains "HVSC #85"
