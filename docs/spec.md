@@ -1473,7 +1473,8 @@ A fetch-ahead counts towards the six requests a minute, and one beyond the limit
 
 **SPEC-142 The listing.** HVSC's song length database is a text file with CRLF or LF line endings: a first
 line `[Database]`, then for each tune a line starting `; ` that holds its HVSC path, and a line of the form
-`MD5=length length …` with 32 hexadecimal digits and one length for each subtune, each `m:ss` or `m:ss.SSS`.
+`MD5=length length …` with 32 hexadecimal digits and one length for each subtune, each `m:ss`, or `m:ss` and
+a point with one to three digits of a second (`3:55.594`, `0:03.5`, `0:02.70`; FIND-028).
 The app's own reader, on the long worker, turns it into `listing.bin` in the cache: every path with its MD5
 and all its lengths in milliseconds, in the order of SPEC-042, with a table of where each folder starts and a
 table sorted by MD5. A path that is not an HVSC path (SPEC-154), a line that fits neither form, and an MD5 line with no path
@@ -2410,7 +2411,7 @@ different and renders the same every time. The set has:
 - the bad tunes of SPEC-203;
 - a song length database, a STIL file, an `HVSC.txt`, a `BUGlist.txt` and an `hv_sids.txt` for them, written
   in HVSC's forms as observed in release 85: CRLF line endings; `[Database]`, `; /path` and `md5=lengths`
-  lines with lengths in both `m:ss` and `m:ss.SSS`; STIL in Latin-1; `HVSC.txt` with "Release 85" on its
+  lines with lengths as `m:ss` and with one and three digits after the point (FIND-028); STIL in Latin-1; `HVSC.txt` with "Release 85" on its
   fifth line after leading spaces; and `hv_sids.txt` as the two lines `# stub for old updaters` and
   `Release 85`;
 - small collections laid out like HVSC, and the same for a release 84 with one tune moved and one changed;

@@ -38,7 +38,7 @@ const std::size_t kListingFileLimit = 64u * 1024 * 1024;
 //   - The first line may be "[Database]". A line "; PATH" names a tune; PATH must be an HVSC path, else the
 //     line is skipped and counted, and so is nothing else on its account: the MD5 line after it is passed
 //     over without being counted again. A line "MD5=LENGTH LENGTH ..." gives the lengths of the path before
-//     it, each m:ss or m:ss.SSS (ss at most 59); an MD5 line with no path before it is skipped and counted.
+//     it, each m:ss, or m:ss with a point and one to three digits (ss at most 59; FIND-028); an MD5 line with no path before it is skipped and counted.
 //     Any other line is skipped and counted. A path given twice keeps its first lengths.
 //   - Refused when lines skipped * 100 > lines read, or when no tune is found. A refused database writes
 //     nothing and leaves an existing listing file as it was (SPEC-140 checks a download this way before it

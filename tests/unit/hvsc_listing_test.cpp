@@ -179,6 +179,28 @@ TEST_CASE("SPEC-142 lengths are read as m:ss and as m:ss.SSS, one for each subtu
     CHECK(tune.lengths == std::vector<Millis>{2000});
 }
 
+TEST_CASE("SPEC-142 FIND-028 a length may have one or two digits after the point, as HVSC writes 0:03.5 and 0:02.70") {
+    Case c("[Database]\r\n" + tune_lines("/LENGTHS/Short.sid", digits(1), "0:03.5 0:02.70 0:00.05 1:01.288 0:06"));
+    const ListingBuild built = c.build();
+    REQUIRE(built.ok);
+    CHECK(built.tunes == 1);
+    CHECK(built.lines_skipped == 0);
+    Listing listing;
+    REQUIRE(c.open(&listing));
+    ListedTune tune;
+    REQUIRE(listing.by_path("/LENGTHS/Short.sid", &tune));
+    CHECK(tune.lengths == std::vector<Millis>{3500, 2700, 50, 61288, 6000});
+}
+
+TEST_CASE("SPEC-142 FIND-028 a point with no digit after it, or with four, is not a length") {
+    for (const char* wrong : {"0:03.", "0:03.5000"}) {
+        Case c("[Database]\r\n" + tune_lines("/LENGTHS/Wrong.sid", digits(1), wrong));
+        const ListingBuild built = c.build();
+        CHECK(built.tunes == 0);
+        CHECK(built.lines_skipped == 1);
+    }
+}
+
 TEST_CASE("SPEC-142 a folder of the listing gives the folders and the tunes HVSC has there, each in order") {
     Case c(fixture_database_text());
     REQUIRE(c.build().ok);
