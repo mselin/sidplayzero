@@ -46,7 +46,7 @@ brief the project started from, so the findings below are raised against that br
   release, when SPEC-145 allows it at that moment, so the collection stays complete. HVSC's smaller update
   archives are not used: they carry scripts of moves and deletions, and the complete download's own move,
   which removes only files the old release had and leaves the user's own, is already built and tested.
-- Status: closed. Asked for by the owner on 27 November 2026; this design is for the owner to confirm
+- Status: closed. Asked for by the owner, and the design confirmed by the owner, on 27 November 2026
 
 ### FIND-030 The device sitting's offline starts needed the SSH session to survive turning networking off
 - Phase: 5, implementation (found at the device sitting, 27 November 2026)
