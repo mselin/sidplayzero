@@ -22,6 +22,12 @@ must hold and one that is built to fail, and removes the package again. About tw
 
 `./device-run.sh PACKAGE.deb`. The answer to each question is recorded under the name in the first column.
 
+The script keeps the step it has reached, and the answers given, in `sitting.state` beside it. Run again
+with the same package, it carries on from that step and does not ask again what was answered; so a step
+that ends the SSH session (step 6), or a sitting that stops for any other reason, loses nothing.
+`./device-run.sh --restart PACKAGE.deb` begins again from step 1. The key step, too, carries on at the
+first key with no answer when SidPlayZero is started again.
+
 | Name | Step | What the tester does, or is asked |
 |---|---|---|
 | | 1 | Nothing: the script installs the package |
@@ -33,7 +39,7 @@ must hold and one that is built to fail, and removes the package again. About tw
 | `sound_from_loudspeaker` | 4 | Does sound come from the loudspeaker? |
 | `commando_shown` | 4 | Does the screen show Commando, Rob Hubbard and 3:55? |
 | `download_everything` | 5 | On the HVSC screen: is "Download everything" offered? If it is and you want to, run it to its end |
-| | 6 | Turn networking off. Start SidPlayZero and leave it with a held ESC, five times. Turn networking on |
+| | 6 | Turn networking off, which ends the SSH session and the script with it. Start SidPlayZero and leave it with a held ESC, five times. Turn networking on, connect again and run the script again just as before: it carries on |
 | `volume_keys` | 7 | While a tune plays: do `fn`+S and `fn`+D change the level you hear, and `fn`+A mute it? |
 | `brightness_keys` | 7 | Do `fn`+U and `fn`+I change the screen's brightness? |
 | `headphones` | 7 | Plug headphones in and out twice. Does the tune keep playing, with gaps under a second? |

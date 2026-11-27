@@ -6,8 +6,9 @@
 // there, every measurement is appended to `selftest.results` beside it as it is taken (Metrics::on_taken),
 // and the step asked for runs at this start:
 //
-//   keys       the self-test screen, at the place `key-step`: 67 keys asked for in turn, each answer
-//              compared with SPEC-111 and SPEC-099; `key_codes_wrong`.
+//   keys       the self-test screen, at the place `key-step`: 25 keys asked for in turn, each answer
+//              compared with SPEC-111 and SPEC-099 and written as `key_answer` as it is given; a step
+//              started again begins at the first key with no answer (FIND-029); `key_codes_wrong`.
 //   engines    the self-test screen; SPEC-072's measurement of the two engines, and the built-in tune
 //              rendered twice with each: the speed factors and the three `render_` keys.
 //   benchmark  the set of SPEC-242 fetched (on the self-test screen) if it is absent; then played round
@@ -39,19 +40,21 @@ namespace spz::app {
 
 namespace {
 
-// SPEC-260's key step: SPEC-111's names row by row, left to right, then six characters.
+// SPEC-260's key step (FIND-029): the 19 names of SPEC-111's table pressed with fn, then the six characters
+// of the sym layer (SPEC-099).
 std::vector<std::string> asked_keys() {
-    std::vector<std::string> keys = {"Esc", "Tab", "Enter", "Backspace", "Space"};
-    for (char c = 'A'; c <= 'Z'; ++c) keys.push_back(std::string(1, c));
-    for (char c = '0'; c <= '9'; ++c) keys.push_back(std::string(1, c));
-    for (const char* name : {"Shift", "Up", "Down", "Left", "Right", "Home", "End", "PageUp", "PageDown", "Delete",
-                             "PlayPause", "Previous", "Next", "Mute", "VolumeDown", "VolumeUp", "BrightnessDown",
-                             "BrightnessUp", "Help", "PrintScreen"}) {
+    std::vector<std::string> keys;
+    for (const char* name : {"Up", "Down", "Left", "Right", "Home", "End", "PageUp", "PageDown", "Delete", "PlayPause",
+                             "Previous", "Next", "Mute", "VolumeDown", "VolumeUp", "BrightnessDown", "BrightnessUp",
+                             "Help", "PrintScreen"}) {
         keys.push_back(name);
     }
     for (const char* sign : {"/", ".", "_", ":", "~", "-"}) keys.push_back(sign);
     return keys;
 }
+
+const char kKeyAnswer[] = "key_answer";
+const std::size_t kResultsLimit = 64 * 1024 * 1024;
 
 // Whether `code` is the right answer for the key asked for: the code SPEC-111 gives its name, or for one of
 // the six characters the code SPEC-099 gives it.
@@ -146,33 +149,74 @@ void Composition::SelfTest::open_screen() {
 void Composition::SelfTest::key_lines() {
     std::vector<std::string> lines = {"Key step: press each key the screen asks for.",
                                       "A held ESC leaves at any time."};
-    lines.push_back("Answered: " + std::to_string(next_key) + ", wrong: " + std::to_string(wrong.size()));
+    lines.push_back("Answered: " + std::to_string(answers.size()) + ", wrong: " + std::to_string(wrong.size()));
     lines.push_back("Key " + std::to_string(next_key + 1) + "/" + std::to_string(asked.size()) + ": " + asked[next_key]);
     say(lines);
 }
 
-void Composition::SelfTest::start_keys() {
-    asked = asked_keys();
-    next_key = 0;
-    wrong.clear();
-    key_step = true;
-    open_screen();
-    key_lines();
+// The answers given so far: the `key_answer` lines of the results file, the last of each name counting.
+void Composition::SelfTest::read_answers() {
+    answers.clear();
+    Bytes bytes;
+    if (parts->seams_.files->read(results, kResultsLimit, &bytes) != FileStatus::Ok) return;
+    const std::string text(bytes.begin(), bytes.end());
+    std::size_t at = 0;
+    while (at < text.size()) {
+        std::size_t end = text.find('\n', at);
+        if (end == std::string::npos) end = text.size();
+        const std::string line = text.substr(at, end - at);
+        at = end + 1;
+        const std::size_t equals = line.find('=');
+        if (equals == std::string::npos) continue;
+        if (text::trim(line.substr(0, equals), text::kLineSpaces) != kKeyAnswer) continue;
+        const std::string value = text::trim(line.substr(equals + 1), text::kLineSpaces);
+        const std::size_t space = value.rfind(' ');
+        if (space == std::string::npos) continue;
+        const std::string name = value.substr(0, space), verdict = value.substr(space + 1);
+        if (std::find(asked.begin(), asked.end(), name) == asked.end()) continue;
+        if (verdict == "right") answers[name] = true;
+        else if (verdict == "wrong") answers[name] = false;
+    }
 }
 
-void Composition::SelfTest::record_key(const KeyEvent& event) {
-    if (!key_step || next_key >= asked.size()) return;
-    if (!right_code(asked[next_key], event.code)) wrong.push_back(asked[next_key]);
-    ++next_key;
-    if (next_key < asked.size()) {
-        key_lines();
-        return;
+// Goes on to the first key with no answer, and gathers the names whose last answer was wrong, in the order
+// asked. False when every key has an answer.
+bool Composition::SelfTest::next_unanswered() {
+    wrong.clear();
+    for (const std::string& name : asked) {
+        const auto found = answers.find(name);
+        if (found != answers.end() && !found->second) wrong.push_back(name);
     }
+    next_key = 0;
+    while (next_key < asked.size() && answers.count(asked[next_key])) ++next_key;
+    return next_key < asked.size();
+}
+
+void Composition::SelfTest::keys_done() {
     std::string value;
     for (const std::string& name : wrong) value += (value.empty() ? "" : " ") + name;
     if (value.empty()) value = "none";
     parts->metrics_.set("key_codes_wrong", value);
     done("keys", {"Key step: " + std::to_string(asked.size()) + " keys asked for.", "Wrong: " + value});
+}
+
+void Composition::SelfTest::start_keys() {
+    asked = asked_keys();
+    read_answers();
+    key_step = true;
+    open_screen();
+    if (next_unanswered()) key_lines();
+    else keys_done();
+}
+
+void Composition::SelfTest::record_key(const KeyEvent& event) {
+    if (!key_step || next_key >= asked.size()) return;
+    const std::string& name = asked[next_key];
+    const bool right = right_code(name, event.code);
+    answers[name] = right;
+    parts->metrics_.set(kKeyAnswer, name + (right ? " right" : " wrong"));
+    if (next_unanswered()) key_lines();
+    else keys_done();
 }
 
 void Composition::SelfTest::start_engines() {

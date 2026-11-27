@@ -54,6 +54,7 @@ const std::vector<MetricRow>& metric_table() {
     {"render_hash_light", MetricForm::Text, MetricWhen::WhenTaken},
     {"lengths_commando", MetricForm::Text, MetricWhen::DeviceOnly},
     {"key_codes_wrong", MetricForm::Text, MetricWhen::WhenTaken},
+    {"key_answer", MetricForm::Text, MetricWhen::WhenTaken},
     {"memory_check_mib", MetricForm::Number, MetricWhen::EveryRun},
     {"unpacker", MetricForm::YesNo, MetricWhen::EveryRun},
     {"card_free_mib", MetricForm::Number, MetricWhen::EveryRun},

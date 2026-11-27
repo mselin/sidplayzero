@@ -3,85 +3,58 @@
 # args: --backend fake --seed 1
 expect screen = selftest
 expect place = key-step
-expect text contains "Key 1/67: Esc"
-key Esc
-expect text contains "Key 2/67: Tab"
-key Tab
-expect text contains "Key 3/67: Enter"
-key Enter
-key Backspace
-key Space
-expect text contains "Key 6/67: A"
-key A
-key B
-key C
-key D
-key E
-key F
-key G
-key H
-key I
-key J
-key K
-key L
-key M
-key N
-key O
-key P
-key Q
-key R
-key S
-key T
-key U
-key V
-key W
-key X
-key Y
-key Z
-expect text contains "Key 32/67: 0"
-key 0
-key 1
-key 2
-key 3
-key 4
-key 5
-key 6
-key 7
-key 8
-key 9
-key Shift
+expect text contains "Key 1/25: Up"
 key Up
+expect text contains "Key 2/25: Down"
 key Down
+expect text contains "Key 3/25: Left"
 key Left
+expect text contains "Key 4/25: Right"
 key Right
+expect text contains "Key 5/25: Home"
 key Home
+expect text contains "Key 6/25: End"
 key End
+expect text contains "Key 7/25: PageUp"
 key PageUp
+expect text contains "Key 8/25: PageDown"
 key PageDown
+expect text contains "Key 9/25: Delete"
 key Delete
+expect text contains "Key 10/25: PlayPause"
 key PlayPause
+expect text contains "Key 11/25: Previous"
 key Previous
+expect text contains "Key 12/25: Next"
 key Next
+expect text contains "Key 13/25: Mute"
 key Mute
+expect text contains "Key 14/25: VolumeDown"
 key VolumeDown
+expect text contains "Key 15/25: VolumeUp"
 key VolumeUp
+expect text contains "Key 16/25: BrightnessDown"
 key BrightnessDown
+expect text contains "Key 17/25: BrightnessUp"
 key BrightnessUp
+expect text contains "Key 18/25: Help"
 key Help
+expect text contains "Key 19/25: PrintScreen"
 key PrintScreen
-expect text contains "Key 62/67: /"
 expect place = key-step
+expect text contains "Key 20/25: /"
 type /
-expect text contains "Key 63/67: ."
+expect text contains "Key 21/25: ."
 type .
-expect text contains "Key 64/67: _"
+expect text contains "Key 22/25: _"
 type _
-expect text contains "Key 65/67: :"
+expect text contains "Key 23/25: :"
 type :
-expect text contains "Key 66/67: ~"
+expect text contains "Key 24/25: ~"
 type ~
-expect text contains "Key 67/67: -"
+expect text contains "Key 25/25: -"
 type -
+expect-file .local/state/sidplayzero/selftest.results contains "key_answer = - right"
 expect text contains "Done. Hold ESC to leave."
 expect screen = selftest
 expect-file .local/state/sidplayzero/selftest.results contains "key_codes_wrong = none"
