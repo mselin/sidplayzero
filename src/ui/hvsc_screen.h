@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// The HVSC screen (SPEC-102): a status block (the release, how many tunes HVSC lists and how many are on
-// the device, the index's state) and under it the things to do, chosen with Up, Down and Enter: "Get
+// The HVSC screen (SPEC-102): a status block (the release, with ", complete" when state.ini records that
+// the collection holds it complete (FIND-031), how many tunes HVSC lists and how many are on the device,
+// the index's state) and under it the things to do, chosen with Up, Down and Enter: "Get
 // HVSC" (SPEC-140), "Check for a newer release" and "Update to #m" (SPEC-148, part `releases`), "Download
 // everything" or "Finish the download" (SPEC-144, part `download-all`), with SPEC-145's explanation under
 // the list when the complete download is not offered, and "Rebuild the index" (SPEC-161). While a job
@@ -55,6 +56,7 @@ private:
         bool known = false;                 // false until the first reading has come back
         bool set_up = false;
         int release = 0;
+        bool complete = false;              // the collection holds that release complete (FIND-031)
         int listed = 0;                     // tunes HVSC lists
         int present = 0;                    // tunes on the device
         bool offered = false;               // SPEC-145 allows the complete download

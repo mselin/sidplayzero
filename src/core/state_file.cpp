@@ -18,7 +18,7 @@ namespace {
 const std::vector<std::string>& state_keys() {
     static const std::vector<std::string> keys = {
         "browser_folder", "browser_entry", "current_path", "current_subtune", "queue_kind",
-        "queue_source", "queue_place", "notice_accepted", "backlight_saved",
+        "queue_source", "queue_place", "notice_accepted", "hvsc_complete_release", "backlight_saved",
     };
     return keys;
 }
@@ -86,6 +86,12 @@ bool set_key(State* state, const std::string& key, const std::string& value) {
         else return false;
         return true;
     }
+    if (key == "hvsc_complete_release") {
+        const long release = small_number(value, 6);
+        if (release <= 0) return false;
+        state->hvsc_complete_release = static_cast<int>(release);
+        return true;
+    }
     if (key == "backlight_saved") {
         const long percent = small_number(value, 3);
         if (percent < 0 || percent > 100) return false;
@@ -114,6 +120,9 @@ bool key_text(const State& state, const std::string& key, std::string* out) {
     } else if (key == "notice_accepted") {
         if (!state.notice_accepted) return false;
         *out = "on";
+    } else if (key == "hvsc_complete_release") {
+        if (state.hvsc_complete_release <= 0) return false;
+        *out = std::to_string(state.hvsc_complete_release);
     } else if (key == "backlight_saved") {
         if (state.backlight_saved < 0) return false;
         *out = std::to_string(state.backlight_saved);
@@ -254,6 +263,14 @@ void StateFile::set_notice_accepted(bool accepted) {
     std::lock_guard<std::mutex> lock(mutex_);
     if (state_.notice_accepted == accepted) return;
     state_.notice_accepted = accepted;
+    changed();
+}
+
+void StateFile::set_hvsc_complete_release(int release) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (release < 0) release = 0;
+    if (state_.hvsc_complete_release == release) return;
+    state_.hvsc_complete_release = release;
     changed();
 }
 

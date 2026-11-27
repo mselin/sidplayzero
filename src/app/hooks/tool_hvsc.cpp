@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // spz_tool (tool.h): the commands that run the HVSC area's jobs as the app runs them, with the real parts:
-// `setup` (SPEC-140) and `complete-download` (SPEC-144).
+// `setup` (SPEC-140), `complete-download` (SPEC-144) and `update` (SPEC-148, FIND-031).
 #include <signal.h>
 #include <unistd.h>
 
@@ -21,7 +21,9 @@
 #include "spz/job.h"
 #include "spz/listing.h"
 #include "spz/path_text.h"
+#include "spz/releases.h"
 #include "spz/settings.h"
+#include "spz/state_file.h"
 
 namespace spz::tool {
 
@@ -386,6 +388,142 @@ int complete_download(const std::vector<std::string>& args) {
         say("result", "failed");
         say("step", std::to_string(listener.step));
     }
+    return 0;
+}
+
+// --- update (SPEC-148, FIND-031) ----------------------------------------------------------------------------
+
+namespace {
+
+class ToldMemory : public Memory {
+public:
+    explicit ToldMemory(std::uint64_t mib) : mib_(mib) {}
+    std::uint64_t available_mib() override { return mib_; }
+    std::uint64_t swap_free_mib() override { return 0; }
+
+private:
+    std::uint64_t mib_;
+};
+
+// The notices printed, and the last one kept, so that the command knows when the check has answered.
+class KeptNotices : public PrintedNotices {
+public:
+    void raise(const std::string& id, const std::map<std::string, std::string>& about) override {
+        PrintedNotices::raise(id, about);
+        std::lock_guard<std::mutex> lock(mutex_);
+        last_ = id;
+    }
+    std::string last() const {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return last_;
+    }
+
+private:
+    mutable std::mutex mutex_;
+    std::string last_;
+};
+
+}  // namespace
+
+int update(const std::vector<std::string>& args) {
+    Arguments a;
+    if (!parse(args, {}, &a) || !a.words.empty() || a.value("--root").empty() || a.value("--cache").empty() ||
+        a.value("--state").empty() || a.value("--url-files").empty() || a.value("--archive").empty()) {
+        return usage("update --root DIR --cache DIR --state FILE --url-files URL [--ca FILE] --archive FILE "
+                     "[--memory-mib N]");
+    }
+    const std::string root = a.value("--root");
+    const std::string cache = a.value("--cache");
+    RealFiles files;
+    platform::CurlHttpClient http(rules_from(a));
+    Watch watch;   // nothing to watch: the archive's server only
+    ArchiveFromFile archive_http(a.value("--archive"), &watch);
+    platform::SevenZipUnpacker unpacker;
+    ToldMemory memory(static_cast<std::uint64_t>(std::atoll(a.value("--memory-mib", "4096").c_str())));
+    platform::RealClock clock;
+    app::UiQueue ui;
+    AcceptedNotice record;
+    NoPanel panel;
+    NoticeGate gate(&record, &panel);
+    Jobs jobs;
+    watch.jobs = &jobs;
+    KeptNotices notices;
+    NoPlayer player;
+    Settings settings;
+    settings.url_files = a.value("--url-files");
+    settings.url_archive = "https://archive.invalid/HVSC_{release}-all-of-them.7z";
+
+    struct Listener : HvscListener, DownloadListener {
+        std::atomic<int> ended{0};   // 1 documents ready, 2 download done, 3 failed
+        void hvsc_ready(int) override { ended = 1; }
+        void hvsc_failed(int) override { ended = 3; }
+        void download_done() override { ended = 2; }
+        void download_failed(int) override { ended = 3; }
+    } listener;
+
+    // HVSC is set up in the root; its listing is built in the cache if it is not there.
+    const std::string listing_file = cache + "/listing.bin";
+    FileInfo there;
+    if (files.info(listing_file, &there) != FileStatus::Ok) {
+        Listing::build(&files, root + "/DOCUMENTS/Songlengths.md5", listing_file);
+    }
+
+    app::Worker long_worker{"spz-long"};
+    app::Worker quick{"spz-quick"};
+    StateFile state(&files, &clock, &quick, a.value("--state"));
+    state.load();
+
+    CompleteDownloadParts dparts;
+    dparts.files = &files;
+    dparts.http = &archive_http;
+    dparts.unpacker = &unpacker;
+    dparts.memory = &memory;
+    dparts.long_worker = &long_worker;
+    dparts.ui = &ui;
+    dparts.gate = &gate;
+    dparts.jobs = &jobs;
+    dparts.notices = &notices;
+    dparts.settings = &settings;
+    dparts.root = root;
+    dparts.cache = cache;
+    dparts.play = &player;
+    dparts.listener = &listener;
+    dparts.state = &state;
+    CompleteDownload download(dparts);
+
+    ReleasesParts rparts;
+    rparts.files = &files;
+    rparts.http = &http;
+    rparts.long_worker = &long_worker;
+    rparts.ui = &ui;
+    rparts.gate = &gate;
+    rparts.jobs = &jobs;
+    rparts.notices = &notices;
+    rparts.settings = &settings;
+    rparts.root = root;
+    rparts.cache = cache;
+    rparts.listener = &listener;
+    rparts.state = &state;
+    rparts.download = &download;
+    rparts.unpacker = &unpacker;
+    rparts.memory = &memory;
+    Releases releases(rparts);
+
+    // "Check for a newer release", then "Update to #m".
+    releases.check();
+    run_ui(&ui, &clock, [&] { return !notices.last().empty(); });
+    say("newer", std::to_string(releases.newer()));
+    bool ended = false;
+    if (releases.newer() > 0 && releases.update()) {
+        ended = run_ui(&ui, &clock, [&] { return listener.ended.load() != 0; });
+    }
+    long_worker.stop();
+    ui.run_all();
+    state.save_now();
+    quick.stop();
+    const int how = ended ? listener.ended.load() : 3;
+    say("result", how == 1 ? "ready" : how == 2 ? "done" : "failed");
+    say("complete_release", std::to_string(state.state().hvsc_complete_release));
     return 0;
 }
 

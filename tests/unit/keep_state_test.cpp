@@ -436,3 +436,50 @@ TEST_CASE("SPEC-154 SPEC-131 a saved path that is not a collection path is dropp
         CHECK(read.state.current_subtune == 2);
     }
 }
+
+TEST_CASE("SPEC-131 hvsc_complete_release is written once a release is recorded as complete, comes back, and is gone again when it is removed (FIND-031)") {
+    Kept kept;
+    {
+        spz::StateFile file(&kept.files, &kept.clock, &kept.quick, kept.path);
+        file.load();
+        CHECK(file.state().hvsc_complete_release == 0);       // absent: nothing is held complete
+        file.set_notice_accepted(true);
+        REQUIRE(file.save_now() == spz::FileStatus::Ok);
+        CHECK(text_on_disk(kept.path).find("hvsc_complete_release") == std::string::npos);
+
+        file.set_hvsc_complete_release(84);
+        CHECK(file.unsaved());
+        kept.pass(2000);                                      // saved as every other key is
+        CHECK_FALSE(file.unsaved());
+        CHECK(has_line(text_on_disk(kept.path), "hvsc_complete_release = 84"));
+    }
+    CHECK(kept.read_back().hvsc_complete_release == 84);
+
+    spz::StateFile file(&kept.files, &kept.clock, &kept.quick, kept.path);
+    file.load();
+    CHECK_FALSE(file.had_fault());
+    CHECK(file.state().hvsc_complete_release == 84);
+    file.set_hvsc_complete_release(84);                       // no change counts for nothing
+    CHECK_FALSE(file.unsaved());
+    file.set_hvsc_complete_release(0);                        // removed
+    REQUIRE(file.save_now() == spz::FileStatus::Ok);
+    const std::string text = text_on_disk(kept.path);
+    CHECK(text.find("hvsc_complete_release") == std::string::npos);
+    CHECK(has_line(text, "notice_accepted = on"));
+    CHECK(kept.read_back().hvsc_complete_release == 0);
+}
+
+TEST_CASE("SPEC-133 SPEC-131 an hvsc_complete_release that is not a release number is a fault that costs that key alone") {
+    for (const char* value : {"many", "0", "-84", "84.5", "1234567"}) {
+        CAPTURE(value);
+        const spz::StateRead read =
+            spz::read_state(bytes(std::string("notice_accepted = on\nhvsc_complete_release = ") + value + "\n"));
+        CHECK(read.fault);
+        CHECK(read.used);
+        CHECK(read.state.hvsc_complete_release == 0);
+        CHECK(read.state.notice_accepted);
+    }
+    const spz::StateRead good = spz::read_state(bytes("hvsc_complete_release = 85\n"));
+    CHECK_FALSE(good.fault);
+    CHECK(good.state.hvsc_complete_release == 85);
+}

@@ -1,0 +1,34 @@
+# SPEC-148 SPEC-145 SPEC-102 Update to #85 of a collection complete for 84, when SPEC-145 does not allow the complete download, brings the documents only; the collection is no longer complete, and Download everything is offered again once SPEC-145 allows it (FIND-031)
+# parts: releases download-all
+# fakes: fakes/hvsc_complete
+# fixture: collections/84/C64Music C64Music
+key Tab
+key 5
+expect screen = hvsc
+expect lines contains "HVSC #84, complete"
+key Enter
+expect notice.id = MSG_HVSC_NEWER
+expect rows[1].text = "Update to #85"
+# Too little memory at the moment of the update.
+fake memory.available_mib 0
+advance 4000
+key Down
+key Enter
+expect notice.id = MSG_HVSC_READY
+expect notice.text contains 85
+# The check, and SPEC-140's five documents: no archive.
+expect-requests 6
+expect-file C64Music/DOCUMENTS/hv_sids.txt contains "Release 85"
+expect-file C64Music/DEMOS/A-F/Clock_Demo.sid absent
+key Tab
+key 5
+expect lines contains "HVSC #85"
+expect lines matches ^(?![\s\S]*complete)
+expect rows matches ^(?![\s\S]*Download everything)
+# The memory is there again: "Download everything" is offered.
+fake memory.available_mib 250
+advance 4000
+key 4
+key 5
+expect rows matches "Download everything"
+expect lines matches ^(?![\s\S]*complete)

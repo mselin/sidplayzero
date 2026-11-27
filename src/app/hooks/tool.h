@@ -70,6 +70,7 @@ int input_setup(const std::vector<std::string>& args);
 int kept_files(const std::vector<std::string>& args);
 int setup(const std::vector<std::string>& args);               // tool_hvsc.cpp
 int complete_download(const std::vector<std::string>& args);
+int update(const std::vector<std::string>& args);
 int audio_guard(const std::vector<std::string>& args);         // tool_sound.cpp
 int load_tunes(const std::vector<std::string>& args);
 

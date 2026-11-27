@@ -197,6 +197,25 @@ void Composition::make_hvsc_scope(RootScope* scope) {
     scope->hvsc_events.reset(new HvscEvents(this, scope));
     scope->arrivals.reset(new Arrivals(this, scope));
 
+    // The complete download first: "Update" of a complete collection hands over to it (FIND-031).
+    CompleteDownloadParts download;
+    download.files = seams_.files;
+    download.http = seams_.http;
+    download.unpacker = seams_.unpacker;
+    download.memory = seams_.memory;
+    download.long_worker = job_guard_.get();
+    download.ui = app()->ui();
+    download.gate = gate_.get();
+    download.jobs = &jobs_;
+    download.notices = notices_.get();
+    download.settings = settings_.get();
+    download.root = scope->root.path;
+    download.cache = folders_.cache;
+    download.play = scope->hvsc_events.get();
+    download.listener = scope->hvsc_events.get();
+    download.state = state_.get();   // FIND-031: hvsc_complete_release
+    scope->download.reset(new CompleteDownload(download));
+
     ReleasesParts releases;
     releases.files = seams_.files;
     releases.http = seams_.http;
@@ -209,6 +228,11 @@ void Composition::make_hvsc_scope(RootScope* scope) {
     releases.root = scope->root.path;
     releases.cache = folders_.cache;
     releases.listener = scope->hvsc_events.get();
+    // FIND-031: "Update" of a complete collection takes the complete download of the newer release.
+    releases.state = state_.get();
+    releases.unpacker = seams_.unpacker;
+    releases.memory = seams_.memory;
+    releases.download = part_built("download-all") ? scope->download.get() : nullptr;
     scope->releases.reset(new Releases(releases));
 
     FetcherParts fetcher;
@@ -241,23 +265,6 @@ void Composition::make_hvsc_scope(RootScope* scope) {
     setup.cache = folders_.cache;
     setup.listener = scope->hvsc_events.get();
     scope->setup.reset(new HvscSetup(setup));
-
-    CompleteDownloadParts download;
-    download.files = seams_.files;
-    download.http = seams_.http;
-    download.unpacker = seams_.unpacker;
-    download.memory = seams_.memory;
-    download.long_worker = job_guard_.get();
-    download.ui = app()->ui();
-    download.gate = gate_.get();
-    download.jobs = &jobs_;
-    download.notices = notices_.get();
-    download.settings = settings_.get();
-    download.root = scope->root.path;
-    download.cache = folders_.cache;
-    download.play = scope->hvsc_events.get();
-    download.listener = scope->hvsc_events.get();
-    scope->download.reset(new CompleteDownload(download));
 
     ui::Services& s = services();
     s.listing = scope->listing.get();
