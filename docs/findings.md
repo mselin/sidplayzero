@@ -15,19 +15,6 @@ brief the project started from, so the findings below are raised against that br
 
 ## Open
 
-### FIND-025 The answer to a key can wait three seconds behind an earlier notice
-- Phase: 5, implementation
-- Observed: two tests press a key right after another key's notice and expect the new notice at once:
-  SPEC-076's presses a volume key that fails right after one that worked (`MSG_VOLUME_FAILED` behind
-  `MSG_VOLUME`), and SPEC-092's presses Mute right after Fav ("Muted" behind `MSG_FAV_ADDED`). SPEC-113 has
-  a notice with another identifier wait its turn, up to 3 s, so the user would see the answer to the key
-  before last.
-- Concerns: SPEC-076, SPEC-092, SPEC-113
-- Resolution (proposed): a notice raised by a key the user has just pressed replaces the notice showing, at
-  once; notices that come from work in the background (a job ending, a fetch failing) still wait their turn.
-  The answer in view is then always the answer to the last key. Both tests hold as written.
-- Status: open; a change of behaviour, for the owner to decide
-
 ### FIND-007 USBSID-Pico needs a newer engine library than the device's system has
 - Phase: 1, requirements
 - Observed: USBSID-Pico support came in libsidplayfp 2.16.0. Debian trixie, which the device runs, has 2.12.0.
@@ -47,6 +34,21 @@ brief the project started from, so the findings below are raised against that br
 
 ## Closed
 
+### FIND-025 The answer to a key can wait three seconds behind an earlier notice
+- Phase: 5, implementation
+- Observed: two tests press a key right after another key's notice and expect the new notice at once:
+  SPEC-076's presses a volume key that fails right after one that worked (`MSG_VOLUME_FAILED` behind
+  `MSG_VOLUME`), and SPEC-092's presses Mute right after Fav ("Muted" behind `MSG_FAV_ADDED`). SPEC-113 has
+  a notice with another identifier wait its turn, up to 3 s, so the user would see the answer to the key
+  before last.
+- Concerns: SPEC-076, SPEC-092, SPEC-113
+- Resolution: a notice raised by a key the user has just pressed replaces the notice showing, at
+  once; notices that come from work in the background (a job ending, a fetch failing) still wait their turn.
+  The answer in view is then always the answer to the last key. Both tests hold as written.
+- Status: closed. Decided by the owner on 27 November 2026: the answer to a key replaces the notice showing.
+  SPEC-113 says so; a notice raised while a key is handled is its answer, and so are the volume's,
+  brightness's and screenshot's, which come from the quick worker
+
 ### FIND-027 A settings file too large to read was read, to be copied
 - Phase: 5, implementation (found by the security review)
 - Observed: SPEC-133 has a faulty `settings.ini` copied to `settings.ini.bad`. For a file over the 64 KiB
@@ -56,7 +58,7 @@ brief the project started from, so the findings below are raised against that br
 - Resolution: a `settings.ini` over the limit is never read; it is renamed to `settings.ini.bad` (or
   `.bad.N`), which keeps its bytes as they were. A faulty file within the limit is still copied. Since the
   rename leaves no `settings.ini`, the next start finds nothing faulty and makes no `.bad.2`.
-- Status: closed. Made at once, as a safety fix; to be confirmed by the owner
+- Status: closed. Confirmed by the owner on 27 November 2026
 
 ### FIND-026 The archive check trusted one line of 7z's listing, and the move trusted every name
 - Phase: 5, implementation (found by the security review)
@@ -71,7 +73,7 @@ brief the project started from, so the findings below are raised against that br
   than SPEC-204's limit; `7z` runs in its own process group with a time limit. Only paths that pass HVSC's
   rules (SPEC-154), and HVSC's documents, are moved into the collection. Nothing a user sees changes for a
   genuine HVSC archive.
-- Status: closed. A tightening of security, made at once; to be confirmed by the owner
+- Status: closed. Confirmed by the owner on 27 November 2026
 
 ### FIND-024 Details the tests had to choose
 - Phase: 4, tests

@@ -41,6 +41,12 @@ public:
     // showing, which goes back to the head of the line and has its turn again, from the start, after it.
     void show_now(const std::string& id, const std::string& text);
 
+    // SPEC-113, FIND-025: the answer to a key the user has just pressed does not wait its turn either. It
+    // shows at once, in place of the one showing. That one, if it was itself the answer to a key, is done
+    // with; if it came from work in the background, it goes back to the head of the line and has its turn
+    // again after this one.
+    void answer(const std::string& id, const std::string& text);
+
     // Takes a notice away before its time is up, whether it shows or waits: MSG_HOLD_TO_LEAVE when ESC is
     // let go (SPEC-106). The next in line then has its turn. Does nothing if there is no such notice.
     void remove(const std::string& id);
@@ -60,6 +66,7 @@ private:
 
     Clock* clock_;
     bool has_showing_ = false;
+    bool showing_answers_key_ = false;   // the notice showing is the answer to a key (FIND-025)
     Notice showing_;
     std::vector<Notice> waiting_;
     Clock::TimerId timer_ = 0;

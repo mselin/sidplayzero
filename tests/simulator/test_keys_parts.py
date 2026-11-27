@@ -74,12 +74,13 @@ class Parts(Case):
                                       "key PrintScreen", "dump after"], keep=["Pictures"])
         before, after = outcome.dump("before"), outcome.dump("after")
         pictures = outcome.out / "home" / "Pictures" / "Screenshots"
-        if built("brightness"):
-            self.assertIsNotNone(after["notice"], "no notice for the brightness keys")
-            self.assertEqual(after["notice"]["id"], "MSG_BRIGHTNESS")      # the first raised shows first (SPEC-113)
-        elif built("screenshot"):
+        # The answer to the last key shows, in place of the ones before it (SPEC-113, FIND-025).
+        if built("screenshot"):
             self.assertIsNotNone(after["notice"], "no notice for Print Screen")
             self.assertEqual(after["notice"]["id"], "MSG_SCREENSHOT_SAVED")
+        elif built("brightness"):
+            self.assertIsNotNone(after["notice"], "no notice for the brightness keys")
+            self.assertEqual(after["notice"]["id"], "MSG_BRIGHTNESS")
         else:
             self.assertEqual(after, before, "a key of a part that is not built changed the screen description")
         if built("screenshot"):

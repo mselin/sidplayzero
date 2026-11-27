@@ -130,6 +130,7 @@ public:
     // The quick worker, for the jobs that must still run when the app leaves: the saves of SPEC-201.
     Executor* saves() { return quick_.kept(); }
     void notice(const std::string& id, const std::map<std::string, std::string>& about = {}) override;
+    void answer(const std::string& id, const std::map<std::string, std::string>& about = {}) override;
     bool open(const std::string& screen) override;
     void set_bottom(const std::string& screen) override;
     void close_top() override;
@@ -204,6 +205,7 @@ private:
     bool dirty_ = true;
     bool leaving_ = false;
     bool shut_down_ = false;
+    int handling_key_ = 0;            // above 0 while a key is handled: its notices are its answers (FIND-025)
     Millis asked_to_leave_ms_ = -1;
 
     // The threads, last: they go first, so that no job of theirs outlives what it uses.

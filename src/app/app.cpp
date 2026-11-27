@@ -259,7 +259,13 @@ void App::when_no_overlay(std::function<void()> fn) {
 }
 
 void App::notice(const std::string& id, const std::map<std::string, std::string>& about) {
-    notices_.raise(id, message_words(id, about));
+    // SPEC-113, FIND-025: a notice raised while a key is being handled is that key's answer.
+    if (handling_key_ > 0) answer(id, about);
+    else notices_.raise(id, message_words(id, about));
+}
+
+void App::answer(const std::string& id, const std::map<std::string, std::string>& about) {
+    notices_.answer(id, message_words(id, about));
 }
 
 App::Hook App::on_action(const std::string& action, std::function<void(const KeyEvent&)> handler) {
@@ -301,7 +307,9 @@ void App::key(int linux_code, bool pressed) {
         }
     }
     if (pressed) keys_read_.push_back(seams_.clock->now_ms());   // SPEC-112
+    ++handling_key_;
     keys_.key(linux_code, pressed);
+    --handling_key_;
     closed_panel_.reset();
     closed_screens_.clear();
 }
@@ -412,8 +420,9 @@ void App::brightness(bool up) {
     quick_.post([this, backlight, up] {
         const BrightnessStep step = step_brightness(backlight, up);
         ui_.post([this, step] {
-            if (step.notice == "MSG_BRIGHTNESS") notice(step.notice, {{"n", std::to_string(step.percent)}});
-            else notice(step.notice);
+            // The answers to a brightness key, from the quick worker (FIND-025).
+            if (step.notice == "MSG_BRIGHTNESS") answer(step.notice, {{"n", std::to_string(step.percent)}});
+            else answer(step.notice);
         });
     });
 }
@@ -444,8 +453,8 @@ void App::screenshot() {
         const bool saved = files != nullptr && !bytes.empty() && files->make_folders(folder) == FileStatus::Ok &&
                            files->write(path, bytes) == FileStatus::Ok;
         ui_.post([this, saved, path] {
-            if (saved) notice("MSG_SCREENSHOT_SAVED", {{"path", path}});
-            else notice("MSG_SCREENSHOT_FAILED");
+            if (saved) answer("MSG_SCREENSHOT_SAVED", {{"path", path}});
+            else answer("MSG_SCREENSHOT_FAILED");
         });
     });
 }

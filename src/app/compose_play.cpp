@@ -266,9 +266,10 @@ void Composition::make_play() {
         app()->quick()->post([this, system, key] {
             const VolumeOutcome outcome = press_volume_key(system, key);
             on_ui([this, outcome] {
-                if (outcome.notice != "MSG_VOLUME") app()->notice(outcome.notice);
-                else if (outcome.muted) app()->notice("MSG_VOLUME");
-                else app()->notice("MSG_VOLUME", {{"n", std::to_string(outcome.level)}});
+                // The answer to a volume key, which comes from the quick worker after the key (FIND-025).
+                if (outcome.notice != "MSG_VOLUME") app()->answer(outcome.notice);
+                else if (outcome.muted) app()->answer("MSG_VOLUME");
+                else app()->answer("MSG_VOLUME", {{"n", std::to_string(outcome.level)}});
             });
         });
     };
