@@ -230,7 +230,7 @@ def collection(release, tunes):
         ("/MUSICIANS/T/Tester_Tom/New_Chip.sid", tunes["model_8580"], "0:02"),
         ("/MUSICIANS/T/Tester_Tom/Needs_BASIC.sid", tunes["needs_basic"], "0:02"),
         ("/MUSICIANS/T/Tester_Tom/Three_Chips_3SID.sid", tunes["three_sid"], "0:02"),
-        ("/MUSICIANS/T/Tester_Tom/Three_Songs.sid", tunes["three_subtunes"], "0:02 0:02.500 0:03"),
+        ("/MUSICIANS/T/Tester_Tom/Three_Songs.sid", tunes["three_subtunes"], "0:02 0:02.5 0:03"),
         ("/MUSICIANS/T/Tester_Tom/Two_Chips_2SID.sid", tunes["two_sid"], "0:02"),
     ]
     moved = "/MUSICIANS/T/Tester_Tom/Old_Name.sid" if release == 84 else "/MUSICIANS/T/Tester_Tom/Renamed.sid"

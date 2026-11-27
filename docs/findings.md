@@ -34,6 +34,21 @@ brief the project started from, so the findings below are raised against that br
 
 ## Closed
 
+### FIND-028 HVSC writes some lengths with fewer than three decimals, and the listing refused HVSC
+- Phase: 5, implementation (found at the device sitting, 27 November 2026)
+- Observed: on the device, "Get HVSC" stopped with "HVSC could not be set up" at step 4. SPEC-142 had a
+  length as `m:ss` or `m:ss.SSS`, and the reader took that literally; HVSC #85's `Songlengths.md5` also
+  writes lengths such as `0:03.5` and `0:02.70`. 2,339 of its lines were skipped, more than one line in a
+  hundred, so the whole listing was refused, and no tune of HVSC could be listed or fetched. The fixtures
+  were written from the same sentence, so no test saw it; the test with HVSC's own documents runs only where
+  `SIDPLAYZERO_REAL_HVSC` names them.
+- Concerns: SPEC-142, SPEC-252, SPEC-140
+- Resolution: a length is `m:ss`, or `m:ss` and a point with one to three digits of a second. SPEC-142 and
+  SPEC-252 say so, the reader takes it, the fixtures write one length that way, and two unit tests check the
+  forms. With HVSC #85's own database the listing now holds 61,157 tunes in 1,981 folders and 87,868
+  lengths, none skipped, the figures SPEC-142 gives.
+- Status: closed. A defect of the specification against HVSC's real file; nothing the owner decided changes
+
 ### FIND-025 The answer to a key can wait three seconds behind an earlier notice
 - Phase: 5, implementation
 - Observed: two tests press a key right after another key's notice and expect the new notice at once:

@@ -65,7 +65,8 @@ bool md5_bytes(const char* digits, std::uint8_t out[16]) {
 
 bool is_digit(char c) { return c >= '0' && c <= '9'; }
 
-// m:ss or m:ss.SSS, at most six digits of minutes.
+// m:ss, or m:ss followed by a point and one to three digits of a second (HVSC writes 3:55.594, and also
+// 0:03.5 and 0:02.70), at most six digits of minutes (SPEC-142, FIND-028).
 bool parse_length(const char* p, std::size_t n, std::uint32_t* out) {
     std::size_t i = 0;
     std::uint64_t minutes = 0;
@@ -82,8 +83,15 @@ bool parse_length(const char* p, std::size_t n, std::uint32_t* out) {
     i += 2;
     std::uint64_t ms = (minutes * 60 + static_cast<std::uint64_t>(seconds)) * 1000;
     if (i < n) {
-        if (n - i != 4 || p[i] != '.' || !is_digit(p[i + 1]) || !is_digit(p[i + 2]) || !is_digit(p[i + 3])) return false;
-        ms += static_cast<std::uint64_t>((p[i + 1] - '0') * 100 + (p[i + 2] - '0') * 10 + (p[i + 3] - '0'));
+        const std::size_t digits = n - i - 1;
+        if (p[i] != '.' || digits < 1 || digits > 3) return false;
+        std::uint64_t part = 0;
+        for (std::size_t d = 0; d < 3; ++d) {
+            const char c = d < digits ? p[i + 1 + d] : '0';    // ".5" is 500 ms, ".05" is 50 ms
+            if (!is_digit(c)) return false;
+            part = part * 10 + static_cast<std::uint64_t>(c - '0');
+        }
+        ms += part;
     }
     if (ms > 0xFFFFFFFFu) return false;
     *out = static_cast<std::uint32_t>(ms);
