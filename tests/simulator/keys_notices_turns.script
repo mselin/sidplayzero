@@ -1,26 +1,27 @@
-# SPEC-113 three different notices raised at once show one after another, three seconds of the clock each
+# SPEC-113 FIND-025 the answers to keys show at once over a notice from the start, which has its whole turn after them
 # fakes: fakes/keys_notices
 # fixture: tunes/commando_test.sid C64Music/A_Commando.sid
 # fixture: tunes/three_subtunes.sid C64Music/B_Three.sid
 # fixture: tunes/two_sid.sid C64Music/C_Two.sid
 expect screen = browser
 expect notice.id = MSG_SETTINGS_RESET
+advance 1000
+# The answer to a key shows at once, in place of the notice the start raised.
 key VolumeUp
-fake volume.works no
-key VolumeUp
-expect notice.id = MSG_SETTINGS_RESET
-advance 2990
-expect notice.id = MSG_SETTINGS_RESET
-advance 20
 expect notice.id = MSG_VOLUME
 expect notice.text = "Volume 55 %"
-advance 2980
-expect notice.id = MSG_VOLUME
-advance 20
+# The answer to the next key takes the place of the first answer, which is done with.
+fake volume.works no
+key VolumeUp
 expect notice.id = MSG_VOLUME_FAILED
 expect notice.text = "The volume could not be changed"
-advance 2980
+advance 2990
 expect notice.id = MSG_VOLUME_FAILED
+advance 20
+# The notice from the start has its turn again, for its whole three seconds; the first answer does not.
+expect notice.id = MSG_SETTINGS_RESET
+advance 2980
+expect notice.id = MSG_SETTINGS_RESET
 advance 20
 expect notice = null
 advance 5000
