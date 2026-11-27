@@ -6,5 +6,3 @@
 # A listed test is in order while it fails with those words. It is a fault when it fails otherwise, and
 # when it passes: a test that starts to pass is taken off this list in the same change.
 test	reason	words
-SPEC-092 on the two playlist screens and in a list panel the keys of `always`, of `lists` and of `screens` have their effect	code	expect notice.text = Muted
-SPEC-076 the volume keys set the system volume to the nearest multiple of 5 % above or below, Mute toggles the mute, and the notice MSG_VOLUME shows the new level or "Muted"	code	expect notice.id = MSG_VOLUME

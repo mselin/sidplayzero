@@ -1,0 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPEC-255 SPEC-114 SPEC-152 HVSC's notice panel looks as the owner approved it on 27 November 2026
+# parts: detail mini modes shuffle restart skip voices bars notes rate too-slow brightness playlists import-more filters resume releases download-all
+key Enter
+shot panel_notice

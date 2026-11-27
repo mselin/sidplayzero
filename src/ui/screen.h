@@ -181,6 +181,10 @@ public:
 
     // SPEC-113: raises a notice of SPEC-116, its words filled in by spz::message_words().
     virtual void notice(const std::string& id, const std::map<std::string, std::string>& about = {}) = 0;
+    // The answer to a key the user has just pressed, when it comes later than the key (from a worker): it
+    // shows at once, in place of the notice showing (SPEC-113, FIND-025). A notice raised while a key is
+    // being handled is such an answer already.
+    virtual void answer(const std::string& id, const std::map<std::string, std::string>& about = {}) = 0;
     // SPEC-090: opens a screen by its name; if it is in the stack already, returns to it. False if there is
     // no such screen in this build, or it is not ready.
     virtual bool open(const std::string& screen) = 0;

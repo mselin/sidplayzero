@@ -33,6 +33,7 @@ void NoticeQueue::show_next() {
         showing_ = Notice();
     } else {
         has_showing_ = true;
+        showing_answers_key_ = false;
         showing_ = waiting_.front();
         waiting_.erase(waiting_.begin());
         start_timer();
@@ -43,6 +44,7 @@ void NoticeQueue::show_next() {
 void NoticeQueue::raise(const std::string& id, const std::string& text) {
     if (!has_showing_ || showing_.id == id) {
         has_showing_ = true;
+        showing_answers_key_ = false;
         showing_ = Notice{id, text};
         start_timer();
         changed();
@@ -76,9 +78,18 @@ void NoticeQueue::show_now(const std::string& id, const std::string& text) {
         }
     }
     has_showing_ = true;
+    showing_answers_key_ = false;
     showing_ = Notice{id, text};
     start_timer();
     changed();
+}
+
+void NoticeQueue::answer(const std::string& id, const std::string& text) {
+    if (has_showing_ && showing_answers_key_ && showing_.id != id) {
+        has_showing_ = false;        // the answer to an earlier key is done with; show_now() puts nothing back
+    }
+    show_now(id, text);
+    showing_answers_key_ = true;
 }
 
 void NoticeQueue::remove(const std::string& id) {

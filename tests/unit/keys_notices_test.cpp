@@ -216,3 +216,45 @@ TEST_CASE("SPEC-113 whoever draws the notice is told each time the one showing c
     clock.advance(3000);
     CHECK(seen == std::vector<std::string>{"Volume 55 %", "Volume 60 %", "ready", ""});
 }
+
+TEST_CASE("SPEC-113 FIND-025 the answer to a key shows at once in place of an earlier key's answer, which is done with") {
+    spz::fake::Clock clock;
+    spz::NoticeQueue queue(&clock);
+    queue.answer("MSG_FAV_ADDED", "Added to Favourites");
+    clock.advance(500);
+    queue.answer("MSG_VOLUME", "Muted");
+    CHECK(showing(queue) == "MSG_VOLUME");
+    CHECK(text_showing(queue) == "Muted");
+    CHECK(queue.waiting().empty());                      // the earlier answer does not come back
+    clock.advance(2999);
+    CHECK(showing(queue) == "MSG_VOLUME");               // its own three seconds, from when it showed
+    clock.advance(1);
+    CHECK(queue.showing() == nullptr);
+}
+
+TEST_CASE("SPEC-113 FIND-025 the answer to a key goes before a notice from the background, which has its turn after it") {
+    spz::fake::Clock clock;
+    spz::NoticeQueue queue(&clock);
+    queue.raise("MSG_INDEX_READY", "The search index is ready");
+    queue.raise("MSG_HVSC_READY", "HVSC is set up");
+    clock.advance(1000);
+    queue.answer("MSG_VOLUME", "Volume 45 %");
+    CHECK(showing(queue) == "MSG_VOLUME");
+    CHECK(ids(queue.waiting()) == "MSG_INDEX_READY MSG_HVSC_READY");
+    clock.advance(3000);
+    CHECK(showing(queue) == "MSG_INDEX_READY");          // the background notice has its turn again, whole
+    clock.advance(3000);
+    CHECK(showing(queue) == "MSG_HVSC_READY");
+}
+
+TEST_CASE("SPEC-113 FIND-025 a notice from the background raised while an answer shows waits its turn behind it") {
+    spz::fake::Clock clock;
+    spz::NoticeQueue queue(&clock);
+    queue.answer("MSG_VOLUME", "Volume 45 %");
+    queue.raise("MSG_INDEX_READY", "The search index is ready");
+    CHECK(showing(queue) == "MSG_VOLUME");
+    CHECK(ids(queue.waiting()) == "MSG_INDEX_READY");
+    queue.answer("MSG_VOLUME", "Volume 50 %");           // the same key again: its new answer, at once
+    CHECK(text_showing(queue) == "Volume 50 %");
+    CHECK(ids(queue.waiting()) == "MSG_INDEX_READY");
+}

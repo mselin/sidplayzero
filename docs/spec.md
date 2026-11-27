@@ -1148,7 +1148,10 @@ screen update after it has been flushed. The differences are kept as a histogram
 
 **SPEC-113 Notices.** A notice is one line of text over the last row of the content band, shown for 3 s‡;
 `MSG_TOO_HEAVY`, which offers a key, shows for 10 s‡. It takes no keys: every key does what it would do
-without it. Notices wait their turn (all but `MSG_HOLD_TO_LEAVE`, SPEC-106): one at a time, in the order raised, at most five waiting (the oldest is
+without it. The answer to a key the user has just pressed (a volume level, "Added to Favourites", a
+brightness, "Muted") shows at once, in place of the notice showing; that notice, if it was itself the
+answer to a key, is done with, and otherwise it waits its turn again (FIND-025). Other notices wait their
+turn (all but `MSG_HOLD_TO_LEAVE`, SPEC-106): one at a time, in the order raised, at most five waiting (the oldest is
 dropped). A notice with the same identifier as the one showing replaces it at once and starts its time
 again, and one with the same identifier as a waiting one replaces that, so five quick presses of a volume
 key end with the last level showing. Everything that happens by itself (a download finishing or failing,
