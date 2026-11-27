@@ -11,6 +11,7 @@
 #include "spz/listing.h"
 #include "spz/messages.h"
 #include "spz/releases.h"
+#include "spz/state_file.h"
 #include "ui/draw.h"
 #include "ui/panel.h"
 
@@ -138,15 +139,18 @@ void HvscScreen::look_again() {
     Memory* memory = s.memory;
     const bool download = s.download != nullptr;
     const std::string root = s.collection;
+    // FIND-031: the release the collection holds complete, as the state remembers it.
+    const int complete = s.state ? s.state->state().hvsc_complete_release : 0;
     Shell* frame = shell();
     const Lifetime::Token alive = lifetime_.token();
-    frame->quick()->post([this, frame, alive, files, listing, index, unpacker, memory, download, root] {
+    frame->quick()->post([this, frame, alive, files, listing, index, unpacker, memory, download, root, complete] {
         Facts found;
         found.known = true;
         try {
             const HvscStatus status = hvsc_status(files, *listing, root);
             found.set_up = status.set_up;
             found.release = status.release;
+            found.complete = status.set_up && status.release > 0 && status.release == complete;
             found.listed = listing->is_open() ? listing->tune_count() : 0;
             if (index) {
                 const int count = index->count();
@@ -185,7 +189,9 @@ std::vector<Row> HvscScreen::wanted_rows() const {
     {
         if (!facts_.set_up) texts.push_back(kGet);
         if (facts_.set_up && s.releases) texts.push_back(kCheck);
-        if (facts_.set_up && s.releases && s.releases->newer() > 0) {
+        // A release the check found that HVSC is not set up with yet: a complete download that "Update"
+        // handed over to (FIND-031) has made it the release without the check being made again.
+        if (facts_.set_up && s.releases && s.releases->newer() > facts_.release) {
             texts.push_back(kUpdate + std::to_string(s.releases->newer()));
         }
         if (s.download && s.download->unfinished()) {
@@ -225,6 +231,7 @@ std::vector<std::string> HvscScreen::status_lines() const {
     std::vector<std::string> lines;
     if (!facts_.known) lines.push_back("");
     else if (!facts_.set_up) lines.push_back("HVSC is not set up");
+    else if (facts_.release > 0 && facts_.complete) lines.push_back("HVSC #" + std::to_string(facts_.release) + ", complete");
     else if (facts_.release > 0) lines.push_back("HVSC #" + std::to_string(facts_.release));
     else lines.push_back("HVSC, release not known");
     const Index* index = shell()->services().index;

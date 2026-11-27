@@ -1,0 +1,9 @@
+# SPEC-102 a collection recorded as complete for another release than the one it is set up with is shown as HVSC #85 alone (FIND-031)
+# parts: download-all
+# fakes: fakes/hvsc_complete
+# fixture: collections/85/C64Music/DOCUMENTS C64Music/DOCUMENTS
+key Tab
+key 5
+expect screen = hvsc
+expect lines contains "HVSC #85"
+expect lines matches ^(?![\s\S]*complete)

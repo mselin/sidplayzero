@@ -14,6 +14,7 @@
 #include "spz/complete_download.h"
 #include "spz/hvsc_setup.h"
 #include "spz/listing.h"
+#include "spz/state_file.h"
 #include "support.h"
 
 #if SPZ_PART_DOWNLOAD_ALL
@@ -40,7 +41,11 @@ struct PlayRecorder : spz::PlaySwitch {
 
 struct DownloadEvents : spz::DownloadListener {
     Words events;     // "done", "failed 3"
-    void download_done() override { events.push_back("done"); }
+    std::function<void()> on_done;
+    void download_done() override {
+        events.push_back("done");
+        if (on_done) on_done();
+    }
     void download_failed(int step) override { events.push_back("failed " + std::to_string(step)); }
 };
 
@@ -119,6 +124,11 @@ struct Complete : World {
     std::vector<int> steps;                                        // the job's step when each of those happened
     std::function<void(const spz::fake::Files::Operation&)> on_file_operation;
     std::map<std::string, spz::Bytes> before, expected;
+    // state.ini (SPEC-131), on a Files of its own so that its writes are not among the job's.
+    spz::fake::Files state_files;
+    spz::fake::Executor quick;
+    std::string state_path = temp.file("state/state.ini");
+    spz::StateFile state{&state_files, &clock, &quick, state_path};
     std::unique_ptr<spz::CompleteDownload> download;
 
     Complete() {
@@ -180,6 +190,7 @@ struct Complete : World {
         parts.cache = cache;
         parts.play = &play;
         parts.listener = &events;
+        parts.state = &state;
         return std::unique_ptr<spz::CompleteDownload>(new spz::CompleteDownload(parts));
     }
 
@@ -1062,6 +1073,90 @@ TEST_CASE("SPEC-144 SPEC-149 SPEC-154 only paths HVSC's rules allow, and HVSC's 
         CHECK_FALSE(exists(c.root + "/" + name));
     }
     CHECK(exists(c.root + "/DOCUMENTS/Update_Rules.txt"));
+}
+
+// --- FIND-031: the release the collection holds complete ----------------------------------------------
+
+TEST_CASE("SPEC-144 SPEC-131 step 8 sets hvsc_complete_release in state.ini to the release, before the listener is told (FIND-031) [parts: download-all]") {
+    Complete c;
+    CHECK(c.state.state().hvsc_complete_release == 0);
+    int recorded_when_told = -1;
+    c.events.on_done = [&] { recorded_when_told = c.state.state().hvsc_complete_release; };
+    REQUIRE(c.download->start());
+    c.run();
+    c.check_finished();
+    // The release of step 1, the one HVSC is set up with, whose archive step 3 downloaded.
+    CHECK(c.http.log.at(0).url == archive_url(84));
+    CHECK(c.state.state().hvsc_complete_release == 84);
+    CHECK(recorded_when_told == 84);                 // so the HVSC screen, told by the listener, sees it
+
+    // It is kept in state.ini, as every key of SPEC-131's table is.
+    fs::create_directories(fs::path(c.state_path).parent_path());
+    REQUIRE(c.state.save_now() == spz::FileStatus::Ok);
+    const spz::Bytes saved = read_file(c.state_path);
+    const std::string text(saved.begin(), saved.end());
+    CHECK(text.find("hvsc_complete_release = 84\n") != std::string::npos);
+}
+
+TEST_CASE("SPEC-144 SPEC-148 given a release, the complete download takes that release's archive and records it (FIND-031) [parts: download-all]") {
+    Complete c;
+    c.url = archive_url(85);
+    c.serve_archive();
+    REQUIRE(c.download->start(85));
+    c.run();
+    REQUIRE(c.http.log.size() == 1);
+    CHECK(c.http.log[0].url == "https://hvsc.brona.dk/HVSC/HVSC_85-all-of-them.7z");
+    c.check_finished();
+    CHECK_FALSE(exists(c.in_root(kOldName)));
+    CHECK(c.state.state().hvsc_complete_release == 85);
+}
+
+TEST_CASE("SPEC-144 a complete download that fails or is stopped records no release; finishing it records the release (FIND-031) [parts: download-all]") {
+    {
+        // Steps 3 to 6: the root is as it was, and so is what the state says of it.
+        Complete c;
+        c.state.set_hvsc_complete_release(83);
+        c.http.down = true;
+        REQUIRE(c.download->start());
+        c.run();
+        CHECK(c.events.events == Words{"failed 3"});
+        CHECK(c.state.state().hvsc_complete_release == 83);
+    }
+    {
+        // Step 7: nothing is recorded until "Finish the download" has succeeded.
+        Complete c;
+        c.url = archive_url(85);
+        c.serve_archive();
+        c.fail_move(3);
+        REQUIRE(c.download->start(85));
+        c.run();
+        REQUIRE(c.download->unfinished());
+        CHECK(c.state.state().hvsc_complete_release == 0);
+        c.on_file_operation = nullptr;
+        REQUIRE(c.download->finish());
+        c.run();
+        c.check_finished();
+        CHECK(c.state.state().hvsc_complete_release == 85);
+    }
+}
+
+TEST_CASE("SPEC-144 a complete download taken up again at the next start records the release it was taking (FIND-031) [parts: download-all]") {
+    Complete c;
+    c.url = archive_url(85);
+    c.serve_archive();
+    c.fail_move(4);
+    REQUIRE(c.download->start(85));
+    c.run();
+    REQUIRE(spz::read_install_marker(&c.files, c.cache) == 7);
+    c.on_file_operation = nullptr;
+
+    // The app starts again, with the state it had saved: nothing complete yet.
+    c.download.reset();
+    std::unique_ptr<spz::CompleteDownload> restarted = c.make();
+    restarted->recover();
+    c.run();
+    c.check_finished();
+    CHECK(c.state.state().hvsc_complete_release == 85);
 }
 
 #endif  // SPZ_PART_DOWNLOAD_ALL

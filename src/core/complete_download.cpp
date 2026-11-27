@@ -2,9 +2,10 @@
 // The complete download (SPEC-144): when it is offered (SPEC-145), the reader of 7z's listing and the
 // check of the archive (SPEC-149), the room it needs (SPEC-146), and the job with its marker file.
 //
-// The marker, install.state in the cache, is a few lines of text: "step = N", and "archive = NAME", the
+// The marker, install.state in the cache, is a few lines of text: "step = N"; "archive = NAME", the
 // name of the archive's partial file in the cache, so that a run taken up again at the next start can
-// delete it.
+// delete it; and "release = N", the release the job takes, which step 8 records as the one the collection
+// holds complete (FIND-031), also when the job is taken up again at the next start.
 #include "spz/complete_download.h"
 
 #include <algorithm>
@@ -134,6 +135,7 @@ std::uint64_t add_saturating(std::uint64_t a, std::uint64_t b) { return a > UINT
 struct Marker {
     int step = 0;
     std::string archive;
+    int release = 0;
 };
 
 Marker read_marker(Files* files, const std::string& cache) {
@@ -154,15 +156,24 @@ Marker read_marker(Files* files, const std::string& cache) {
     for (const std::string& l : lines) {
         if (l.size() == 8 && l.compare(0, 7, "step = ") == 0 && l[7] >= '1' && l[7] <= '8') marker.step = l[7] - '0';
         if (l.compare(0, 10, "archive = ") == 0) marker.archive = archive_name(l.substr(10));
+        if (l.compare(0, 10, "release = ") == 0) {
+            const std::string number = l.substr(10);
+            std::uint64_t value = 0;
+            if (number.size() <= 6 && parse_size(number, &value)) marker.release = static_cast<int>(value);
+        }
     }
-    if (marker.step == 0) marker.archive.clear();
+    if (marker.step == 0) {
+        marker.archive.clear();
+        marker.release = 0;
+    }
     return marker;
 }
 
-bool write_marker(Files* files, const std::string& cache, int step, const std::string& archive) {
+bool write_marker(Files* files, const std::string& cache, int step, const std::string& archive, int release = 0) {
     if (step <= 0) return files->remove(marker_path(cache)) == FileStatus::Ok;
     std::string text = "step = " + std::to_string(step) + "\n";
     if (!archive.empty()) text += "archive = " + archive + "\n";
+    if (release > 0) text += "release = " + std::to_string(release) + "\n";
     return safe_write(files, marker_path(cache), Bytes(text.begin(), text.end()), FolderFlush::Ignored) == FileStatus::Ok;
 }
 
@@ -357,6 +368,8 @@ struct CompleteDownload::Impl {
     std::atomic<bool> unfinished{false};
     std::atomic<bool> switched_off{false};   // the player was switched off for the running job
     std::string archive;                     // the archive's name in the cache, for the running job
+    std::atomic<int> wanted{0};              // the release start() was given; 0: the one HVSC is set up with
+    std::atomic<int> release{0};             // the release the running job takes
 
     std::string staging() const {
         const std::string parent = path_text::folder_of(p.root);
@@ -369,16 +382,19 @@ struct CompleteDownload::Impl {
     bool stopped() const { return p.jobs->stop_asked(); }
 
     void mark(int step) {
-        write_marker(p.files, p.cache, step, archive);
+        write_marker(p.files, p.cache, step, archive, release);
         p.jobs->progress(step, 0, 0);
     }
 
     // The end of the job, on the UI thread: playing on again, the notice, the listener.
-    void end(bool done, int step, const std::string& notice = "", const std::map<std::string, std::string>& about = {}) {
-        p.ui->post([this, done, step, notice, about] {
+    void end(bool done, int step, const std::string& notice = "", const std::map<std::string, std::string>& about = {},
+             int complete = 0) {
+        p.ui->post([this, done, step, notice, about, complete] {
             if (switched_off.exchange(false) && p.play) p.play->playing_on();
             p.jobs->end();
             if (done) {
+                // FIND-031: the collection now holds this release complete.
+                if (p.state && complete > 0) p.state->set_hvsc_complete_release(complete);
                 if (p.notices) p.notices->raise("MSG_DOWNLOAD_DONE", {});
                 if (p.listener) p.listener->download_done();
                 return;
@@ -415,9 +431,11 @@ struct CompleteDownload::Impl {
         const HvscStatus status = hvsc_status(p.files, listing, p.root);
         if (!status.set_up || status.release == 0) return fail_early(1);
         std::string url = p.settings.get().url_archive;
-        const std::string release = std::to_string(status.release);
-        for (std::size_t at = url.find("{release}"); at != std::string::npos; at = url.find("{release}", at + release.size())) {
-            url.replace(at, 9, release);
+        release = wanted > 0 ? wanted.load() : status.release;
+        const std::string release_text = std::to_string(release.load());
+        for (std::size_t at = url.find("{release}"); at != std::string::npos;
+             at = url.find("{release}", at + release_text.size())) {
+            url.replace(at, 9, release_text);
         }
         archive = archive_name(url);
         mark(2);
@@ -564,21 +582,30 @@ struct CompleteDownload::Impl {
         }
         if (remove_tree(files, staging()) != FileStatus::Ok) return fail_late(8);
         if (files->remove(listing_old()) != FileStatus::Ok) return fail_late(8);
+        // FIND-031: the collection now holds the job's release complete. A marker written before markers
+        // named their release leaves it to the root's hv_sids.txt, which the move has made the new one.
+        int complete = release;
+        Bytes hv_sids;
+        if (complete == 0 && files->read(p.root + "/" + kHvSids, kHvSidsReadLimit, &hv_sids) == FileStatus::Ok) {
+            complete = read_release(hv_sids);
+        }
         write_marker(files, p.cache, 0, "");
         unfinished = false;
-        end(true, 0);
+        end(true, 0, "", {}, complete);
     }
 };
 
 CompleteDownload::CompleteDownload(const CompleteDownloadParts& parts) : impl_(new Impl) { impl_->p = parts; }
 CompleteDownload::~CompleteDownload() = default;
 
-bool CompleteDownload::start() {
+bool CompleteDownload::start(int release) {
     Impl* s = impl_.get();
     if (s->p.jobs->running() || s->unfinished) return false;
-    s->p.gate->ask([s] {
+    s->p.gate->ask([s, release] {
         if (s->unfinished || !s->p.jobs->begin(JobKind::Download)) return;
         s->archive.clear();
+        s->wanted = release > 0 ? release : 0;
+        s->release = 0;
         s->p.long_worker->post([s] { s->check_first(); });
     });
     return true;
@@ -597,6 +624,7 @@ void CompleteDownload::recover() {
     s->unfinished = true;
     if (!s->p.jobs->begin(JobKind::Download)) return;   // "Finish the download" is offered instead
     s->archive = marker.archive;
+    s->release = marker.release;
     s->switched_off = true;
     s->p.ui->post([s] {
         if (s->p.play) s->p.play->playing_off();
@@ -612,7 +640,9 @@ bool CompleteDownload::finish() {
     if (s->p.play) s->p.play->playing_off();
     s->switched_off = true;
     s->p.long_worker->post([s] {
-        s->archive = read_marker(s->p.files, s->p.cache).archive;
+        const Marker marker = read_marker(s->p.files, s->p.cache);
+        s->archive = marker.archive;
+        s->release = marker.release;
         s->move_and_finish(true);
     });
     return true;

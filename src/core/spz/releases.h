@@ -7,6 +7,7 @@
 #include <memory>
 #include <string>
 
+#include "spz/complete_download.h"
 #include "spz/executor.h"
 #include "spz/fetcher.h"
 #include "spz/files.h"
@@ -15,6 +16,8 @@
 #include "spz/job.h"
 #include "spz/notice_gate.h"
 #include "spz/settings_file.h"
+#include "spz/state_file.h"
+#include "spz/system.h"
 
 namespace spz {
 
@@ -30,6 +33,12 @@ struct ReleasesParts {
     std::string root;                    // the collection root; HVSC is set up there
     std::string cache;                   // listing.bin is here, and what an update remembers
     HvscListener* listener = nullptr;    // may be null; told as after a set-up
+    // What "Update" of a complete collection needs (FIND-031); any of them may be null, and then the
+    // update is the update of the documents.
+    StateFile* state = nullptr;          // hvsc_complete_release
+    CompleteDownload* download = nullptr;
+    Unpacker* unpacker = nullptr;        // SPEC-145's conditions, asked at the moment of the update
+    Memory* memory = nullptr;
 };
 
 class Releases : public ChangedTunes {
@@ -47,9 +56,14 @@ public:
     // The release a check found that is higher than the root's: the row "Update to #m". 0 if none.
     int newer() const;
 
-    // "Update to #m": SPEC-140's steps 2 to 6 as a job of kind Update, with the same notices and the
-    // same listener calls as a set-up. Before the new listing replaces the old one, for each tune that
-    // is on the device:
+    // "Update to #m". Behind the notice gate, as a job of kind Update, it first chooses, on the long worker
+    // (FIND-031): when the state's hvsc_complete_release is the release HVSC is set up with, a check has
+    // found a newer one, no complete download is unfinished, and SPEC-145 allows the complete download
+    // now, the Update job gives way, on the UI thread, to the complete download of the newer release
+    // (CompleteDownload::start(m)), which tells its own listener and records the release complete.
+    // Otherwise it runs SPEC-140's steps 2 to 6, with the same notices and the same listener calls as a
+    // set-up, and once they have succeeded hvsc_complete_release is removed from the state, before the
+    // listener is told. Before the new listing replaces the old one, for each tune that is on the device:
     //   - its path is not in the new listing, and its MD5 is, at another path: the file is moved there;
     //   - neither its path nor its MD5 is in the new listing: it stays, a tune of the user's own;
     //   - its path is in the new listing with another MD5, and its file has the MD5 the old listing gave:
