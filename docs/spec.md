@@ -1327,7 +1327,7 @@ same form as the settings:
 | `current_path`, `current_subtune` | The player's current entry |
 | `queue_kind`, `queue_source`, `queue_place` | `folder`, `search` or `playlist`; the folder's path, the query or the playlist's name; and the place in the queue |
 | `notice_accepted` | `on` once the user has accepted SPEC-152's notice |
-| `hvsc_complete_release` | The release of HVSC the collection holds complete, after a complete download (SPEC-144); absent otherwise (FIND-031) |
+| `hvsc_complete_release` | The release of HVSC the collection holds complete, after a complete download (SPEC-144); removed by a set-up (SPEC-140), which brings the documents only; absent otherwise (FIND-031) |
 | `backlight_saved` | The brightness to restore, while the app has the screen off (SPEC-207) |
 
 It is written through SPEC-132 when any of these has changed and two seconds‡ have passed since the first

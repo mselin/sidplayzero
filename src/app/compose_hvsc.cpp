@@ -264,6 +264,7 @@ void Composition::make_hvsc_scope(RootScope* scope) {
     setup.root = scope->root.path;
     setup.cache = folders_.cache;
     setup.listener = scope->hvsc_events.get();
+    setup.state = state_.get();      // FIND-031: a set-up removes hvsc_complete_release
     scope->setup.reset(new HvscSetup(setup));
 
     ui::Services& s = services();

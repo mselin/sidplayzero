@@ -461,3 +461,40 @@ TEST_CASE("SPEC-140 HVSC is set up when the root's song length file gave a listi
     CHECK(status.set_up);
     CHECK(status.release == 0);
 }
+
+TEST_CASE("SPEC-140 SPEC-131 a set-up removes the mark of a complete collection, since it brings the documents only (FIND-031)") {
+    World w;
+    w.record.accepted = true;
+    spz::fake::Files state_files;
+    spz::fake::Executor quick;
+    spz::StateFile state{&state_files, &w.clock, &quick, w.temp.file("state/state.ini")};
+    state.set_hvsc_complete_release(85);
+    HvscEvents events;
+    spz::HvscSetupParts parts = setup_parts(w, &events);
+    parts.state = &state;
+    spz::HvscSetup setup{parts};
+    serve_collection(&w.http, 85);
+    REQUIRE(setup.start());
+    w.run();
+    CHECK(events.events == std::vector<std::string>{"ready 85"});
+    CHECK(state.state().hvsc_complete_release == 0);
+}
+
+TEST_CASE("SPEC-140 SPEC-131 a set-up that fails leaves the mark of a complete collection as it was (FIND-031)") {
+    World w;
+    w.record.accepted = true;
+    spz::fake::Files state_files;
+    spz::fake::Executor quick;
+    spz::StateFile state{&state_files, &w.clock, &quick, w.temp.file("state/state.ini")};
+    state.set_hvsc_complete_release(85);
+    HvscEvents events;
+    spz::HvscSetupParts parts = setup_parts(w, &events);
+    parts.state = &state;
+    spz::HvscSetup setup{parts};
+    // Nothing is served: the documents' download fails, and the root is left as it was.
+    REQUIRE(setup.start());
+    w.run();
+    CHECK(events.events.size() == 1);
+    CHECK(events.count("failed") == 1);
+    CHECK(state.state().hvsc_complete_release == 85);
+}
