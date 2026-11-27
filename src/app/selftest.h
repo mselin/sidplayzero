@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <deque>
 #include <functional>
+#include <map>
 #include <mutex>
 #include <set>
 #include <string>
@@ -78,6 +79,7 @@ struct Composition::SelfTest : ui::SelfTestView {
     // ---- the key step
     bool key_step = false;
     std::vector<std::string> asked;
+    std::map<std::string, bool> answers;   // each name answered, and whether its last answer was right
     std::size_t next_key = 0;
     std::vector<std::string> wrong;
 
@@ -140,6 +142,9 @@ struct Composition::SelfTest : ui::SelfTestView {
     // ---- the key step -------------------------------------------------------------------------------------
     void key_lines();
     void start_keys();
+    void read_answers();
+    bool next_unanswered();
+    void keys_done();
     void record_key(const KeyEvent& event);
 
     // ---- the engines ------------------------------------------------------------------------------------------
