@@ -117,8 +117,8 @@ just left highlighted.
   going back, that folder is highlighted.
 
 **REQ-003 A full HVSC stays quick.** With all of HVSC #85 installed, opening any folder shows its first
-screenful within 300 ms‡ when the folder has been read before and within 1 s‡ when it has not. Holding an
-arrow key moves the highlight at 20 rows per second‡ or more with no pause longer than 100 ms‡. The app uses
+screenful within 300 ms when the folder has been read before and within 1 s when it has not. Holding an
+arrow key moves the highlight at 20 rows per second or more with no pause longer than 100 ms. The app uses
 no more than 64 MB‡ of memory while doing so.
 - Why: 61,157 tunes on a microSD card and 512 MB of RAM shared with the system (CON-01, CON-15). Long stalls
   were the first thing asked to be avoided.
@@ -235,7 +235,7 @@ and says why.
 - Acceptance: a folder of five truncated files followed by a good one stops with a message after the fifth; a
   folder with one bad file between two good ones plays both good ones.
 
-**REQ-020 Quick to start.** Sound starts within 500 ms‡ of choosing a tune.
+**REQ-020 Quick to start.** Sound starts within 500 ms of choosing a tune.
 - Why: on a small keyboard, a delay after choosing a tune looks like a key press that did not register.
 - Priority: Should
 - Acceptance: on the reference device, the time from the key press to the first samples handed to the sound
@@ -334,7 +334,7 @@ file and can be forced in the settings.
 
 **REQ-050 Plays in real time on the device.** With the default settings, the reference device plays without
 dropouts: no underruns in 30 minutes over a fixed benchmark set of an ordinary tune, a tune that plays
-samples, a two-SID tune and a three-SID tune. The app's processor use averages no more than 60 %‡ of one core.
+samples, a two-SID tune and a three-SID tune. The app's processor use averages no more than 60 % of one core.
 - Why: the default engine of sidplayfp is accurate and heavy, and the processor is modest (CON-01).
 - Priority: Must
 - Acceptance: the app counts underruns and time spent rendering and can write both to a file; the on-device
@@ -365,7 +365,7 @@ lighter engine, and does not just stutter.
 - Acceptance: with a fake engine made too slow, the message appears within 10 s‡ and accepting it switches
   engine.
 
-**REQ-054 The screen keeps up.** While a tune plays, a key press shows its effect within 100 ms‡ in 95 of 100
+**REQ-054 The screen keeps up.** While a tune plays, a key press shows its effect within 100 ms in 95 of 100
 cases.
 - Why: rendering sound competes with the screen for a slow processor. A player that plays well and ignores
   keys is not usable.
@@ -373,7 +373,7 @@ cases.
 - Acceptance: on the reference device, the app logs the time from each key event to the next finished screen
   update during the benchmark; 95 % are within the budget.
 
-**REQ-055 Quick to open.** From choosing the app in the launcher to a browser that responds takes 2 s‡ or
+**REQ-055 Quick to open.** From choosing the app in the launcher to a browser that responds takes 2 s or
 less when the app has run before. Starting never waits for the network.
 - Why: the launcher shows nothing while an app starts (CON-03), so a slow start looks like a hang.
 - Priority: Must
@@ -591,7 +591,7 @@ or opened in the browser at its folder. The search works without a network.
 - Why: asked for directly: "search and play from HVSC".
 - Priority: Must
 - Acceptance: on a test collection of known tunes, a table of queries gives exactly the expected results; on
-  the reference device with HVSC #85, results for a two-word query appear within 500 ms‡.
+  the reference device with HVSC #85, results for a two-word query appear within 500 ms.
 
 **REQ-091 The index builds itself.** What the search needs is built in the background from HVSC's list of
 tunes and from the tunes on the device, with progress shown. Browsing and playing work meanwhile. The index is kept between runs, rebuilt
@@ -719,7 +719,7 @@ udev rule that runs no programs. The app never asks for a password.
 ### 4.12 Starting, stopping, and staying safe
 
 **REQ-120 Stops when told.** On SIGTERM or SIGINT, as on a held ESC, the app stops the sound, saves its state
-and exits within 1 s‡.
+and exits within 1 s.
 - Why: the launcher sends SIGTERM and kills what has not gone 3 s later (CON-04).
 - Priority: Must
 - Acceptance: a test sends SIGTERM during playback: the process exits with status 0 inside the budget and the

@@ -629,7 +629,7 @@ test calls; on the device it runs on the render thread.
   simulator script plays a fixture with the real engine and a recording sink while it opens three folders
   and the settings screen, saves the samples, then plays the same fixture again for the same time and
   presses nothing: the counter stays 0 and the two saved recordings are equal (`expect-same`).
-  On the device `key_to_sound_ms_max` is at most 500 ms‡ for present tunes.
+  On the device `key_to_sound_ms_max` is at most 500 ms for present tunes.
 - Level: host-unit, simulator, device
 
 **SPEC-071 The same tune renders the same.** With the settings of SPEC-067, rendering a given subtune twice
@@ -657,7 +657,7 @@ for 3 s: for each engine it renders the built-in one-SID fixture tune for 0.5 s 
 runs of 1 s each, timed through the `Clock` seam (the real clock on the device), and keeps the slowest run.
 The two **speed factors** (seconds of sound per second taken) are stored in the cache folder as `speed.ini`,
 two lines `accurate = F` and `light = F`, with the version and `sample_rate` they were measured for. With `engine = auto`, a tune that uses *n* SID chips
-is played with reSIDfp when its factor divided by *n* is at least 2.5‡, and with sidlite otherwise. Until the
+is played with reSIDfp when its factor divided by *n* is at least 2.5, and with sidlite otherwise. Until the
 measurement is done, `auto` means sidlite.
 - Covers: REQ-050, REQ-051
 - Priority: Must
@@ -672,7 +672,7 @@ measurement is done, `auto` means sidlite.
 
   On the device the results file holds both factors, the engine used for each benchmark tune and each tune's
   `render_load_percent`; the benchmark set plays for 30 minutes with `underrun_frames` at 0 and
-  `cpu_percent` at most 60 %‡.
+  `cpu_percent` at most 60 %.
 - Level: host-unit, device
 
 **SPEC-073 Sample rate.** The setting `sample_rate` is 44100 or 48000, and starts as 48000. The engine renders
@@ -1144,7 +1144,7 @@ screen update after it has been flushed. The differences are kept as a histogram
 - Covers: REQ-054
 - Priority: Must
 - Oracle: on the device, during the 30-minute benchmark with SPEC-260's key script, `key_to_screen_ms_p95` is
-  at most 100 ms‡.
+  at most 100 ms.
 - Level: device
 
 **SPEC-113 Notices.** A notice is one line of text over the last row of the content band, shown for 3 s‡;
@@ -1779,7 +1779,7 @@ with no word gives no search. A search is one pass over the index and runs on th
 - Oracle: on the fixture collection a table of queries, including "hub 1985", "1985 hub", "HUB", "huls" for
   "Hülsbeck" and a word that matches only a path, each give exactly the expected tunes; an absent tune is
   found by a word from its path and not by its title. On the device a two-word query over an index built
-  from HVSC #85's listing returns within 500 ms‡ (`search_ms_max`).
+  from HVSC #85's listing returns within 500 ms (`search_ms_max`).
 - Level: host-unit, device
 
 **SPEC-164 Filters.** The `filter` panel has four lines, each changed with Left and Right: chip model (any,
@@ -2021,7 +2021,7 @@ device `cafe:4011` by tagging it `uaccess`. The rule runs no program.
 
 Nothing in this order uses the network. The **start time** runs from the start of the process, as the system
 records it, to the first screen update flushed after the browser has its first screenful, and is at most
-2 s‡ when the app has run before.
+2 s when the app has run before.
 - Covers: REQ-055, REQ-086
 - Priority: Must
 - Oracle: the simulator, started with a `HttpClient` that fails the test if it is called, shows the browser
@@ -2035,11 +2035,11 @@ keys; stop the sound backend, which silences and closes the stream; put the scre
 app had turned it off (SPEC-207); write `state.ini` (SPEC-132); tell the workers to stop, which cuts a
 download short and keeps its partial file, ends a `7z` child and its process group, and keeps the index as
 last saved; write the measurements if they were asked for (SPEC-241); release the lock; exit with status 0.
-This takes at most 1 s‡. A second signal during it ends the process at once.
+This takes at most 1 s. A second signal during it ends the process at once.
 - Covers: REQ-120, REQ-127
 - Priority: Must
 - Oracle: an integration test starts the real program with a script that plays a fixture tune, sends
-  SIGTERM, and sees it end with status 0 within 1 s‡ of the real clock, `state.ini` naming that tune, and no
+  SIGTERM, and sees it end with status 0 within 1 s of the real clock, `state.ini` naming that tune, and no
   child process left; the same with SIGINT, and with a fake download held open. On the device `exit_ms` is
   at most 1,000‡ and a held ESC brings the launcher back.
 - Level: host-integration, simulator, device
@@ -2280,20 +2280,20 @@ each. A budget marked ‡ is a proposal until the device run has measured it (SP
 
 | Budget | Value | From | Measurement (SPEC-241) | How it is produced |
 |---|---|---|---|---|
-| First screenful of a folder listed before | 300 ms‡ | REQ-003 | `folder_again_ms_max` | The key script opens `/MUSICIANS/B/Bayliss_Richard` and `/MUSICIANS/S` a second time |
-| First screenful of a folder not listed before | 1 s‡ | REQ-003 | `folder_first_ms_max` | The key script opens them the first time after a start |
-| Rows per second with an arrow held | 20‡ or more | REQ-003 | `rows_per_second_min` | The key script holds Down for 10 s in the first of those folders |
-| Longest pause while it is held | 100 ms‡ | REQ-003 | `row_pause_ms_max` | The same hold |
+| First screenful of a folder listed before | 300 ms | REQ-003 | `folder_again_ms_max` | The key script opens `/MUSICIANS/B/Bayliss_Richard` and `/MUSICIANS/S` a second time |
+| First screenful of a folder not listed before | 1 s | REQ-003 | `folder_first_ms_max` | The key script opens them the first time after a start |
+| Rows per second with an arrow held | 20 or more | REQ-003 | `rows_per_second_min` | The key script holds Down for 10 s in the first of those folders |
+| Longest pause while it is held | 100 ms | REQ-003 | `row_pause_ms_max` | The same hold |
 | Memory in use | 64 MB‡ | REQ-003 | `peak_memory_kb` | The process's peak resident size at the end of the benchmark |
 | Detail line after the highlight rests | 200 ms‡ | REQ-004 | `detail_ms_max` | The key script, on present tunes |
-| Key to first samples, tune present | 500 ms‡ | REQ-020 | `key_to_sound_ms_max` | Each benchmark tune's start; time spent fetching is not counted |
+| Key to first samples, tune present | 500 ms | REQ-020 | `key_to_sound_ms_max` | Each benchmark tune's start; time spent fetching is not counted |
 | Underruns in 30 minutes of the benchmark set | 0 | REQ-050 | `underrun_frames` | SPEC-070's counter |
-| Processor use while playing | 60 %‡ of one core | REQ-050 | `cpu_percent` | The process's processor time, all threads, over the benchmark's wall time |
-| Key to screen, 95 of 100 | 100 ms‡ | REQ-054 | `key_to_screen_ms_p95` | SPEC-112, over the key script |
-| Start to a browser that answers | 2 s‡ | REQ-055 | `start_ms` | SPEC-200, five starts |
-| Exit after being told | 1 s‡ | REQ-120 | `exit_ms` | SPEC-201 |
-| Search, two words | 500 ms‡ | REQ-090 | `search_ms_max` | The key script's queries, over HVSC #85's listing |
-| Index, step one, HVSC #85's listing | 60 s‡ | REQ-091 | `index_step_one_s` | SPEC-161, at the first build |
+| Processor use while playing | 60 % of one core | REQ-050 | `cpu_percent` | The process's processor time, all threads, over the benchmark's wall time |
+| Key to screen, 95 of 100 | 100 ms | REQ-054 | `key_to_screen_ms_p95` | SPEC-112, over the key script |
+| Start to a browser that answers | 2 s | REQ-055 | `start_ms` | SPEC-200, five starts |
+| Exit after being told | 1 s | REQ-120 | `exit_ms` | SPEC-201 |
+| Search, two words | 500 ms | REQ-090 | `search_ms_max` | The key script's queries, over HVSC #85's listing |
+| Index, step one, HVSC #85's listing | 60 s | REQ-091 | `index_step_one_s` | SPEC-161, at the first build |
 | Index, step two | 200 tunes a second‡ or more | REQ-091 | `index_tunes_per_second` | SPEC-161; decided only when at least 1,000 tunes are present, else recorded as not measured |
 | Underruns while the index is built | 0 | REQ-091 | `index_underrun_frames` | A benchmark tune playing during the build |
 | Setting HVSC up | 2 minutes‡ | REQ-080 | `hvsc_setup_s` | SPEC-140, from Enter on the notice to the notice that it is ready |

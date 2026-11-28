@@ -15,6 +15,27 @@ brief the project started from, so the findings below are raised against that br
 
 ## Open
 
+### FIND-036 The step-5 answer and the app's own record of the complete download disagree
+- Phase: 5, implementation (found in the results of the device sitting, 28 November 2026)
+- Observed: in `sidplayzero-device-20261128-123755.txt`, line 15 says `download_everything_offered = yes`, and lines 12 to 14 show every SPEC-145
+  condition met (4,332 MiB of memory and swap, `7z` present, 15,453 MiB free); line 88 says
+  `check_download_everything = not offered`. HVSC was still set up from the sitting of 27 November, so an
+  unfinished earlier download would put "Finish the download" in that row in place of "Download
+  everything" (SPEC-148), which the checklist does not mention.
+- Concerns: SPEC-145, SPEC-148, `docs/device-checklist.md` step 5
+- Status: open. Asked the owner which rows the HVSC screen showed; the second sitting sets HVSC up from
+  empty and looks again
+
+### FIND-035 Two of the budgets were not measured at the sitting
+- Phase: 5, implementation (found in the results of the device sitting, 28 November 2026)
+- Observed: `sidplayzero-device-20261128-123755.txt` has no `hvsc_setup_s` line, because HVSC was already set up from the sitting of
+  27 November and SPEC-140 did not run; and line 70 says `index_tunes_per_second = not measured`, because
+  line 69 shows only four tunes present, below SPEC-240's 1,000.
+- Concerns: SPEC-240's rows "Setting HVSC up" (2 minutes‡, REQ-080) and "Index, step two" (200 tunes a
+  second‡, REQ-091)
+- Status: open. A second, short sitting sets HVSC up from an empty root, runs "Download everything", and runs
+  the benchmark step again with the whole collection present
+
 ### FIND-007 USBSID-Pico needs a newer engine library than the device's system has
 - Phase: 1, requirements
 - Observed: USBSID-Pico support came in libsidplayfp 2.16.0. Debian trixie, which the device runs, has 2.12.0.
@@ -33,6 +54,47 @@ brief the project started from, so the findings below are raised against that br
 - Status: open; it matters only when REQ-111 is taken up. The part `usbsid` stays out of every build until then
 
 ## Closed
+
+### FIND-034 The audio rate and format in the results were the ones asked for, not the ones opened
+- Phase: 5, implementation (found in the results of the device sitting, 28 November 2026)
+- Observed: `sidplayzero-device-20261128-123755.txt` lines 53 and 54 say `audio_rate = 48000` and `audio_format = s16 stereo`. The self-test
+  wrote the setting `sample_rate` and a fixed "s16 stereo", so the lines would read the same whatever the
+  system opened, and SPEC-243's open point "the system's sample rate and format" is not settled by them.
+- Concerns: SPEC-241's row `audio_backend`, `audio_rate`, `audio_format` ("What miniaudio opened"); SPEC-243
+- Resolution: the app now asks miniaudio, once the stream is open, for the rate, format and channels the
+  backend opened it with, and writes those. SPEC-241 already says this; no document changes. The open point
+  is settled at the second sitting. Line 52, `audio_backend = PulseAudio`, was already taken from miniaudio.
+- Status: closed in the code; the measurement is owed by the second sitting (FIND-035)
+
+### FIND-032 The device sitting confirms most of SPEC-240's budgets and SPEC-243's open points
+- Phase: 5, implementation (the results of the device sitting, 28 November 2026, `sidplayzero-device-20261128-123755.txt`)
+- Observed, against SPEC-240, each with its line of the results file:
+  - line 7, `start_ms` 971, 563, 184, 211, 368, 174 and 504: all within 2 s (REQ-055)
+  - line 8, `exit_ms` at most 115: within 1 s (REQ-120)
+  - line 58, `folder_first_ms_max = 28`, and line 59, `folder_again_ms_max = 0`: within 1 s and 300 ms
+    (REQ-003)
+  - line 60, `rows_per_second_min = 23.7`, and line 61, `row_pause_ms_max = 71`: at least 20 and at most
+    100 ms (REQ-003)
+  - line 57, `key_to_sound_ms_max = 84`: within 500 ms (REQ-020)
+  - line 55, `underrun_frames = 0`, and line 56, `cpu_percent = 25.5`: no underruns, and under 60 % (REQ-050)
+  - line 64, `key_to_screen_ms_p95 = 4`: within 100 ms (REQ-054)
+  - line 63, `search_ms_max = 65`: within 500 ms (REQ-090)
+  - line 67, `index_step_one_s = 1.34`: within 60 s, and line 71, `index_underrun_frames = 0` (REQ-091)
+- Observed, against SPEC-243's open points:
+  - R8: line 11 shows the user in `audio`, `video`, `input` and `gpio`; lines 43 to 45 show the backlight
+    writable and the framebuffer and keyboard open
+  - R7: line 43, `backlight_writable = yes`; line 92, the screen stayed on past two minutes while a tune
+    played; line 90, the brightness keys worked
+  - R1: lines 12 to 15, every SPEC-145 condition met on the device
+  - R2: lines 47 and 48, `speed_factor_accurate = 1.081081` and `speed_factor_light = 6.369427`; lines 72 to
+    79, `auto` chose sidlite for all four benchmark tunes, whose render load was 15.8 % to 22.0 %
+  - CON-20: line 49, `render_repeatable = yes`
+- Resolution: SPEC-072's threshold of 2.5 is confirmed: reSIDfp at 1.08 times real time cannot play a
+  one-SID tune with room to spare, sidlite plays the three-SID tune at 22 % load, and line 55 shows no
+  underruns over the 30 minutes, so SPEC-004's default `auto` stands. The ‡ is removed from each budget
+  above in `requirements.md` and `spec.md`. Three rows are not confirmed: memory (FIND-033), the detail
+  line (FIND-037) and the two not measured (FIND-035); the sample rate and format wait on FIND-034.
+- Status: closed. Confirmed by the owner on 28 November 2026
 
 ### FIND-031 A complete collection was not kept complete by an update
 - Phase: 5, implementation (asked for by the owner after the device sitting, 27 November 2026)
