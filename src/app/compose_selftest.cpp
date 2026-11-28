@@ -310,10 +310,6 @@ void Composition::SelfTest::after_first_listing() {
 void Composition::SelfTest::tick() {
     Composition* p = parts;
     const Millis now = p->seams_.clock->now_ms();
-    if (now - setup_checked >= kSettingUpCheckMs) {
-        setup_checked = now;
-        watch_setup(now);
-    }
     switch (phase) {
         case Phase::Fetching:
             fetch_tick();
@@ -341,17 +337,15 @@ void Composition::SelfTest::tick() {
     }
 }
 
-// SPEC-240: setting HVSC up, from the job's start (Enter on the notice) to its end with a listing.
-void Composition::SelfTest::watch_setup(Millis now) {
-    const JobState job = p_jobs().state();
-    if (job.kind == JobKind::Setup) {
-        if (setup_began < 0) setup_began = now;
-    } else if (setup_began >= 0) {
-        if (parts->scope_->listing && parts->scope_->listing->is_open()) {
-            parts->metrics_.set("hvsc_setup_s", decimal(static_cast<double>(now - setup_began) / 1000.0, 1));
-        }
-        setup_began = -1;
-    }
+// SPEC-240: setting HVSC up, from the job's start (Enter on the notice) to the notice that it is ready.
+void Composition::SelfTest::setup_began_at(Millis now) { setup_began = now; }
+
+void Composition::SelfTest::setup_ended() { setup_began = -1; }
+
+void Composition::SelfTest::setup_ready(Millis now) {
+    if (setup_began < 0) return;
+    parts->metrics_.set("hvsc_setup_s", decimal(static_cast<double>(now - setup_began) / 1000.0, 1));
+    setup_began = -1;
 }
 
 Millis Composition::SelfTest::share_done() const {
@@ -443,10 +437,6 @@ void Composition::device_measurements() {
     // SPEC-241: what only the device can say, on the device only.
     if (!seams_.device_facts) return;
     for (const auto& fact : seams_.device_facts()) metrics_.set(fact.first, fact.second);
-    if (metrics_.has("audio_backend")) {
-        metrics_.set_number("audio_rate", settings_->settings().sample_rate);
-        metrics_.set("audio_format", "s16 stereo");
-    }
     ListedTune commando;
     if (scope_->listing && scope_->listing->is_open() && scope_->listing->by_path(kCommando, &commando)) {
         std::string lengths;

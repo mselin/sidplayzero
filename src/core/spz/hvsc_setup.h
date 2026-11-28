@@ -59,6 +59,9 @@ public:
     virtual void hvsc_ready(int release) = 0;
     // A step failed or the job was stopped; what was there before is untouched. `step` is 0 for a stop.
     virtual void hvsc_failed(int step) = 0;
+    // The set-up's job has begun, after Enter on the notice and the gate (SPEC-240 measures from here;
+    // FIND-039). Called on the UI thread; nothing by default.
+    virtual void hvsc_began() {}
 };
 
 struct HvscSetupParts {

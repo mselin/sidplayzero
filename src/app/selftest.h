@@ -34,7 +34,6 @@ const int kHoldEvery = 5;                        // in the first round and every
 const Millis kKeyGapMs = 120;                    // between two keys of the key script, as a quick hand
 const Millis kMoveGapMs = 60;                    // between two keys that move the highlight
 const Millis kWaitMostMs = 10 * 1000;            // what the key script waits for at most, before giving up
-const Millis kSettingUpCheckMs = 100;            // how often a set-up of HVSC is looked for
 const int kFetchTries = 3;
 const double kRenderSeconds = 10.0;              // SPEC-241: ten seconds of the built-in tune
 const int kStepTunesNeeded = 1000;               // SPEC-240: step two is decided with this many present
@@ -84,7 +83,6 @@ struct Composition::SelfTest : ui::SelfTestView {
     std::vector<std::string> wrong;
 
     // ---- a set-up of HVSC, for hvsc_setup_s
-    Millis setup_checked = 0;
     Millis setup_began = -1;
 
     // ---- the benchmark
@@ -230,9 +228,13 @@ struct Composition::SelfTest : ui::SelfTestView {
     // ---- what changes by itself --------------------------------------------------------------------------
     void tick();
 
-    // SPEC-240: setting HVSC up, from the job's start (Enter on the notice) to its end with a listing.
-    void watch_setup(Millis now);
-    Jobs& p_jobs() { return parts->jobs_; }
+    // SPEC-240: setting HVSC up, from the job's start (Enter on the notice), which the set-up tells of as it
+    // begins, to the notice that it is ready, told of as it is raised. Both are told, not looked for: a set-up
+    // can end between two looks, and the listing is opened again only later, on the long worker (FIND-039).
+    // A set-up that fails or is stopped is not measured.
+    void setup_began_at(Millis now);
+    void setup_ready(Millis now);
+    void setup_ended();
 
     // SPEC-260: the job mark while the benchmark plays.
     bool marking() const { return phase == Phase::Playing || phase == Phase::Indexing; }

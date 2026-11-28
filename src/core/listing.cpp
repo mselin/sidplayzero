@@ -289,6 +289,16 @@ struct Listing::Map {
         *out = std::move(tune);
         return true;
     }
+    // A tune's number of subtunes and the length of its first (0 if it has none), without its path.
+    bool tune_lengths(std::uint32_t t, int* subtunes, Millis* first_length) const {
+        if (t >= tunes) return false;
+        const std::uint8_t* record = at(tunes_at + t * kTuneRecord);
+        const std::uint32_t first = get_u32(record + 8), count = get_u32(record + 12);
+        if (static_cast<std::uint64_t>(first) + count > lengths) return false;
+        *subtunes = static_cast<int>(count);
+        *first_length = count > 0 ? static_cast<Millis>(get_u32(at(lengths_at + 4 * static_cast<std::size_t>(first)))) : 0;
+        return true;
+    }
     bool tune_name(std::uint32_t t, std::string* out) const {
         if (!tune_path(t, out)) return false;
         const std::uint32_t from = get_u16(at(tunes_at + t * kTuneRecord + 6));
@@ -488,7 +498,8 @@ bool Listing::by_md5(const std::string& md5, ListedTune* out) const {
     return found != nullptr && std::memcmp(found, wanted, 16) == 0 && m.tune(id, out);
 }
 
-bool Listing::folder(const std::string& path, std::vector<std::string>* folders, std::vector<std::string>* tunes) const {
+bool Listing::folder(const std::string& path, std::vector<std::string>* folders, std::vector<std::string>* tunes,
+                     std::vector<TuneLengths>* lengths) const {
     const std::shared_ptr<const Map> map = snapshot();
     if (!map) return false;
     const Map& m = *map;
@@ -512,12 +523,20 @@ bool Listing::folder(const std::string& path, std::vector<std::string>* folders,
         if (!m.folder_path(child, &name)) return false;
         folder_names.push_back(name.substr(name.rfind('/') + 1));
     }
+    std::vector<TuneLengths> tune_lengths;
+    if (lengths != nullptr) tune_lengths.reserve(tune_count);
     for (std::uint32_t i = 0; i < tune_count; ++i) {
         if (!m.tune_name(first_tune + i, &name)) return false;
         tune_names.push_back(name);
+        if (lengths != nullptr) {
+            TuneLengths shape;
+            if (!m.tune_lengths(first_tune + i, &shape.subtunes, &shape.first_ms)) return false;
+            tune_lengths.push_back(shape);
+        }
     }
     *folders = std::move(folder_names);
     *tunes = std::move(tune_names);
+    if (lengths != nullptr) *lengths = std::move(tune_lengths);
     return true;
 }
 

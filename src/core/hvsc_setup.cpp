@@ -288,6 +288,7 @@ bool HvscSetup::start() {
     if (p.jobs->running()) return false;
     p.gate->ask([p] {
         if (!p.jobs->begin(JobKind::Setup)) return;
+        if (p.listener) p.listener->hvsc_began();
         p.long_worker->post([p] {
             const SetupOutcome outcome = run_setup_steps(p.files, p.http, p.jobs, p.settings.get().url_files, p.root, p.cache);
             p.ui->post([p, outcome] {

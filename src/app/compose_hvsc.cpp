@@ -6,6 +6,7 @@
 #include <memory>
 
 #include "app/composition.h"
+#include "app/selftest.h"
 #include "platform/guarded.h"
 #include "spz/keep_start.h"
 #include "spz/keymap.h"
@@ -54,6 +55,8 @@ struct Composition::HvscEvents : HvscListener, DownloadListener, PlaySwitch {
         // changes nothing it shows.
         changed();
         if (!scope->live) return;
+        // SPEC-240: the set-up's time ends at this notice (FIND-039).
+        if (parts->selftest_) parts->selftest_->setup_ready(parts->seams_.clock->now_ms());
         parts->listing_changed(scope);
         App* app = parts->app();
         const bool showing = app->top_name() == "hvsc" || app->top_name() == "empty";
@@ -69,7 +72,14 @@ struct Composition::HvscEvents : HvscListener, DownloadListener, PlaySwitch {
             });
         }
     }
-    void hvsc_failed(int) override { changed(); }
+    void hvsc_failed(int) override {
+        changed();
+        if (scope->live && parts->selftest_) parts->selftest_->setup_ended();
+    }
+    void hvsc_began() override {
+        // SPEC-240: the set-up's time starts here (FIND-039).
+        if (scope->live && parts->selftest_) parts->selftest_->setup_began_at(parts->seams_.clock->now_ms());
+    }
     void download_done() override {
         changed();
         if (scope->live) parts->listing_changed(scope);

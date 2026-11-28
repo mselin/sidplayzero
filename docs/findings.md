@@ -15,6 +15,78 @@ brief the project started from, so the findings below are raised against that br
 
 ## Open
 
+### FIND-033 The memory peak at the sitting was over its budget
+- Phase: 5, implementation (found in the results of the device sitting, 28 November 2026)
+- Observed: `sidplayzero-device-20261128-123755.txt` says `peak_memory_kb = 80824`, against SPEC-240's
+  64 MB‡. It is `getrusage`'s high-water mark, taken after the benchmark's last phase, a User rebuild of the
+  index (`src/app/selftest_benchmark.cpp:24-28`). Reproduced on the host at 86.4 MB (light engine, no GL).
+  About 25 MB of that is clean file-backed pages (the program, `listing.bin`, shared libraries). The peak
+  itself is step one of a full index build, which held the old records (232 bytes each, about 19 MB with
+  their strings), the whole listing's tunes (9 to 12 MB, only to read their paths) and the new records
+  (about 19 MB) at once; glibc then kept the freed pages, so the resident size stayed at the peak. A start
+  that rebuilds the whole index (a first start, a moved card, a new HVSC) peaks the same way (84.4 MB).
+- Concerns: SPEC-240's row "Memory in use" (64 MB‡, REQ-003), SPEC-161
+- Resolution so far: step one reads the listing 1,024 tunes at a time, and `malloc_trim(0)` runs after each
+  index build (`src/core/index.cpp`, `src/app/compose_search.cpp`). On the host the peak fell from 86.4 to
+  71.2 MB, and the resident size after a rebuild from 86.8 to 50.4 MB; the same output, covered by the
+  index's unit tests. The same cut on the device suggests about 66 MB, still over. Further cuts are
+  estimated, not built: dropping the old records before step one (about 7 MB; searches would find nothing
+  while it runs, a change of behaviour), updating in place in `reconcile` (about 12 MB at a start), and a
+  smaller `IndexRecord` (about 7.5 MB always, 15 MB at a peak).
+- Status: open. For the owner: whether the budget should count the high-water mark, which includes the
+  clean file pages, or anonymous memory only (`RssAnon`); and whether to take the further cuts. The second
+  sitting measures the peak again with this change
+
+### FIND-037 The detail line at the sitting was slower than its budget, and was measured on absent tunes
+- Phase: 5, implementation (found in the results of the device sitting, 28 November 2026)
+- Observed: `sidplayzero-device-20261128-123755.txt` says `detail_ms_max = 341`, against SPEC-240's 200 ms‡.
+  The key script rests on three tunes of its first folder, `/MUSICIANS/B/Bayliss_Richard`, present ones first
+  and absent ones otherwise (`src/app/selftest_script.cpp`); none of the four present tunes is there, so all
+  three were absent, though SPEC-240 says "on present tunes". The figure runs from the last key to the line,
+  so it includes SPEC-046's rest of 150 ms. The line was a job on the quick worker, which takes one job at a
+  time in order (SPEC-022) and also writes the state every 2 s of browsing, with two fsyncs (SPEC-131,
+  SPEC-132). On the host, with each fsync slowed by 250 ms, the figure went from 173 to 670 ms, and every
+  figure over 200 ms was a line queued behind a save. `search_ms_max` waits in the same queue.
+- Concerns: SPEC-240's row "Detail line after the highlight rests" (200 ms‡, REQ-004), SPEC-046, SPEC-022,
+  SPEC-131, SPEC-132, SPEC-260's key script
+- Resolution so far: a folder's entries now carry each absent tune's number of subtunes and first length
+  from the listing, so an absent tune's line is shown as soon as the rest ends, with the same words and
+  without the worker (`src/core/listing.cpp`, `src/core/collection.cpp`, `src/ui/browser_screen.cpp`). The
+  simulator script `browse_detail_line_busy_worker.script` holds the quick worker on a slow file system and
+  wants the line within 200 ms; it failed before the change. With the slowed fsync the host figure is 162 ms.
+- Status: open. For the owner: a present tune's line still reads its file on the quick worker and can wait
+  behind a save, and moving it needs a change to SPEC-022's one worker; the key script should rest on present
+  tunes, as SPEC-240 says; and whether the 200 ms includes the 150 ms rest, which SPEC-240's "after the
+  highlight rests" can be read either way. The second sitting measures the line again with this change
+
+### FIND-036 The step-5 answer and the app's own record of the complete download disagree
+- Phase: 5, implementation (found in the results of the device sitting, 28 November 2026)
+- Observed: in `sidplayzero-device-20261128-123755.txt`, line 15 says `download_everything_offered = yes`, and lines 12 to 14 show every SPEC-145
+  condition met (4,332 MiB of memory and swap, `7z` present, 15,453 MiB free); line 88 says
+  `check_download_everything = not offered`. HVSC was still set up from the sitting of 27 November, so an
+  unfinished earlier download would put "Finish the download" in that row in place of "Download
+  everything" (SPEC-148), which the checklist does not mention.
+- Concerns: SPEC-145, SPEC-148, `docs/device-checklist.md` step 5
+- Resolution so far: none until it is known which rows the screen showed; the second sitting begins from
+  an empty root, where no earlier download can be unfinished. The owner's screenshots of a set-up from empty
+  show a likelier cause: when the set-up ends the app goes to the browser by itself, and the HVSC screen is
+  reached only by Tab for Settings and then 5, which step 5 did not say. Step 5 of the checklist and of
+  `tools/device-run.sh` now says so.
+- Status: open. Asked the owner which rows the HVSC screen showed; the second sitting sets HVSC up from
+  empty and looks again
+
+### FIND-035 Two of the budgets were not measured at the sitting
+- Phase: 5, implementation (found in the results of the device sitting, 28 November 2026)
+- Observed: `sidplayzero-device-20261128-123755.txt` has no `hvsc_setup_s` line, because HVSC was already set up from the sitting of
+  27 November and SPEC-140 did not run; and line 70 says `index_tunes_per_second = not measured`, because
+  line 69 shows only four tunes present, below SPEC-240's 1,000.
+- Concerns: SPEC-240's rows "Setting HVSC up" (2 minutes‡, REQ-080) and "Index, step two" (200 tunes a
+  second‡, REQ-091)
+- Resolution so far: the two budgets keep their marks; `device-run.sh --only 4,5,8` (FIND-038) gives the
+  steps that measure them.
+- Status: open. A second, short sitting sets HVSC up from an empty root, runs "Download everything", and runs
+  the benchmark step again with the whole collection present
+
 ### FIND-007 USBSID-Pico needs a newer engine library than the device's system has
 - Phase: 1, requirements
 - Observed: USBSID-Pico support came in libsidplayfp 2.16.0. Debian trixie, which the device runs, has 2.12.0.
@@ -33,6 +105,75 @@ brief the project started from, so the findings below are raised against that br
 - Status: open; it matters only when REQ-111 is taken up. The part `usbsid` stays out of every build until then
 
 ## Closed
+
+### FIND-039 The self-test dropped the set-up's time when HVSC was set up from empty
+- Phase: 5, implementation (found from the owner's screenshots of a set-up from empty, 28 November 2026)
+- Observed: `SelfTest::watch_setup` wrote `hvsc_setup_s` only if the listing was already open at its first
+  check after the set-up's job ended, and forgot the start otherwise. The listing reopens later, on the long
+  worker, after the ready notice, so on a set-up from empty the time was usually dropped. The simulator's
+  benchmark test left `hvsc_setup_s` out, so nothing caught it.
+- Concerns: SPEC-240's row "Setting HVSC up" ("from Enter on the notice to the notice that it is ready"),
+  SPEC-241, FIND-035
+- Resolution: the set-up now tells the self-test as its job begins (`HvscListener::hvsc_began`) and as it
+  is ready (`HvscEvents::hvsc_ready`), so nothing is looked for between two checks; a first fix that still
+  looked for the start every 100 ms failed the new test, whose set-up ends sooner than that. A set-up that
+  fails or is stopped is not measured. The simulator test
+  `test_setup_time` sets HVSC up from empty under the self-test and checks the key. It changes the self-test
+  only, as SPEC-240 already says it should be measured.
+- Status: closed. Within the owner's word of 28 November 2026 to fix the measurements
+
+### FIND-038 A second sitting for what the first could not measure had to be the whole sitting again
+- Phase: 5, implementation (found in the results of the device sitting, 28 November 2026)
+- Observed: the measurements FIND-035 leaves open need steps 4, 5 and 8 only, but `tools/device-run.sh`
+  gives every step from the one it has reached, about an hour with the tester present.
+- Concerns: SPEC-260, `tools/device-run.sh`, `docs/device-checklist.md`
+- Resolution: `--only` followed by step numbers gives those steps only; steps 1 and 11, the install and
+  the removal with the results file, are always done, and `sitting.state` remembers the steps so the
+  sitting is carried on as before. It changes the test tooling only, not the app.
+- Status: closed. Within the owner's word of 28 November 2026 to send a package for a short second sitting
+
+### FIND-034 The audio rate and format in the results were the ones asked for, not the ones opened
+- Phase: 5, implementation (found in the results of the device sitting, 28 November 2026)
+- Observed: `sidplayzero-device-20261128-123755.txt` lines 53 and 54 say `audio_rate = 48000` and `audio_format = s16 stereo`. The self-test
+  wrote the setting `sample_rate` and a fixed "s16 stereo", so the lines would read the same whatever the
+  system opened, and SPEC-243's open point "the system's sample rate and format" is not settled by them.
+- Concerns: SPEC-241's row `audio_backend`, `audio_rate`, `audio_format` ("What miniaudio opened"); SPEC-243
+- Resolution: the app now asks miniaudio, once the stream is open, for the rate, format and channels the
+  backend opened it with, and writes those. SPEC-241 already says this; no document changes. The open point
+  is settled at the second sitting. Line 52, `audio_backend = PulseAudio`, was already taken from miniaudio.
+- Status: closed in the code; the measurement is owed by the second sitting (FIND-035)
+
+### FIND-032 The device sitting confirms most of SPEC-240's budgets and SPEC-243's open points
+- Phase: 5, implementation (the results of the device sitting, 28 November 2026, `sidplayzero-device-20261128-123755.txt`)
+- Observed, against SPEC-240, each with its line of the results file:
+  - line 7, `start_ms` 971, 563, 184, 211, 368, 174 and 504: all within 2 s (REQ-055)
+  - line 8, `exit_ms` at most 115: within 1 s (REQ-120)
+  - line 58, `folder_first_ms_max = 28`, and line 59, `folder_again_ms_max = 0`: within 1 s and 300 ms
+    (REQ-003)
+  - line 60, `rows_per_second_min = 23.7`, and line 61, `row_pause_ms_max = 71`: at least 20 and at most
+    100 ms (REQ-003)
+  - line 57, `key_to_sound_ms_max = 84`: within 500 ms (REQ-020)
+  - line 55, `underrun_frames = 0`, and line 56, `cpu_percent = 25.5`: no underruns, and under 60 % (REQ-050)
+  - line 64, `key_to_screen_ms_p95 = 4`: within 100 ms (REQ-054)
+  - line 63, `search_ms_max = 65`: within 500 ms (REQ-090)
+  - line 67, `index_step_one_s = 1.34`: within 60 s, and line 71, `index_underrun_frames = 0` (REQ-091)
+- Observed, against SPEC-243's open points:
+  - R8: line 11 shows the user in `audio`, `video`, `input` and `gpio`; lines 43 to 45 show the backlight
+    writable and the framebuffer and keyboard open
+  - R7: line 43, `backlight_writable = yes`; line 92, the screen stayed on past two minutes while a tune
+    played; line 90, the brightness keys worked
+  - R1: lines 12 to 15, every SPEC-145 condition met on the device
+  - R2: lines 47 and 48, `speed_factor_accurate = 1.081081` and `speed_factor_light = 6.369427`; lines 72 to
+    79, `auto` chose sidlite for all four benchmark tunes, whose render load was 15.8 % to 22.0 %
+  - CON-20: line 49, `render_repeatable = yes`
+- Concerns: SPEC-240, SPEC-243, SPEC-072, SPEC-004; REQ-003, REQ-020, REQ-050, REQ-054, REQ-055, REQ-090,
+  REQ-091, REQ-120
+- Resolution: SPEC-072's threshold of 2.5 is confirmed: reSIDfp at 1.08 times real time cannot play a
+  one-SID tune with room to spare, sidlite plays the three-SID tune at 22 % load, and line 55 shows no
+  underruns over the 30 minutes, so SPEC-004's default `auto` stands. The ‡ is removed from each budget
+  above in `requirements.md` and `spec.md`. Three rows are not confirmed: memory (FIND-033), the detail
+  line (FIND-037) and the two not measured (FIND-035); the sample rate and format wait on FIND-034.
+- Status: closed. Confirmed by the owner on 28 November 2026
 
 ### FIND-031 A complete collection was not kept complete by an update
 - Phase: 5, implementation (asked for by the owner after the device sitting, 27 November 2026)

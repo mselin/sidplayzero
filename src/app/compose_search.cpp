@@ -4,6 +4,9 @@
 // through ui::Services::rebuild_index) and when the collection root changes, and told of tunes as they
 // arrive (compose_hvsc.cpp, Arrivals).
 #include <atomic>
+#ifdef __GLIBC__
+#include <malloc.h>
+#endif
 
 #include "app/composition.h"
 
@@ -62,6 +65,11 @@ void Composition::build_index(IndexReason reason, std::function<void(const Index
     app()->long_worker()->post([this, index, files, cache, reason, live, done] {
         files->make_folders(cache);
         const IndexRun run = index->build(reason, [this, live] { return running() && live->load(); });
+#ifdef __GLIBC__
+        // The build's copies of the records are freed by now, but glibc keeps their pages in this thread's
+        // arena (tens of MB after a rebuild of HVSC's index), counted in the resident size. Give them back.
+        malloc_trim(0);
+#endif
         if (done) {
             done(run);
             return;

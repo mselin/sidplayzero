@@ -149,6 +149,19 @@ class SelfTest(unittest.TestCase):
         self.assertEqual(values["index_tunes_per_second"], "not measured")   # fewer than 1,000 tunes are present
         self.assertEqual(len([key for key in keys if key == "start_ms"]), 1)
 
+    def test_setup_time(self):
+        """SPEC-240 SPEC-260 HVSC set up from the empty screen while a self-test request is there writes hvsc_setup_s, from Enter on the notice to the notice that it is ready (FIND-039)"""
+        header = ["# SPEC-240 the time of setting HVSC up, written to the results",
+                  "# fakes: fakes/selftest_setup",
+                  "# args: --backend fake --seed 1"]
+        _, results = self.run_lines(header, ["expect screen = empty", "key Enter", "expect panel.id = notice-panel",
+                                             "key Enter", "expect notice.id = MSG_HVSC_READY", "expect screen = browser",
+                                             "advance 1000", "quit"])
+        self.assertIsNotNone(results, "selftest.results was not written")
+        values = dict(lines_of(results))
+        self.assertIn("hvsc_setup_s", values, "the set-up's time was not written")
+        self.assertRegex(values["hvsc_setup_s"], r"^\d+\.\d$")
+
     def test_no_step(self):
         """SPEC-260 with the request none, two starts and exits leave two start_ms and two exit_ms lines and no step's keys"""
         header = ["# SPEC-260 two starts and two exits with no step asked for",

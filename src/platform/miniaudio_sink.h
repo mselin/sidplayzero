@@ -33,6 +33,10 @@ public:
 
     // The backend of the stream that is open, such as "PulseAudio" or "ALSA"; "" when none is (SPEC-241).
     std::string backend_name() const;
+    // What the backend opened the stream with, as miniaudio reports it once the device is open (SPEC-241):
+    // the rate in Hz, and the sample format and channels, such as "s16 stereo". 0 and "" when none is open.
+    unsigned opened_rate() const;
+    std::string opened_format() const;
 
 private:
     struct Impl;

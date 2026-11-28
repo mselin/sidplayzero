@@ -114,4 +114,26 @@ std::string MiniaudioSink::backend_name() const {
     }
 }
 
+unsigned MiniaudioSink::opened_rate() const {
+    if (!impl_->device_open) return 0;
+    return impl_->device.playback.internalSampleRate;
+}
+
+std::string MiniaudioSink::opened_format() const {
+    if (!impl_->device_open) return "";
+    std::string format;
+    switch (impl_->device.playback.internalFormat) {
+        case ma_format_u8: format = "u8"; break;
+        case ma_format_s16: format = "s16"; break;
+        case ma_format_s24: format = "s24"; break;
+        case ma_format_s32: format = "s32"; break;
+        case ma_format_f32: format = "f32"; break;
+        default: format = "unknown"; break;
+    }
+    const ma_uint32 channels = impl_->device.playback.internalChannels;
+    if (channels == 1) return format + " mono";
+    if (channels == 2) return format + " stereo";
+    return format + " " + std::to_string(channels) + " channels";
+}
+
 }  // namespace spz::platform
