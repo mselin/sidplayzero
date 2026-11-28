@@ -443,10 +443,6 @@ void Composition::device_measurements() {
     // SPEC-241: what only the device can say, on the device only.
     if (!seams_.device_facts) return;
     for (const auto& fact : seams_.device_facts()) metrics_.set(fact.first, fact.second);
-    if (metrics_.has("audio_backend")) {
-        metrics_.set_number("audio_rate", settings_->settings().sample_rate);
-        metrics_.set("audio_format", "s16 stereo");
-    }
     ListedTune commando;
     if (scope_->listing && scope_->listing->is_open() && scope_->listing->by_path(kCommando, &commando)) {
         std::string lengths;

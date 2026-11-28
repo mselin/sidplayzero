@@ -132,7 +132,11 @@ int main(int argc, char** argv) {
                 {"backlight_writable", backlight.can_change() ? "yes" : "no"},
             };
             const std::string backend = sink.backend_name();
-            if (!backend.empty()) facts["audio_backend"] = backend;
+            if (!backend.empty()) {
+                facts["audio_backend"] = backend;
+                facts["audio_rate"] = std::to_string(sink.opened_rate());
+                facts["audio_format"] = sink.opened_format();
+            }
             return facts;
         };
     }
