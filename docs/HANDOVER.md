@@ -22,7 +22,8 @@ measurement; then send a package for a short second sitting.)
    12 passed. **Done** (`e488102`).
 4. The set-up's time dropped on a set-up from empty (FIND-039), found from the owner's screenshots: fix,
    simulator test `test_setup_time`; step 5 now says Tab, then 5 (FIND-036). Check: simulator level passes,
-   and the test fails without the fix. **In progress** (simulator level running with the second fix).
+   and the test fails without the fix. **Done** (`b3cb91d`, `d6bd215`; the first fix failed the test, the
+   second passes; simulator level 494 passed, 0 not in order).
 5. Memory peak (FIND-033) and detail line (FIND-037): read the two agents' files, merge any fix, write the
    findings. Check: `check_repo.py` OK. **In progress** (agents running).
 6. `tools/test unit`, then `tools/test simulator`, both with WERROR. Check: "0 not in order".
@@ -94,7 +95,8 @@ Rules for working here:
 - Build with WERROR of `device-sitting-2` at `4c69ee6`: OK.
 - `python3 -m pytest tests/framework/integration/test_device_script.py`: 12 passed.
 - The audio fix has no host test (the platform sink has none); it is checked at the second sitting.
-- Not yet run: `tools/test unit`; `tools/test simulator` running with FIND-039's fix.
+- `tools/test simulator` with WERROR at `d6bd215`: 588 tests, 494 passed, 94 skipped, 0 not in order.
+- `tools/test unit` at `d6bd215`: running.
 
 ## Dead ends
 
