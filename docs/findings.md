@@ -37,6 +37,28 @@ brief the project started from, so the findings below are raised against that br
   clean file pages, or anonymous memory only (`RssAnon`); and whether to take the further cuts. The second
   sitting measures the peak again with this change
 
+### FIND-037 The detail line at the sitting was slower than its budget, and was measured on absent tunes
+- Phase: 5, implementation (found in the results of the device sitting, 28 November 2026)
+- Observed: `sidplayzero-device-20261128-123755.txt` says `detail_ms_max = 341`, against SPEC-240's 200 ms‡.
+  The key script rests on three tunes of its first folder, `/MUSICIANS/B/Bayliss_Richard`, present ones first
+  and absent ones otherwise (`src/app/selftest_script.cpp`); none of the four present tunes is there, so all
+  three were absent, though SPEC-240 says "on present tunes". The figure runs from the last key to the line,
+  so it includes SPEC-046's rest of 150 ms. The line was a job on the quick worker, which takes one job at a
+  time in order (SPEC-022) and also writes the state every 2 s of browsing, with two fsyncs (SPEC-131,
+  SPEC-132). On the host, with each fsync slowed by 250 ms, the figure went from 173 to 670 ms, and every
+  figure over 200 ms was a line queued behind a save. `search_ms_max` waits in the same queue.
+- Concerns: SPEC-240's row "Detail line after the highlight rests" (200 ms‡, REQ-004), SPEC-046, SPEC-022,
+  SPEC-131, SPEC-132, SPEC-260's key script
+- Resolution so far: a folder's entries now carry each absent tune's number of subtunes and first length
+  from the listing, so an absent tune's line is shown as soon as the rest ends, with the same words and
+  without the worker (`src/core/listing.cpp`, `src/core/collection.cpp`, `src/ui/browser_screen.cpp`). The
+  simulator script `browse_detail_line_busy_worker.script` holds the quick worker on a slow file system and
+  wants the line within 200 ms; it failed before the change. With the slowed fsync the host figure is 162 ms.
+- Status: open. For the owner: a present tune's line still reads its file on the quick worker and can wait
+  behind a save, and moving it needs a change to SPEC-022's one worker; the key script should rest on present
+  tunes, as SPEC-240 says; and whether the 200 ms includes the 150 ms rest, which SPEC-240's "after the
+  highlight rests" can be read either way. The second sitting measures the line again with this change
+
 ### FIND-036 The step-5 answer and the app's own record of the complete download disagree
 - Phase: 5, implementation (found in the results of the device sitting, 28 November 2026)
 - Observed: in `sidplayzero-device-20261128-123755.txt`, line 15 says `download_everything_offered = yes`, and lines 12 to 14 show every SPEC-145
