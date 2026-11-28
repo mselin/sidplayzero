@@ -5,15 +5,27 @@ The working state of the project, so that any session can carry on from here. Ho
 
 ## Task
 
-update CONTRIBUTING.md's stale phase rows
+go ahead with your recommendations
+
+(The recommendations, on the results of the device sitting of 28 November 2026: confirm SPEC-072, SPEC-004
+and REQ-050; look into memory and the detail line on the host and fix what can be fixed; fix the audio
+measurement; then send a package for a short second sitting.)
 
 ## Plan
 
-1. Rewrite the State cells of Phase 3 (the device proof has run) and Phase 5 (merged, waiting list empty,
-   FIND-025 to FIND-031 settled, the sitting owed) in `CONTRIBUTING.md`'s phase table. Check: the two rows
-   match "Established" below, and `python3 tools/check_repo.py` is OK. **Done.**
-2. Open a pull request with `CONTRIBUTING.md` and this file. Check: the PR's only changes are these two files.
-   **Done when the PR is open.**
+1. Fix the audio measurement: `audio_rate` and `audio_format` from what miniaudio opened. Check: builds with
+   WERROR. **Done** (`4c69ee6`).
+2. Findings for the results file (SPEC-243): confirmations and the ‡ removed (FIND-032), the audio fix
+   (FIND-034), the two not measured (FIND-035), the step-5 contradiction (FIND-036). Check: `check_repo.py`
+   finds only the two findings still to write. **Done** (`292ce38`).
+3. `device-run.sh --only` for the second sitting (FIND-038), with tests. Check: `test_device_script.py`
+   12 passed. **Done** (`e488102`).
+4. Memory peak (FIND-033) and detail line (FIND-037): read the two agents' files, merge any fix, write the
+   findings. Check: `check_repo.py` OK. **In progress** (agents running).
+5. `tools/test unit`, then `tools/test simulator`, both with WERROR. Check: "0 not in order".
+6. Open the PR; merge on the owner's word only.
+7. Build the package and send it with the second sitting's instructions; ask again which rows the HVSC
+   screen showed at step 5.
 
 ## Established
 
@@ -38,8 +50,11 @@ Where each phase stands:
   order: 1 check passed, 1 failed as intended, 0 not in order.
 
 Findings and test state:
-- Findings: 31 (FIND-001 to FIND-031). Only FIND-007 (USBSID-Pico: GPL-2-only driver files, part `usbsid`
-  kept out) is open (`docs/findings.md`, "Open").
+- Findings: up to FIND-038 (FIND-033 and FIND-037 still to write). Open: FIND-007 (USBSID-Pico: GPL-2-only
+  driver files, part `usbsid` kept out), FIND-035 (two budgets not measured) and FIND-036 (step 5's answer
+  against the app's record); `docs/findings.md`, "Open".
+- The sitting of 28 November 2026 (`sidplayzero-device-20261128-123755.txt`) met every budget it measured
+  but memory (`peak_memory_kb = 80824`, 64 MB) and the detail line (`detail_ms_max = 341`, 200 ms).
 - FIND-025 to FIND-031 were decided or confirmed by the owner on 26 and 27 November 2026.
 - `tests/waiting.tsv` lists no test: every test of the specification passes (checked with `grep -v "^#"
   tests/waiting.tsv`).
@@ -51,7 +66,8 @@ Engine speed and SPEC-072's threshold:
   `--prove`.
 - SPEC-072's threshold is still the proposal 2.5 (`src/core/spz/engine_choice.h:24`), so `auto` will choose
   sidlite for every tune on this device.
-- Confirming the threshold waits on the full sitting's results file (SPEC-262, SPEC-243).
+- The sitting of 28 November gave 1.08 and 6.37, sidlite for all four benchmark tunes at 15.8 % to 22.0 %
+  load and no underruns: the threshold, SPEC-004's `auto` and REQ-050's 60 % are confirmed (FIND-032).
 
 Rules for working here:
 - Merge only on the owner's word, and only when "All checks passed" is green. This repository has no
@@ -67,14 +83,15 @@ Rules for working here:
 
 ## Changes
 
-- sidplayzero, PR #12 (merged, `2f17c9f`): `docs/HANDOVER-PROTOCOL.md` and `docs/HANDOVER.md`, new.
-- sidplayzero, branch `contributing-phase-rows`: the Phase 3 and 5 rows of `CONTRIBUTING.md`, and this file.
+- sidplayzero, PRs #12 and #13 merged (`2fb03d7` on main).
+- sidplayzero, branch `device-sitting-2` (worktree `/home/user/wt-main`): steps 1 to 3 of the plan.
 
 ## Verification
 
-- `python3 tools/check_repo.py`: OK.
-- `grep -v "^#" tests/waiting.tsv`: only the header line, so no test waits.
-- Not run: the test levels, since no code changed.
+- Build with WERROR of `device-sitting-2` at `4c69ee6`: OK.
+- `python3 -m pytest tests/framework/integration/test_device_script.py`: 12 passed.
+- The audio fix has no host test (the platform sink has none); it is checked at the second sitting.
+- Not yet run: `tools/test unit`, `tools/test simulator`.
 
 ## Dead ends
 
@@ -90,21 +107,16 @@ Things tried earlier in this project, so that nobody tries them again:
 
 ## Next
 
-Wait for the owner's full device sitting with the package built from `main` at `f261aec` (SHA-256
-`28b5405e…dae546b0`): `./device-run.sh sidplayzero_0.1.0-1_arm64.deb`, which writes
-`sidplayzero-device-*.txt` beside it.
-
-From that results file:
-- confirm or change SPEC-072's threshold and table, SPEC-004's default and REQ-050's budget (SPEC-262), as a
-  finding;
-- check every budget of SPEC-240 (SPEC-243);
-- answer each checklist line;
-- then set Phase 5's row in `CONTRIBUTING.md`'s phase table to "Gate passed", closing the gate.
+When the two agents report, read `handover-memory.md` and `handover-detail.md` in the scratchpad, merge
+`inv-detail` (and any memory fix) into `device-sitting-2`, and write FIND-033 and FIND-037.
 
 Candidate tasks after that:
+- The second sitting: `./device-run.sh --only 4,5,8 PACKAGE.deb` with the collection moved aside; then
+  close the remaining ‡ rows and set Phase 5's row to "Gate passed".
 - A release (version, changelog, a tag), and publishing to the store, done by hand only when the owner asks.
 - FIND-007, when the owner's USBSID-Pico arrives.
 
 ## Subagent files
 
-None.
+- scratchpad `handover-memory.md`: the memory peak, worktree `/home/user/wt-memory`; running.
+- scratchpad `handover-detail.md`: the detail line, worktree `/home/user/wt-detail`; running.
