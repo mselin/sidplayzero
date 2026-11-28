@@ -179,7 +179,8 @@ FolderListing Collection::list(const std::string& folder) const {
 
     if (listing_open()) {
         std::vector<std::string> listed_folders, listed_tunes;
-        if (listing_->folder(folder, &listed_folders, &listed_tunes)) {
+        std::vector<TuneLengths> listed_lengths;
+        if (listing_->folder(folder, &listed_folders, &listed_tunes, &listed_lengths)) {
             std::unordered_set<std::string> device_folders, device_tunes;
             for (const FolderEntry& e : folders) device_folders.insert(e.name);
             for (const FolderEntry& e : tunes) device_tunes.insert(e.name);
@@ -191,11 +192,15 @@ FolderListing Collection::list(const std::string& folder) const {
                 entry.is_folder = true;
                 folders.push_back(std::move(entry));
             }
-            for (const std::string& name : listed_tunes) {
+            for (std::size_t i = 0; i < listed_tunes.size(); ++i) {
+                const std::string& name = listed_tunes[i];
                 if (device_tunes.count(name) != 0) continue;
                 FolderEntry entry;
                 entry.name = name;
                 entry.present = false;
+                entry.listed = true;
+                entry.subtunes = listed_lengths[i].subtunes;
+                entry.first_length_ms = listed_lengths[i].first_ms;
                 tunes.push_back(std::move(entry));
             }
         }

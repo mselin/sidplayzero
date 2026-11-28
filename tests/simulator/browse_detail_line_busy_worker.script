@@ -1,0 +1,37 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPEC-046 SPEC-022 an absent tune's detail line comes within 200 ms of the highlight resting on it even while the quick worker is busy with other work
+# parts: detail
+# fixture: collections/85/C64Music/DOCUMENTS C64Music/DOCUMENTS
+# fixture: collections/85/C64Music/MUSICIANS/H C64Music/MUSICIANS/H
+
+# Of HVSC's tunes only those under /MUSICIANS/H are on the device, so /MUSICIANS/T/Tester_Tom holds absent
+# tunes only. The highlight rests on one of them, and the state file keeps that place (SPEC-131).
+key End
+key Enter
+key Down
+key Enter
+key Enter
+expect title = /MUSICIANS/T/Tester_Tom
+key End
+key Up
+expect rows matches "text":"Three_Songs\.sid"[^{}]*"highlighted":true
+advance 3000
+expect detail contains "not on device"
+
+# From now on the file system takes 400 ms of the fake clock to list a folder. The app starts again in the
+# same place. The quick worker lists the folder first; then, one job at a time (SPEC-022), it goes on with
+# the rest of the start, which lists a folder too and so takes another 400 ms. The highlight rests on the
+# absent tune from the moment the entries arrive, and its line is due 200 ms after that, whatever the quick
+# worker is doing: what it says comes from the listing, with the folder's entries.
+fake files.list_delay_ms 400
+restart
+expect title = /MUSICIANS/T/Tester_Tom
+advance 400
+expect rows matches "text":"Three_Songs\.sid"[^{}]*"highlighted":true
+advance 100
+expect detail matches ^(?![\s\S]*not on device)
+advance 100
+expect detail contains "not on device"
+expect detail contains 0:02
+expect detail matches (^|[^0-9:.])3([^0-9:.]|$)
+expect-requests 0

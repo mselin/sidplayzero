@@ -20,6 +20,13 @@ struct ListedTune {
     std::vector<Millis> lengths;   // one for each subtune, in milliseconds
 };
 
+// What the detail line of an absent tune needs from the listing (SPEC-046): its number of subtunes and the
+// length of its first, 0 if it has none.
+struct TuneLengths {
+    int subtunes = 0;
+    Millis first_ms = 0;
+};
+
 struct ListingBuild {
     bool ok = false;               // false: the file was refused (MSG_LENGTHS_UNREADABLE) and there is no listing
     int tunes = 0;
@@ -79,8 +86,10 @@ public:
     bool by_md5(const std::string& md5, ListedTune* out) const;
 
     // What HVSC has directly in a folder ("/" is the root): the names of its folders and of its tunes,
-    // each in the order of SPEC-042. False if HVSC has no such folder.
-    bool folder(const std::string& path, std::vector<std::string>* folders, std::vector<std::string>* tunes) const;
+    // each in the order of SPEC-042. False if HVSC has no such folder. With `lengths`, also each tune's
+    // TuneLengths, in the order of `tunes`.
+    bool folder(const std::string& path, std::vector<std::string>* folders, std::vector<std::string>* tunes,
+                std::vector<TuneLengths>* lengths = nullptr) const;
 
     // Every tune, in listing order, from `first`, at most `count`: for the index (SPEC-161) and the tests.
     std::vector<ListedTune> tunes(int first, int count) const;
