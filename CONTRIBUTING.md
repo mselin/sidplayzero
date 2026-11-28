@@ -12,9 +12,9 @@ has passed.
 |---|---|---|---|---|
 | 1 | Requirements | [`docs/requirements.md`](docs/requirements.md) | The owner approves | Approved 25 November 2026 |
 | 2 | Specification | [`docs/spec.md`](docs/spec.md), and an independent review of it, [`docs/spec-review.md`](docs/spec-review.md) | Every review item closed; then the owner approves | Approved 25 November 2026 |
-| 3 | Test framework | [`docs/test-framework-tasks.md`](docs/test-framework-tasks.md), then the framework | Every level runs one passing and one deliberately failing test with one command | Built and merged 25 November 2026; the device level's proof is still owed |
+| 3 | Test framework | [`docs/test-framework-tasks.md`](docs/test-framework-tasks.md), then the framework | Every level runs one passing and one deliberately failing test with one command | Gate passed: built and merged 25 November 2026; the device level's proof ran on the device 27 November 2026, in order |
 | 4 | Tests | `tests/`, each test tracing to the specification | Every item has a test; the tests fail for the right reasons against stubs | Gate passed 26 November 2026: the tests merged, and FIND-016 to FIND-024 accepted by the owner and carried into the specification |
-| 5 | Implementation | `src/` | All tests pass on the host and in the simulator; the device checklist passes | Built 26 November 2026: every host and simulator test passes but those that wait on the owner's decision on FIND-025; the screens' images approved 26 November 2026; code-quality and security reviews done and fixed. The device sitting is owed |
+| 5 | Implementation | `src/` | All tests pass on the host and in the simulator; the device checklist passes | Built and merged 26 to 27 November 2026: every host and simulator test passes, and the waiting list is empty; FIND-025 to FIND-031 decided or confirmed by the owner; the screens' images approved 26 November 2026; code-quality and security reviews done and fixed. The owner's full device sitting is owed, and with it the confirmation of SPEC-072's engine threshold |
 
 ## Rules that hold throughout
 

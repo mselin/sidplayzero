@@ -5,16 +5,14 @@ The working state of the project, so that any session can carry on from here. Ho
 
 ## Task
 
-Bootstrap only: create the handover docs in sidplayzero from the design doc, roadmap and git log. No code changes. Open a PR.
+update CONTRIBUTING.md's stale phase rows
 
 ## Plan
 
-1. Create `docs/HANDOVER-PROTOCOL.md` from the handover workflow's sections 2 to 5. Check: the file exists,
-   word for word. **Done.**
-2. Create this file from the design doc (`docs/spec.md`), the roadmap (the phase table in
-   `CONTRIBUTING.md`), `docs/findings.md` and the git log. Check: under about 150 lines, every section of
-   the protocol present, no private detail (`python3 tools/check_repo.py` OK). **Done.**
-3. Open a pull request with the two files and nothing else. Check: the PR's only changes are these two files.
+1. Rewrite the State cells of Phase 3 (the device proof has run) and Phase 5 (merged, waiting list empty,
+   FIND-025 to FIND-031 settled, the sitting owed) in `CONTRIBUTING.md`'s phase table. Check: the two rows
+   match "Established" below, and `python3 tools/check_repo.py` is OK. **Done.**
+2. Open a pull request with `CONTRIBUTING.md` and this file. Check: the PR's only changes are these two files.
    **Done when the PR is open.**
 
 ## Established
@@ -69,11 +67,13 @@ Rules for working here:
 
 ## Changes
 
-- sidplayzero, branch `handover-docs`: `docs/HANDOVER-PROTOCOL.md` and `docs/HANDOVER.md`, new. Nothing else.
+- sidplayzero, PR #12 (merged, `2f17c9f`): `docs/HANDOVER-PROTOCOL.md` and `docs/HANDOVER.md`, new.
+- sidplayzero, branch `contributing-phase-rows`: the Phase 3 and 5 rows of `CONTRIBUTING.md`, and this file.
 
 ## Verification
 
-- `python3 tools/check_repo.py`: OK, with the two new files.
+- `python3 tools/check_repo.py`: OK.
+- `grep -v "^#" tests/waiting.tsv`: only the header line, so no test waits.
 - Not run: the test levels, since no code changed.
 
 ## Dead ends
@@ -99,10 +99,9 @@ From that results file:
   finding;
 - check every budget of SPEC-240 (SPEC-243);
 - answer each checklist line;
-- then update `CONTRIBUTING.md`'s phase table and close Phase 5's gate.
+- then set Phase 5's row in `CONTRIBUTING.md`'s phase table to "Gate passed", closing the gate.
 
 Candidate tasks after that:
-- `CONTRIBUTING.md`'s Phase 3 and 5 rows are out of date: the device proof has run, and FIND-025 is decided.
 - A release (version, changelog, a tag), and publishing to the store, done by hand only when the owner asks.
 - FIND-007, when the owner's USBSID-Pico arrives.
 
