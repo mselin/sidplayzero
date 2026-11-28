@@ -53,6 +53,11 @@ struct FolderEntry {
                               // "" when its path is not a collection path (SPEC-154), as for a name that is
                               // not valid UTF-8: such a tune still plays, from file_path(), but cannot be
                               // made a favourite, added to a playlist or remembered between runs
+    // SPEC-046: of an absent tune, from the listing as the folder is listed, so that its detail line needs
+    // no worker: `listed` says the two are known.
+    bool listed = false;
+    int subtunes = 0;
+    Millis first_length_ms = 0;
 };
 
 // What one folder shows (SPEC-041), in the order of SPEC-042: folders, then tunes.

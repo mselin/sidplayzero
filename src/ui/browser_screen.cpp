@@ -31,6 +31,14 @@ bool playing_now(const PlayerStatus& status) {
     return status.has_entry && status.state != PlayerState::Idle && status.state != PlayerState::Failed;
 }
 
+// The words of SPEC-046's detail line.
+std::string detail_text(const EntryDetail& detail) {
+    if (detail.is_folder) return std::string();
+    if (detail.present) return detail.title + " \xC2\xB7 " + detail.author + " \xC2\xB7 " + time_of(detail.length_ms);
+    return "not on device \xC2\xB7 " + std::to_string(detail.subtunes) +
+           (detail.subtunes == 1 ? " subtune" : " subtunes") + " \xC2\xB7 " + time_of(detail.length_ms);
+}
+
 }  // namespace
 
 BrowserScreen::BrowserScreen(Shell* shell) : Screen(shell) {}
@@ -174,6 +182,16 @@ void BrowserScreen::ask_detail(const std::string& key) {
     if (!m || !tree || m->highlight() < 0) return;
     const FolderEntry entry = m->row(m->highlight());
     if (entry.is_folder) return;
+    if (!entry.present && entry.listed) {
+        // An absent tune's line came with the folder's entries, so it is shown now: it does not wait on the
+        // quick worker behind whatever that is doing, such as saving the state (SPEC-046, SPEC-022).
+        EntryDetail detail;
+        detail.subtunes = entry.subtunes;
+        detail.length_ms = entry.first_length_ms;
+        detail_ = detail_text(detail);
+        shell()->redraw();
+        return;
+    }
     const std::string folder = m->folder();
     const SettingsFile* settings = shell()->services().settings;
     const Millis default_ms = settings ? static_cast<Millis>(settings->settings().default_length_s) * 1000 : 0;
@@ -181,16 +199,7 @@ void BrowserScreen::ask_detail(const std::string& key) {
     const Lifetime::Token alive = lifetime_.token();
     // The quick worker reads the file: the header, and the MD5 for the length (SPEC-046).
     frame->quick()->post([frame, alive, tree, folder, entry, default_ms, key, this] {
-        const EntryDetail detail = tree->detail(folder, entry, default_ms);
-        std::string text;
-        if (!detail.is_folder) {
-            if (detail.present) {
-                text = detail.title + " \xC2\xB7 " + detail.author + " \xC2\xB7 " + time_of(detail.length_ms);
-            } else {
-                text = "not on device \xC2\xB7 " + std::to_string(detail.subtunes) +
-                       (detail.subtunes == 1 ? " subtune" : " subtunes") + " \xC2\xB7 " + time_of(detail.length_ms);
-            }
-        }
+        const std::string text = detail_text(tree->detail(folder, entry, default_ms));
         frame->ui()->post([frame, alive, key, text, this] {
             if (!alive.alive() || key != detail_key_) return;
             detail_ = text;
