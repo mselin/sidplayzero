@@ -70,8 +70,10 @@ brief the project started from, so the findings below are raised against that br
   benchmark test left `hvsc_setup_s` out, so nothing caught it.
 - Concerns: SPEC-240's row "Setting HVSC up" ("from Enter on the notice to the notice that it is ready"),
   SPEC-241, FIND-035
-- Resolution: the time now ends at the ready notice itself (`SelfTest::setup_ready`, called from
-  `HvscEvents::hvsc_ready`); a set-up that fails or is stopped is not measured. The simulator test
+- Resolution: the set-up now tells the self-test as its job begins (`HvscListener::hvsc_began`) and as it
+  is ready (`HvscEvents::hvsc_ready`), so nothing is looked for between two checks; a first fix that still
+  looked for the start every 100 ms failed the new test, whose set-up ends sooner than that. A set-up that
+  fails or is stopped is not measured. The simulator test
   `test_setup_time` sets HVSC up from empty under the self-test and checks the key. It changes the self-test
   only, as SPEC-240 already says it should be measured.
 - Status: closed. Within the owner's word of 28 November 2026 to fix the measurements

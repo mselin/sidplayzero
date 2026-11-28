@@ -22,7 +22,7 @@ measurement; then send a package for a short second sitting.)
    12 passed. **Done** (`e488102`).
 4. The set-up's time dropped on a set-up from empty (FIND-039), found from the owner's screenshots: fix,
    simulator test `test_setup_time`; step 5 now says Tab, then 5 (FIND-036). Check: simulator level passes,
-   and the test fails without the fix. **In progress** (simulator running).
+   and the test fails without the fix. **In progress** (simulator level running with the second fix).
 5. Memory peak (FIND-033) and detail line (FIND-037): read the two agents' files, merge any fix, write the
    findings. Check: `check_repo.py` OK. **In progress** (agents running).
 6. `tools/test unit`, then `tools/test simulator`, both with WERROR. Check: "0 not in order".

@@ -310,10 +310,6 @@ void Composition::SelfTest::after_first_listing() {
 void Composition::SelfTest::tick() {
     Composition* p = parts;
     const Millis now = p->seams_.clock->now_ms();
-    if (now - setup_checked >= kSettingUpCheckMs) {
-        setup_checked = now;
-        watch_setup(now);
-    }
     switch (phase) {
         case Phase::Fetching:
             fetch_tick();
@@ -342,14 +338,9 @@ void Composition::SelfTest::tick() {
 }
 
 // SPEC-240: setting HVSC up, from the job's start (Enter on the notice) to the notice that it is ready.
-void Composition::SelfTest::watch_setup(Millis now) {
-    const JobState job = p_jobs().state();
-    if (job.kind == JobKind::Setup) {
-        if (setup_began < 0) setup_began = now;
-    } else {
-        setup_began = -1;   // ended without setup_ready(): failed or stopped, and not measured
-    }
-}
+void Composition::SelfTest::setup_began_at(Millis now) { setup_began = now; }
+
+void Composition::SelfTest::setup_ended() { setup_began = -1; }
 
 void Composition::SelfTest::setup_ready(Millis now) {
     if (setup_began < 0) return;
