@@ -12,6 +12,9 @@
 #                                         Run again with the same package, it carries on from the step
 #                                         it had reached, with the answers already given (FIND-030).
 #   ./device-run.sh --restart PACKAGE.deb the whole sitting, begun again from step 1.
+#   ./device-run.sh --only 4,5,8 PACKAGE.deb
+#                                         only the steps named, with the install of step 1 and the
+#                                         removal and results of step 11; carried on as above (FIND-038).
 #   ./device-run.sh --scrub FILE          takes private details out of FILE, as it does for its own results
 #
 # It installs the package with sudo, and removes it again at the end; it uses sudo for nothing else, and
@@ -38,6 +41,7 @@ PASSED=0
 FAILED_AS_INTENDED=0
 FAULTS=0
 SITTING_STATE="$(cd "$(dirname "$0")" && pwd)/sitting.state"
+ONLY=""            # the steps --only names, as " 4 5 8 "; empty for the whole sitting
 PACKAGE_SUM=""      # the package's SHA-256: a sitting carries on only with the same package
 REACHED=1           # the step of the sitting reached
 CHECKED=" "         # the steps the app has done that have been counted, between spaces
@@ -164,6 +168,7 @@ save_state() {
     say "# carry on, or with --restart to begin again."
     say "package = $PACKAGE_SUM"
     say "step = $REACHED"
+    say "only =$ONLY"
     say "passed = $PASSED"
     say "faults = $FAULTS"
     say "checked =$CHECKED"
@@ -175,11 +180,12 @@ save_state() {
 # there is none to take up.
 load_state() {
   [ -f "$SITTING_STATE" ] || return 1
-  local line package="" step="" passed=0 faults=0 checked=" " answers=""
+  local line package="" step="" only="" passed=0 faults=0 checked=" " answers=""
   while IFS= read -r line || [ -n "$line" ]; do
     case "$line" in
       "package = "*) package="${line#package = }" ;;
       "step = "*) step="${line#step = }" ;;
+      "only ="*) only="${line#only =}" ;;
       "passed = "*) passed="${line#passed = }" ;;
       "faults = "*) faults="${line#faults = }" ;;
       "checked ="*) checked="${line#checked =}" ;;
@@ -190,6 +196,10 @@ load_state() {
     say "The sitting in $SITTING_STATE was with another package: beginning again from step 1."
     return 1
   fi
+  if [ "$only" != "$ONLY" ]; then
+    say "The sitting in $SITTING_STATE was of other steps: beginning again from step 1."
+    return 1
+  fi
   case "$step$passed$faults" in
     ''|*[!0-9]*) say "$SITTING_STATE cannot be read: beginning again from step 1."; return 1 ;;
   esac
@@ -198,9 +208,13 @@ load_state() {
 }
 
 # reach N: true if step N is still to do, or is the step the sitting had reached, and records that the
-# sitting has reached it; false for a step done in an earlier run.
+# sitting has reached it; false for a step done in an earlier run, and for one --only leaves out. Steps 1
+# and 11, the install and the removal, are never left out.
 reach() {
   [ "$1" -ge "$REACHED" ] || return 1
+  if [ -n "$ONLY" ] && [ "$1" -ne 1 ] && [ "$1" -ne 11 ]; then
+    case "$ONLY" in *" $1 "*) ;; *) return 1 ;; esac
+  fi
   REACHED="$1"
   save_state
   return 0
@@ -390,7 +404,11 @@ sitting() {
   fi
   # 11
   reach 11
-  gather "$out" "the whole sitting"
+  if [ -n "$ONLY" ]; then
+    gather "$out" "steps${ONLY% } of the sitting"
+  else
+    gather "$out" "the whole sitting"
+  fi
   local config="${XDG_CONFIG_HOME:-$HOME/.config}/sidplayzero" kept=yes removed=yes
   remove_package
   [ -d "$config" ] || kept=no
@@ -422,6 +440,16 @@ case "${1:-}" in
   --restart)
     [ $# -eq 2 ] || stop "usage: device-run.sh --restart PACKAGE.deb"
     sitting "$2" yes
+    ;;
+  --only)
+    [ $# -eq 3 ] || stop "usage: device-run.sh --only STEPS PACKAGE.deb, with STEPS such as 4,5,8"
+    case "$2" in ''|*[!0-9,]*|,*|*,|*,,*) stop "--only takes step numbers from 2 to 10 with commas between, such as 4,5,8" ;; esac
+    ONLY=" "
+    for n in ${2//,/ }; do
+      { [ "$n" -ge 2 ] && [ "$n" -le 10 ]; } || stop "--only takes steps 2 to 10; 1 and 11 are always done"
+      case "$ONLY" in *" $n "*) ;; *) ONLY="$ONLY$n " ;; esac
+    done
+    sitting "$3" no
     ;;
   -*)
     stop "unknown option: $1"

@@ -23,6 +23,8 @@ brief the project started from, so the findings below are raised against that br
   unfinished earlier download would put "Finish the download" in that row in place of "Download
   everything" (SPEC-148), which the checklist does not mention.
 - Concerns: SPEC-145, SPEC-148, `docs/device-checklist.md` step 5
+- Resolution so far: none until it is known which rows the screen showed; the second sitting begins from
+  an empty root, where no earlier download can be unfinished.
 - Status: open. Asked the owner which rows the HVSC screen showed; the second sitting sets HVSC up from
   empty and looks again
 
@@ -33,6 +35,8 @@ brief the project started from, so the findings below are raised against that br
   line 69 shows only four tunes present, below SPEC-240's 1,000.
 - Concerns: SPEC-240's rows "Setting HVSC up" (2 minutes‡, REQ-080) and "Index, step two" (200 tunes a
   second‡, REQ-091)
+- Resolution so far: the two budgets keep their marks; `device-run.sh --only 4,5,8` (FIND-038) gives the
+  steps that measure them.
 - Status: open. A second, short sitting sets HVSC up from an empty root, runs "Download everything", and runs
   the benchmark step again with the whole collection present
 
@@ -54,6 +58,16 @@ brief the project started from, so the findings below are raised against that br
 - Status: open; it matters only when REQ-111 is taken up. The part `usbsid` stays out of every build until then
 
 ## Closed
+
+### FIND-038 A second sitting for what the first could not measure had to be the whole sitting again
+- Phase: 5, implementation (found in the results of the device sitting, 28 November 2026)
+- Observed: the measurements FIND-035 leaves open need steps 4, 5 and 8 only, but `tools/device-run.sh`
+  gives every step from the one it has reached, about an hour with the tester present.
+- Concerns: SPEC-260, `tools/device-run.sh`, `docs/device-checklist.md`
+- Resolution: `--only` followed by step numbers gives those steps only; steps 1 and 11, the install and
+  the removal with the results file, are always done, and `sitting.state` remembers the steps so the
+  sitting is carried on as before. It changes the test tooling only, not the app.
+- Status: closed. Within the owner's word of 28 November 2026 to send a package for a short second sitting
 
 ### FIND-034 The audio rate and format in the results were the ones asked for, not the ones opened
 - Phase: 5, implementation (found in the results of the device sitting, 28 November 2026)
@@ -89,6 +103,8 @@ brief the project started from, so the findings below are raised against that br
   - R2: lines 47 and 48, `speed_factor_accurate = 1.081081` and `speed_factor_light = 6.369427`; lines 72 to
     79, `auto` chose sidlite for all four benchmark tunes, whose render load was 15.8 % to 22.0 %
   - CON-20: line 49, `render_repeatable = yes`
+- Concerns: SPEC-240, SPEC-243, SPEC-072, SPEC-004; REQ-003, REQ-020, REQ-050, REQ-054, REQ-055, REQ-090,
+  REQ-091, REQ-120
 - Resolution: SPEC-072's threshold of 2.5 is confirmed: reSIDfp at 1.08 times real time cannot play a
   one-SID tune with room to spare, sidlite plays the three-SID tune at 22 % load, and line 55 shows no
   underruns over the 30 minutes, so SPEC-004's default `auto` stands. The ‡ is removed from each budget

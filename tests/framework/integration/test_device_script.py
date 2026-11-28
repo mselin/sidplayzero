@@ -237,6 +237,35 @@ class DeviceScript(unittest.TestCase):
         self.assertIn("check_launcher_shows_app = no", results)
         self.assertEqual(self.log.read_text().count("  install\n"), 2)
 
+    def test_only_some_steps(self):
+        """TF-080 SPEC-260 --only 4,5,8 installs, gives steps 4, 5 and 8 and no other, and removes the package and writes the results as at the end of a whole sitting (FIND-038)"""
+        self.play_the_app()
+        (self.home / ".config" / "sidplayzero").mkdir(parents=True)
+        answers = "\n".join(["", "yes", "yes", "ran to its end"]) + "\n"
+        done = self.run_script(["--only", "4,5,8", "sidplayzero_0.1.0-1_arm64.deb"], answers=answers)
+        self.assertEqual(done.returncode, 0, done.stdout)
+        for given in ("Step 4.", "Step 5.", "Step 8."):
+            self.assertIn(given, done.stdout)
+        for left_out in ("Step 2.", "Step 3.", "Step 6.", "Step 7.", "Step 9.", "Step 10."):
+            self.assertNotIn(left_out, done.stdout)
+        results = self.results_file("sidplayzero-device-2*.txt")
+        self.assertIn("# SidPlayZero device run: steps 4 5 8 of the sitting", results)
+        self.assertIn("check_download_everything = ran to its end", results)
+        self.assertIn("step_done = benchmark", results)
+        self.assertIn("checks_passed = 1", results)
+        self.assertIn("checks_not_in_order = 0", results)
+        self.assertIn("package_removed_cleanly = yes", results)
+        self.assertNotIn("check_launcher_shows_app", results)
+        self.assertEqual(self.log.read_text().count("  install\n"), 1)
+        self.assertFalse(self.sitting_state.exists())
+
+    def test_only_refuses_steps_it_cannot_take(self):
+        """TF-080 SPEC-260 --only refuses steps 1 and 11, numbers out of range and lists it cannot read, and installs nothing"""
+        for steps in ("1,4", "4,11", "0", "4,,5", "four", ""):
+            done = self.run_script(["--only", steps, "sidplayzero_0.1.0-1_arm64.deb"])
+            self.assertEqual(done.returncode, 2, f"{steps!r}: {done.stdout}")
+        self.assertFalse(self.log.exists() and "install" in self.log.read_text())
+
     def test_checklist_and_script_agree(self):
         """TF-080 SPEC-260 every question the script asks is a line of the checklist, and the other way round"""
         asked = set(re.findall(r"(?m)^\s+ask ([a-z_]+) ", SCRIPT.read_text()))

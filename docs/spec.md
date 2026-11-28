@@ -2691,7 +2691,8 @@ the 30 minutes done, and the notice `MSG_SELFTEST` shows at its start.
 The five starts of step 6 come after HVSC is set up and its caches exist, as REQ-055 means them. The
 script keeps the step it has reached in `sitting.state` beside it: run again with the same package, it
 carries on from that step, so a step that ends the SSH session, or a sitting that stops, loses nothing;
-`--restart` begins again from step 1 (FIND-030). The key
+`--restart` begins again from step 1 (FIND-030). `--only` followed by step numbers from 2 to 10, such as
+`4,5,8`, gives those steps only, with steps 1 and 11 always, and is carried on in the same way (FIND-038). The key
 script, built into the app, repeats this round during step 8, starting one every 20 s‡: from the root, open
 and leave the two folders of SPEC-240; rest on three present tunes for the detail line; open Search, type
 "hub 1985" and then "galway ark", and go back; open and close Settings; and, in the first round and every
@@ -2707,7 +2708,8 @@ puts the answers in the results file. In the results file `start_ms` and `exit_m
   benchmark step writes in `selftest.results`, and `step_done = benchmark`; with `step = none`, two starts
   and exits leave two `start_ms` and two `exit_ms` lines and one set of the keys that belong to no step. A host-integration test runs `tools/device-run.sh`
   against a stand-in that plays the app's and the tester's parts through files, and gets a results file with
-  an answer for each checklist line; run as root, the script refuses. The results file from the reference
+  an answer for each checklist line; with `--only 4,5,8` it gives those steps and no other, and still
+  installs, removes and writes the results file; run as root, the script refuses. The results file from the reference
   device has all of SPEC-240's and SPEC-241's keys and every answer.
 - Level: host-integration, simulator, device
 

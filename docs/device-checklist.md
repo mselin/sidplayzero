@@ -28,6 +28,10 @@ that ends the SSH session (step 6), or a sitting that stops for any other reason
 `./device-run.sh --restart PACKAGE.deb` begins again from step 1. The key step, too, carries on at the
 first key with no answer when SidPlayZero is started again.
 
+`./device-run.sh --only 4,5,8 PACKAGE.deb` gives only the steps named, for a sitting that measures again
+what an earlier one could not (FIND-038). Step 1's install and step 11's removal and results file are always
+done; a results file from it holds the answers of the steps named only.
+
 | Name | Step | What the tester does, or is asked |
 |---|---|---|
 | | 1 | Nothing: the script installs the package |
