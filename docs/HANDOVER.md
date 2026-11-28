@@ -29,9 +29,10 @@ measurement; then send a package for a short second sitting.)
    detail line merged (`43ae6da`, absent tunes' line without the worker); FIND-033 and FIND-037 written, open.
 6. `tools/test unit`, then `tools/test simulator`, both with WERROR. Check: "0 not in order". **Done** at
    `4c9ed50` (see Verification).
-7. Open the PR; merge on the owner's word only.
+7. Open the PR; merge on the owner's word only. **Opened**: mselin/sidplayzero#14, waiting for the owner.
 8. Build the package and send it with the second sitting's instructions; ask again which rows the HVSC
-   screen showed at step 5.
+   screen showed at step 5. **Sent** (built at `824ac8c` with the test maintainer
+   `SidPlayZero test build <build@sidplayzero.test>`); waiting for the owner's results file.
 
 ## Established
 
@@ -110,6 +111,8 @@ Rules for working here:
 Things tried earlier in this project, so that nobody tries them again:
 - Resuming a stopped subagent that ran on a model whose usage limit was hit only fails again. Start a fresh
   agent on the files the first one left.
+- `cmake --workflow --preset cp0-cross-package` stops at `cmake/package.cmake:6` without
+  `SIDPLAYZERO_MAINTAINER`; sitting packages use the test maintainer above, never the owner's address.
 - Running `tools/test unit` and `tools/test simulator` at once in one worktree breaks the simulator run, since
   the unit level regenerates `tests/fixtures`.
 - `git reset --hard` is refused in agents' worktrees; `git merge --ff-only origin/BRANCH` on a clean worktree
@@ -119,9 +122,8 @@ Things tried earlier in this project, so that nobody tries them again:
 
 ## Next
 
-Wait for the PR of `device-sitting-2` to be green and for the owner's word to merge; then build the package
-(`cmake --workflow --preset cp0-cross-package`) and send it with the second sitting's instructions, and ask the
-owner the FIND-033 and FIND-037 questions.
+Wait for the owner: the word to merge mselin/sidplayzero#14, the results file of the second sitting, and the
+answers to FIND-033 and FIND-037. Then write the findings for the results (SPEC-243).
 
 Candidate tasks after that:
 - The second sitting: `./device-run.sh --only 4,5,8 PACKAGE.deb` with the collection moved aside; then
