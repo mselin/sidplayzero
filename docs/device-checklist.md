@@ -42,7 +42,7 @@ done; a results file from it holds the answers of the steps named only.
 | | 4 | Start it. With an empty collection folder: Enter, Enter sets HVSC up. Play `MUSICIANS/H/Hubbard_Rob/Commando.sid` |
 | `sound_from_loudspeaker` | 4 | Does sound come from the loudspeaker? |
 | `commando_shown` | 4 | Does the screen show Commando, Rob Hubbard and 3:55? |
-| `download_everything` | 5 | On the HVSC screen: is "Download everything" offered? If it is and you want to, run it to its end |
+| `download_everything` | 5 | Press Tab for Settings, then 5 for the HVSC screen: is "Download everything" offered? If it is and you want to, run it to its end |
 | | 6 | Turn networking off, which ends the SSH session and the script with it. Start SidPlayZero and leave it with a held ESC, five times. Turn networking on, connect again and run the script again just as before: it carries on |
 | `volume_keys` | 7 | While a tune plays: do `fn`+S and `fn`+D change the level you hear, and `fn`+A mute it? |
 | `brightness_keys` | 7 | Do `fn`+U and `fn`+I change the screen's brightness? |

@@ -24,7 +24,10 @@ brief the project started from, so the findings below are raised against that br
   everything" (SPEC-148), which the checklist does not mention.
 - Concerns: SPEC-145, SPEC-148, `docs/device-checklist.md` step 5
 - Resolution so far: none until it is known which rows the screen showed; the second sitting begins from
-  an empty root, where no earlier download can be unfinished.
+  an empty root, where no earlier download can be unfinished. The owner's screenshots of a set-up from empty
+  show a likelier cause: when the set-up ends the app goes to the browser by itself, and the HVSC screen is
+  reached only by Tab for Settings and then 5, which step 5 did not say. Step 5 of the checklist and of
+  `tools/device-run.sh` now says so.
 - Status: open. Asked the owner which rows the HVSC screen showed; the second sitting sets HVSC up from
   empty and looks again
 
@@ -58,6 +61,20 @@ brief the project started from, so the findings below are raised against that br
 - Status: open; it matters only when REQ-111 is taken up. The part `usbsid` stays out of every build until then
 
 ## Closed
+
+### FIND-039 The self-test dropped the set-up's time when HVSC was set up from empty
+- Phase: 5, implementation (found from the owner's screenshots of a set-up from empty, 28 November 2026)
+- Observed: `SelfTest::watch_setup` wrote `hvsc_setup_s` only if the listing was already open at its first
+  check after the set-up's job ended, and forgot the start otherwise. The listing reopens later, on the long
+  worker, after the ready notice, so on a set-up from empty the time was usually dropped. The simulator's
+  benchmark test left `hvsc_setup_s` out, so nothing caught it.
+- Concerns: SPEC-240's row "Setting HVSC up" ("from Enter on the notice to the notice that it is ready"),
+  SPEC-241, FIND-035
+- Resolution: the time now ends at the ready notice itself (`SelfTest::setup_ready`, called from
+  `HvscEvents::hvsc_ready`); a set-up that fails or is stopped is not measured. The simulator test
+  `test_setup_time` sets HVSC up from empty under the self-test and checks the key. It changes the self-test
+  only, as SPEC-240 already says it should be measured.
+- Status: closed. Within the owner's word of 28 November 2026 to fix the measurements
 
 ### FIND-038 A second sitting for what the first could not measure had to be the whole sitting again
 - Phase: 5, implementation (found in the results of the device sitting, 28 November 2026)

@@ -341,17 +341,20 @@ void Composition::SelfTest::tick() {
     }
 }
 
-// SPEC-240: setting HVSC up, from the job's start (Enter on the notice) to its end with a listing.
+// SPEC-240: setting HVSC up, from the job's start (Enter on the notice) to the notice that it is ready.
 void Composition::SelfTest::watch_setup(Millis now) {
     const JobState job = p_jobs().state();
     if (job.kind == JobKind::Setup) {
         if (setup_began < 0) setup_began = now;
-    } else if (setup_began >= 0) {
-        if (parts->scope_->listing && parts->scope_->listing->is_open()) {
-            parts->metrics_.set("hvsc_setup_s", decimal(static_cast<double>(now - setup_began) / 1000.0, 1));
-        }
-        setup_began = -1;
+    } else {
+        setup_began = -1;   // ended without setup_ready(): failed or stopped, and not measured
     }
+}
+
+void Composition::SelfTest::setup_ready(Millis now) {
+    if (setup_began < 0) return;
+    parts->metrics_.set("hvsc_setup_s", decimal(static_cast<double>(now - setup_began) / 1000.0, 1));
+    setup_began = -1;
 }
 
 Millis Composition::SelfTest::share_done() const {

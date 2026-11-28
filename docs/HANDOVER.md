@@ -20,11 +20,14 @@ measurement; then send a package for a short second sitting.)
    finds only the two findings still to write. **Done** (`292ce38`).
 3. `device-run.sh --only` for the second sitting (FIND-038), with tests. Check: `test_device_script.py`
    12 passed. **Done** (`e488102`).
-4. Memory peak (FIND-033) and detail line (FIND-037): read the two agents' files, merge any fix, write the
+4. The set-up's time dropped on a set-up from empty (FIND-039), found from the owner's screenshots: fix,
+   simulator test `test_setup_time`; step 5 now says Tab, then 5 (FIND-036). Check: simulator level passes,
+   and the test fails without the fix. **In progress** (simulator running).
+5. Memory peak (FIND-033) and detail line (FIND-037): read the two agents' files, merge any fix, write the
    findings. Check: `check_repo.py` OK. **In progress** (agents running).
-5. `tools/test unit`, then `tools/test simulator`, both with WERROR. Check: "0 not in order".
-6. Open the PR; merge on the owner's word only.
-7. Build the package and send it with the second sitting's instructions; ask again which rows the HVSC
+6. `tools/test unit`, then `tools/test simulator`, both with WERROR. Check: "0 not in order".
+7. Open the PR; merge on the owner's word only.
+8. Build the package and send it with the second sitting's instructions; ask again which rows the HVSC
    screen showed at step 5.
 
 ## Established
@@ -50,7 +53,7 @@ Where each phase stands:
   order: 1 check passed, 1 failed as intended, 0 not in order.
 
 Findings and test state:
-- Findings: up to FIND-038 (FIND-033 and FIND-037 still to write). Open: FIND-007 (USBSID-Pico: GPL-2-only
+- Findings: up to FIND-039 (FIND-033 and FIND-037 still to write). Open: FIND-007 (USBSID-Pico: GPL-2-only
   driver files, part `usbsid` kept out), FIND-035 (two budgets not measured) and FIND-036 (step 5's answer
   against the app's record); `docs/findings.md`, "Open".
 - The sitting of 28 November 2026 (`sidplayzero-device-20261128-123755.txt`) met every budget it measured
@@ -84,14 +87,14 @@ Rules for working here:
 ## Changes
 
 - sidplayzero, PRs #12 and #13 merged (`2fb03d7` on main).
-- sidplayzero, branch `device-sitting-2` (worktree `/home/user/wt-main`): steps 1 to 3 of the plan.
+- sidplayzero, branch `device-sitting-2` (worktree `/home/user/wt-main`): steps 1 to 3 of the plan, and step 4's change (FIND-039, step-5 wording).
 
 ## Verification
 
 - Build with WERROR of `device-sitting-2` at `4c69ee6`: OK.
 - `python3 -m pytest tests/framework/integration/test_device_script.py`: 12 passed.
 - The audio fix has no host test (the platform sink has none); it is checked at the second sitting.
-- Not yet run: `tools/test unit`, `tools/test simulator`.
+- Not yet run: `tools/test unit`; `tools/test simulator` running with FIND-039's fix.
 
 ## Dead ends
 

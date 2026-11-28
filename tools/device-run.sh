@@ -370,7 +370,7 @@ sitting() {
   fi
   # 5
   if reach 5; then
-    ask download_everything "Step 5. On the HVSC screen: is \"Download everything\" offered? If it is and you want to, run it to its end now. (not offered / offered, not run / ran to its end / failed)"
+    ask download_everything "Step 5. Press Tab for Settings, then 5 for the HVSC screen: is \"Download everything\" offered? If it is and you want to, run it to its end now. (not offered / offered, not run / ran to its end / failed)"
   fi
   # 6: turning networking off ends the SSH session, and this script with it (FIND-030).
   if reach 6; then

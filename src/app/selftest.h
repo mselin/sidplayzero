@@ -230,8 +230,11 @@ struct Composition::SelfTest : ui::SelfTestView {
     // ---- what changes by itself --------------------------------------------------------------------------
     void tick();
 
-    // SPEC-240: setting HVSC up, from the job's start (Enter on the notice) to its end with a listing.
+    // SPEC-240: setting HVSC up, from the job's start (Enter on the notice), which watch_setup() sees, to the
+    // notice that it is ready, which setup_ready() is told of as it is raised. The listing is opened again
+    // after that, on the long worker, so the end is not looked for in the listing (FIND-039).
     void watch_setup(Millis now);
+    void setup_ready(Millis now);
     Jobs& p_jobs() { return parts->jobs_; }
 
     // SPEC-260: the job mark while the benchmark plays.
