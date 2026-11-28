@@ -32,6 +32,7 @@ namespace {
 
 const char kMagic[8] = {'S', 'P', 'Z', 'I', 'N', 'D', 'E', 'X'};
 const std::size_t kIndexFileLimit = 256u * 1024 * 1024;
+const int kListingBatch = 1024;   // tunes taken from the listing at a time by step one
 
 // --- search text ----------------------------------------------------------------------------------------
 
@@ -493,9 +494,15 @@ IndexRun Index::build(IndexReason reason, const std::function<bool()>& keep_goin
         // Step one: a record for every tune of the listing, without opening any.
         std::vector<IndexRecord> fresh;
         if (listing_ != nullptr && listing_->is_open()) {
-            const std::vector<ListedTune> tunes = listing_->tunes(0, listing_->tune_count());
-            fresh.reserve(tunes.size());
-            for (const ListedTune& tune : tunes) fresh.push_back(absent_record(tune.path));
+            // In batches, so that the listing's tunes (path, MD5 and lengths, ~9 MB for HVSC) are never all
+            // held at once beside the old records and the new ones. A copy of the Listing shares its mapping,
+            // so every batch comes from the same listing even if listing.bin is opened again meanwhile.
+            const Listing listing = *listing_;
+            const int listed = listing.tune_count();
+            fresh.reserve(static_cast<std::size_t>(listed));
+            for (int first = 0; first < listed; first += kListingBatch) {
+                for (const ListedTune& tune : listing.tunes(first, kListingBatch)) fresh.push_back(absent_record(tune.path));
+            }
             if (!std::is_sorted(fresh.begin(), fresh.end(),
                                 [](const IndexRecord& a, const IndexRecord& b) { return path_comes_before(a.path, b.path); })) {
                 std::sort(fresh.begin(), fresh.end(),
