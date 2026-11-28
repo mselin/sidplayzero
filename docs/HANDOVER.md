@@ -27,7 +27,8 @@ measurement; then send a package for a short second sitting.)
 5. Memory peak (FIND-033) and detail line (FIND-037): read the two agents' files, merge any fix, write the
    findings. Check: `check_repo.py` OK. **Done**: memory merged (`60afdd0`, host peak 86.4 to 71.2 MB),
    detail line merged (`43ae6da`, absent tunes' line without the worker); FIND-033 and FIND-037 written, open.
-6. `tools/test unit`, then `tools/test simulator`, both with WERROR. Check: "0 not in order".
+6. `tools/test unit`, then `tools/test simulator`, both with WERROR. Check: "0 not in order". **Done** at
+   `4c9ed50` (see Verification).
 7. Open the PR; merge on the owner's word only.
 8. Build the package and send it with the second sitting's instructions; ask again which rows the HVSC
    screen showed at step 5.
@@ -90,16 +91,19 @@ Rules for working here:
 ## Changes
 
 - sidplayzero, PRs #12 and #13 merged (`2fb03d7` on main).
-- sidplayzero, branch `device-sitting-2` (worktree `wt-main`): steps 1 to 3 of the plan, and step 4's change (FIND-039, step-5 wording).
+- sidplayzero, branch `device-sitting-2` (worktree `wt-main`): steps 1 to 5 of the plan: audio measurement, findings
+  FIND-032 to FIND-039, `--only`, the set-up time, the memory cut (`60afdd0`) and the detail line (`43ae6da`).
 
 ## Verification
 
 - Build with WERROR of `device-sitting-2` at `4c69ee6`: OK.
 - `python3 -m pytest tests/framework/integration/test_device_script.py`: 12 passed.
 - The audio fix has no host test (the platform sink has none); it is checked at the second sitting.
-- `tools/test simulator` with WERROR at `d6bd215`: 588 tests, 494 passed, 94 skipped, 0 not in order.
-- `tools/test unit` with WERROR at `d6bd215`: 1904 passed, 6 not in order, all six from `check_repo.py`
-  finding FIND-033 and FIND-037 referenced but not yet written (step 5); no code test failed.
+- `tools/test unit` with WERROR at `4c9ed50` (merged tree): 2168 tests, 1910 passed, 0 not in order.
+- `tools/test simulator` with WERROR at `4c9ed50`: 590 tests, 495 passed, 95 skipped, 0 not in order.
+- One earlier simulator run at `4c9ed50` had `hvsc_notice_play.script:10` (`expect title = /MUSICIANS`)
+  not in order; run alone ten times it passed every time, and the rerun of the level passed: load-dependent,
+  not caused by the merges. Not yet explained.
 
 ## Dead ends
 
@@ -115,8 +119,9 @@ Things tried earlier in this project, so that nobody tries them again:
 
 ## Next
 
-When the two agents report, read `handover-memory.md` and `handover-detail.md` in the scratchpad, merge
-`inv-detail` (and any memory fix) into `device-sitting-2`, and write FIND-033 and FIND-037.
+Wait for the PR of `device-sitting-2` to be green and for the owner's word to merge; then build the package
+(`cmake --workflow --preset cp0-cross-package`) and send it with the second sitting's instructions, and ask the
+owner the FIND-033 and FIND-037 questions.
 
 Candidate tasks after that:
 - The second sitting: `./device-run.sh --only 4,5,8 PACKAGE.deb` with the collection moved aside; then
