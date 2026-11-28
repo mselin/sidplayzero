@@ -15,6 +15,28 @@ brief the project started from, so the findings below are raised against that br
 
 ## Open
 
+### FIND-033 The memory peak at the sitting was over its budget
+- Phase: 5, implementation (found in the results of the device sitting, 28 November 2026)
+- Observed: `sidplayzero-device-20261128-123755.txt` says `peak_memory_kb = 80824`, against SPEC-240's
+  64 MB‡. It is `getrusage`'s high-water mark, taken after the benchmark's last phase, a User rebuild of the
+  index (`src/app/selftest_benchmark.cpp:24-28`). Reproduced on the host at 86.4 MB (light engine, no GL).
+  About 25 MB of that is clean file-backed pages (the program, `listing.bin`, shared libraries). The peak
+  itself is step one of a full index build, which held the old records (232 bytes each, about 19 MB with
+  their strings), the whole listing's tunes (9 to 12 MB, only to read their paths) and the new records
+  (about 19 MB) at once; glibc then kept the freed pages, so the resident size stayed at the peak. A start
+  that rebuilds the whole index (a first start, a moved card, a new HVSC) peaks the same way (84.4 MB).
+- Concerns: SPEC-240's row "Memory in use" (64 MB‡, REQ-003), SPEC-161
+- Resolution so far: step one reads the listing 1,024 tunes at a time, and `malloc_trim(0)` runs after each
+  index build (`src/core/index.cpp`, `src/app/compose_search.cpp`). On the host the peak fell from 86.4 to
+  71.2 MB, and the resident size after a rebuild from 86.8 to 50.4 MB; the same output, covered by the
+  index's unit tests. The same cut on the device suggests about 66 MB, still over. Further cuts are
+  estimated, not built: dropping the old records before step one (about 7 MB; searches would find nothing
+  while it runs, a change of behaviour), updating in place in `reconcile` (about 12 MB at a start), and a
+  smaller `IndexRecord` (about 7.5 MB always, 15 MB at a peak).
+- Status: open. For the owner: whether the budget should count the high-water mark, which includes the
+  clean file pages, or anonymous memory only (`RssAnon`); and whether to take the further cuts. The second
+  sitting measures the peak again with this change
+
 ### FIND-036 The step-5 answer and the app's own record of the complete download disagree
 - Phase: 5, implementation (found in the results of the device sitting, 28 November 2026)
 - Observed: in `sidplayzero-device-20261128-123755.txt`, line 15 says `download_everything_offered = yes`, and lines 12 to 14 show every SPEC-145

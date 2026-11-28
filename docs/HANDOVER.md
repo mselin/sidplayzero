@@ -25,7 +25,8 @@ measurement; then send a package for a short second sitting.)
    and the test fails without the fix. **Done** (`b3cb91d`, `d6bd215`; the first fix failed the test, the
    second passes; simulator level 494 passed, 0 not in order).
 5. Memory peak (FIND-033) and detail line (FIND-037): read the two agents' files, merge any fix, write the
-   findings. Check: `check_repo.py` OK. **In progress** (agents running).
+   findings. Check: `check_repo.py` OK. **In progress**: memory merged (`60afdd0`, host peak 86.4 to 71.2 MB)
+   and FIND-033 written; the detail agent is running.
 6. `tools/test unit`, then `tools/test simulator`, both with WERROR. Check: "0 not in order".
 7. Open the PR; merge on the owner's word only.
 8. Build the package and send it with the second sitting's instructions; ask again which rows the HVSC
@@ -54,7 +55,8 @@ Where each phase stands:
   order: 1 check passed, 1 failed as intended, 0 not in order.
 
 Findings and test state:
-- Findings: up to FIND-039 (FIND-033 and FIND-037 still to write). Open: FIND-007 (USBSID-Pico: GPL-2-only
+- Findings: up to FIND-039 (FIND-037 still to write). FIND-033 (memory) is open for the owner's choice of
+  what the budget counts. Open: FIND-007 (USBSID-Pico: GPL-2-only
   driver files, part `usbsid` kept out), FIND-035 (two budgets not measured) and FIND-036 (step 5's answer
   against the app's record); `docs/findings.md`, "Open".
 - The sitting of 28 November 2026 (`sidplayzero-device-20261128-123755.txt`) met every budget it measured
@@ -88,7 +90,7 @@ Rules for working here:
 ## Changes
 
 - sidplayzero, PRs #12 and #13 merged (`2fb03d7` on main).
-- sidplayzero, branch `device-sitting-2` (worktree `/home/user/wt-main`): steps 1 to 3 of the plan, and step 4's change (FIND-039, step-5 wording).
+- sidplayzero, branch `device-sitting-2` (worktree `wt-main`): steps 1 to 3 of the plan, and step 4's change (FIND-039, step-5 wording).
 
 ## Verification
 
@@ -124,5 +126,5 @@ Candidate tasks after that:
 
 ## Subagent files
 
-- scratchpad `handover-memory.md`: the memory peak, worktree `/home/user/wt-memory`; running.
-- scratchpad `handover-detail.md`: the detail line, worktree `/home/user/wt-detail`; running.
+- scratchpad `handover-memory.md`: the memory peak, worktree `wt-memory`; done, merged (`60afdd0`), FIND-033 written.
+- scratchpad `handover-detail.md`: the detail line, worktree `wt-detail`; running.
