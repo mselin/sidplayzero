@@ -96,7 +96,8 @@ Rules for working here:
 - `python3 -m pytest tests/framework/integration/test_device_script.py`: 12 passed.
 - The audio fix has no host test (the platform sink has none); it is checked at the second sitting.
 - `tools/test simulator` with WERROR at `d6bd215`: 588 tests, 494 passed, 94 skipped, 0 not in order.
-- `tools/test unit` at `d6bd215`: running.
+- `tools/test unit` with WERROR at `d6bd215`: 1904 passed, 6 not in order, all six from `check_repo.py`
+  finding FIND-033 and FIND-037 referenced but not yet written (step 5); no code test failed.
 
 ## Dead ends
 
